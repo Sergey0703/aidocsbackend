@@ -14,6 +14,17 @@ import time
 import argparse
 from pathlib import Path
 from datetime import datetime
+import warnings
+
+# Suppress Pydantic warning from llama-index library
+# Root cause: llama_index/core/node_parser/interface.py uses deprecated 'validate_default' attribute
+# This is not our code - suppressing to keep console output clean
+warnings.filterwarnings(
+    'ignore',
+    category=UserWarning,
+    module='pydantic._internal._generate_schema',
+    message='.*validate_default.*'
+)
 
 # Import Part 1: Docling
 from docling_processor import (

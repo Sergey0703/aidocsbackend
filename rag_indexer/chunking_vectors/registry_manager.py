@@ -3,6 +3,7 @@
 
 import logging
 import psycopg2
+import psycopg2.extras
 from typing import Optional
 import hashlib
 
@@ -88,18 +89,18 @@ class DocumentRegistryManager:
     def update_file_hash(self, registry_id: str, file_hash: str) -> bool:
         """
         Update file hash for registry entry
-        
+
         Args:
             registry_id: Registry UUID
             file_hash: File hash to store
-            
+
         Returns:
             bool: Success status
         """
         try:
             conn = psycopg2.connect(self.connection_string)
             cur = conn.cursor()
-            
+
             cur.execute("""
                 UPDATE vecs.document_registry
                 SET extracted_data = extracted_data || %s::jsonb
@@ -108,15 +109,52 @@ class DocumentRegistryManager:
                 psycopg2.extras.Json({'file_hash': file_hash}),
                 registry_id
             ))
-            
+
             conn.commit()
             cur.close()
             conn.close()
-            
+
             return True
-            
+
         except Exception as e:
             logger.error(f"Failed to update file hash: {e}")
+            return False
+
+    def update_registry_status(self, registry_id: str, status: str) -> bool:
+        """
+        Update status for registry entry
+
+        Args:
+            registry_id: Registry UUID
+            status: New status (e.g. 'processed', 'indexed', 'failed')
+
+        Returns:
+            bool: Success status
+        """
+        try:
+            conn = psycopg2.connect(self.connection_string)
+            cur = conn.cursor()
+
+            cur.execute("""
+                UPDATE vecs.document_registry
+                SET status = %s, updated_at = now()
+                WHERE id = %s
+            """, (status, registry_id))
+
+            conn.commit()
+            rows_updated = cur.rowcount
+            cur.close()
+            conn.close()
+
+            if rows_updated > 0:
+                logger.debug(f"✅ Updated registry {registry_id} status to '{status}'")
+                return True
+            else:
+                logger.warning(f"⚠️ No registry found with id {registry_id}")
+                return False
+
+        except Exception as e:
+            logger.error(f"Failed to update registry status for {registry_id}: {e}")
             return False
 
 

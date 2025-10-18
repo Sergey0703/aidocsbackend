@@ -188,26 +188,26 @@ def should_skip_directory(directory_path, blacklist_directories=None, verbose=Fa
 
 def scan_files_in_directory(directory, recursive=True, blacklist_directories=None, verbose=False):
     """
-    Scan directory to get all files with blacklist filtering
-    
+    Scan directory to get all MARKDOWN files (.md) with blacklist filtering
+
     Args:
         directory: Directory to scan
         recursive: Whether to scan recursively
         blacklist_directories: List of directory names to exclude
         verbose: Whether to print detailed scanning info
-    
+
     Returns:
-        list: List of file paths (excludes blacklisted directories)
+        list: List of .md file paths (excludes blacklisted directories)
     """
     file_list = []
     skipped_dirs = []
-    
+
     try:
         if verbose:
             print(f"📂 Scanning directory: {directory}")
             if blacklist_directories:
                 print(f"🚫 Blacklisted directories: {', '.join(blacklist_directories)}")
-        
+
         if recursive:
             # Use os.walk for better control over directory traversal
             for root, dirs, files in os.walk(directory):
@@ -215,25 +215,28 @@ def scan_files_in_directory(directory, recursive=True, blacklist_directories=Non
                 # This prevents os.walk from entering them
                 original_dirs = dirs.copy()
                 dirs[:] = []  # Clear the list
-                
+
                 for dir_name in original_dirs:
                     dir_path = os.path.join(root, dir_name)
                     should_skip, reason = should_skip_directory(dir_path, blacklist_directories, verbose)
-                    
+
                     if should_skip:
                         skipped_dirs.append((dir_path, reason))
                     else:
                         dirs.append(dir_name)  # Add back to dirs for traversal
-                
-                # Add files from current directory
+
+                # Add ONLY .md files from current directory
                 for file_name in files:
-                    file_path = os.path.join(root, file_name)
-                    file_list.append(file_path)
+                    # 🔧 FIXED: Filter only .md files
+                    if file_name.lower().endswith('.md'):
+                        file_path = os.path.join(root, file_name)
+                        file_list.append(file_path)
         else:
             # Non-recursive scan
             directory_path = Path(directory)
             for item in directory_path.iterdir():
-                if item.is_file():
+                # 🔧 FIXED: Filter only .md files
+                if item.is_file() and item.suffix.lower() == '.md':
                     file_list.append(str(item))
         
         if verbose and skipped_dirs:
