@@ -1,0 +1,82 @@
+# RAG Document Indexer Requirements - Part 1 + Part 2
+# Combined environment for Docling conversion and LlamaIndex chunking
+
+# ============================================================================
+# PART 1: DOCLING - DOCUMENT CONVERSION
+# ============================================================================
+docling>=1.0.0
+docling-core>=1.0.0
+docling-ibm-models>=1.0.0
+
+# Document processing dependencies for Docling
+pypdfium2>=4.0.0
+python-docx>=1.0.0
+python-pptx>=0.6.0
+pillow>=10.0.0
+pydantic>=2.0.0
+
+# ============================================================================
+# PART 2: LLAMAINDEX - CHUNKING & VECTORS
+# ============================================================================
+llama-index>=0.10.0
+llama-index-core>=0.10.0
+llama-index-embeddings-google-genai>=0.1.0
+llama-index-vector-stores-supabase>=0.1.0
+
+# ============================================================================
+# GOOGLE GEMINI INTEGRATION
+# ============================================================================
+google-generativeai>=0.5.2,<0.6.0
+google-genai>=1.0.0
+
+# ============================================================================
+# DATABASE & VECTOR STORE
+# ============================================================================
+psycopg2-binary>=2.9.0
+supabase>=2.0.0
+
+# ============================================================================
+# ENVIRONMENT MANAGEMENT
+# ============================================================================
+python-dotenv>=1.0.0
+
+# ============================================================================
+# HTTP REQUESTS
+# ============================================================================
+requests>=2.31.0
+
+# ============================================================================
+# SYSTEM UTILITIES
+# ============================================================================
+psutil>=5.9.0
+
+# ============================================================================
+# DATA PROCESSING
+# ============================================================================
+numpy>=1.24.0
+pandas>=2.0.0
+
+# ============================================================================
+# PROGRESS BARS & CLI
+# ============================================================================
+tqdm>=4.65.0
+rich>=13.0.0
+
+# ============================================================================
+# NOTES
+# ============================================================================
+# Installation:
+# pip install -r requirements.txt
+#
+# System Requirements:
+# - Python 3.9 or higher
+# - PostgreSQL/Supabase instance
+# - Google Gemini API key
+#
+# Optional GPU support for Docling:
+# - For faster OCR processing
+# - Not required, will work on CPU
+
+
+# Optional but recommended for faster Hugging Face model downloads
+hf_xet>=0.1.1

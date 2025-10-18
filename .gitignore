@@ -1,0 +1,38 @@
+# Data directories
+data/
+*/data/
+**/data/
+
+/webclient/node_modules
+
+# Virtual environments
+venv
+*/venv/
+**/venv/
+
+# Environment files with secrets
+.env
+*/.env
+**/.env
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Logs
+*.log
+indexing_errors.log
+logs/
+
+# OS files
+.DS_Store
+Thumbs.db
+google/
+*.deb
+chrome*
+gitkey
+gitkey.pub
+*.pem
+*.key

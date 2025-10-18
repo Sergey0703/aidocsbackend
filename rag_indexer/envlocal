@@ -1,0 +1,118 @@
+# Simplified settings for RAG Indexer Part 2: Chunking & Vectors Only
+# Expects markdown input from Docling (Part 1)
+
+# ============================================================================
+# DATABASE SETTINGS
+# ============================================================================
+SUPABASE_CONNECTION_STRING="postgresql://"
+TABLE_NAME=documents
+
+# ============================================================================
+# INPUT DIRECTORY (Markdown files from Docling)
+# ============================================================================
+DOCUMENTS_DIR=./data/markdown
+
+# ============================================================================
+# GOOGLE GEMINI API SETTINGS
+# ============================================================================
+GEMINI_API_KEY=
+
+# Embedding model settings - Google Gemini embeddings
+EMBED_MODEL=text-embedding-004
+EMBED_DIM=768                  # gemini supports 768, 1536, or 3072 dimensions
+
+# ============================================================================
+# TEXT CHUNKING SETTINGS
+# ============================================================================
+CHUNK_SIZE=512                 # Characters per chunk
+CHUNK_OVERLAP=128              # Overlap between chunks
+MIN_CHUNK_LENGTH=50            # Minimum chunk length to keep
+
+# ============================================================================
+# BATCH PROCESSING SETTINGS
+# ============================================================================
+PROCESSING_BATCH_SIZE=50       # Chunks per processing batch
+BATCH_SIZE=5                   # Chunks per embedding batch
+DB_BATCH_SIZE=200              # Records per database batch
+NUM_WORKERS=4                  # Parallel workers
+
+# ============================================================================
+# GEMINI API OPTIMIZATION
+# ============================================================================
+GEMINI_TIMEOUT=300             # API timeout in seconds
+GEMINI_REQUEST_RATE_LIMIT=10  # Requests per second
+GEMINI_RETRY_ATTEMPTS=3       # Number of retries for failed requests
+GEMINI_RETRY_DELAY=1.0         # Delay between retries in seconds
+GEMINI_MAX_TOKENS_PER_REQUEST=2048
+
+# ============================================================================
+# MONITORING AND LOGGING
+# ============================================================================
+ENABLE_PROGRESS_LOGGING=true
+LOG_BATCH_TIMING=true
+LOG_GEMINI_API_CALLS=false
+
+# ============================================================================
+# DIRECTORY FILTERING (Optional - exclude these from scanning)
+# ============================================================================
+BLACKLIST_DIRECTORIES=logs,temp,.git,__pycache__,.vscode,.idea,node_modules,_metadata
+
+# ============================================================================
+# PERFORMANCE SETTINGS
+# ============================================================================
+SKIP_VALIDATION=false
+
+# ============================================================================
+# NOTES
+# ============================================================================
+# This configuration is for Part 2: Chunking & Vectors Only
+# 
+# Prerequisites:
+# 1. Markdown files should be in DOCUMENTS_DIR (output from Docling - Part 1)
+# 2. Supabase database should be running and accessible
+# 3. GEMINI_API_KEY must be set with valid Google AI API key
+#
+# Workflow:
+# 1. Docling (Part 1) converts documents → markdown files
+# 2. This system (Part 2) reads markdown → chunks → embeddings → vector store
+#
+# To get Gemini API key:
+# Visit: https://makersuite.google.com/app/apikey
+# ============================================================================
+# DOCLING - DOCUMENT CONVERSION SETTINGS
+# ============================================================================
+RAW_DOCUMENTS_DIR=./data/raw
+MARKDOWN_OUTPUT_DIR=./data/markdown
+FAILED_CONVERSIONS_DIR=./data/failed
+METADATA_DIR=./data/markdown/_metadata
+
+# Supported formats (comma-separated)
+SUPPORTED_FORMATS=pdf,docx,doc,pptx,ppt,txt,html,htm,png,jpg,jpeg,tiff
+
+# Conversion settings
+RECURSIVE_SCAN=true
+MIRROR_DIRECTORY_STRUCTURE=true
+PRESERVE_IMAGES=false
+EXTRACT_TABLES=true
+
+# OCR settings
+ENABLE_OCR=true
+OCR_LANGUAGE=eng
+
+# Naming: timestamp_originalname.md
+USE_TIMESTAMP_PREFIX=false
+TIMESTAMP_FORMAT=%Y%m%d_%H%M%S
+
+# Error handling
+SKIP_FAILED_CONVERSIONS=true
+RETRY_FAILED=false
+MAX_RETRIES=2
+
+# Performance
+DOCLING_BATCH_SIZE=5
+USE_GPU=false
+MAX_FILE_SIZE_MB=100
+
+# Logging
+VERBOSE_LOGGING=true
+LOG_DIR=./logs

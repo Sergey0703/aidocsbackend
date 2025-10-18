@@ -1,0 +1,231 @@
+# ============================================================================
+# RAG INDEXER - DEPENDENCIES
+# ============================================================================
+# Project: AI Document Processing & RAG System
+# Updated: 2025-10-07
+# Python: >=3.9, <3.13 (recommended: 3.11)
+# ============================================================================
+
+# ============================================================================
+# PART 1: DOCLING - DOCUMENT CONVERSION (v2.x)
+# ============================================================================
+# CRITICAL: Docling 2.x has breaking changes from 1.x
+# This project uses Docling 2.55.1+ API
+
+docling>=2.55.0,<3.0.0
+docling-core>=2.0.0,<3.0.0
+docling-ibm-models>=2.0.0,<3.0.0
+# FIXED: docling 2.55.x requires docling-parse>=4.4.0
+docling-parse>=4.4.0,<5.0.0
+
+# PDF Backend (REQUIRED for PDF processing)
+# Docling 2.x automatically detects pypdfium2 if installed
+pypdfium2>=4.30.0,<5.0.0
+
+# Document format support
+python-docx>=1.1.0          # DOCX support
+python-pptx>=0.6.23         # PPTX support
+openpyxl>=3.1.0            # Excel support
+
+# OCR support (REQUIRED if ENABLE_OCR=true)
+easyocr>=1.7.0             # OCR engine used by Docling 2.x
+# Note: easyocr will install torch/torchvision automatically
+
+# Image processing
+Pillow>=10.0.0             # Image handling
+pillow-heif>=0.13.0        # HEIF/HEIC support (optional)
+
+# Additional Docling dependencies (auto-installed but listed for clarity)
+beautifulsoup4>=4.12.0     # HTML parsing
+lxml>=4.9.0                # XML/HTML processing
+marko>=2.0.0               # Markdown processing
+pylatexenc>=2.10           # LaTeX support
+filetype>=1.2.0            # File type detection
+
+# ============================================================================
+# PART 2: FASTAPI - REST API
+# ============================================================================
+# Updated to match installed packages (2025-10-07)
+
+fastapi>=0.115.0,<0.116.0
+uvicorn[standard]>=0.32.0,<0.33.0
+python-multipart>=0.0.6    # File upload support
+
+# Validation & Settings
+pydantic>=2.11.0,<3.0.0
+pydantic-settings>=2.6.0,<3.0.0
+
+# ============================================================================
+# PART 3: LLAMAINDEX - RAG & EMBEDDINGS
+# ============================================================================
+
+# Core LlamaIndex
+llama-index-core>=0.14.0,<0.15.0
+
+# LLM & Embedding providers
+llama-index-llms-google-genai>=0.1.0,<0.2.0
+llama-index-embeddings-google-genai>=0.1.0,<0.2.0
+
+# Vector store
+llama-index-vector-stores-supabase>=0.1.0,<0.2.0
+
+# ============================================================================
+# PART 4: GOOGLE GEMINI API
+# ============================================================================
+
+google-generativeai>=0.5.2,<0.6.0
+
+# ============================================================================
+# PART 5: DATABASE
+# ============================================================================
+
+# PostgreSQL / Supabase
+psycopg2-binary>=2.9.9     # PostgreSQL adapter
+# Note: Use psycopg2-binary for easier installation
+# Use psycopg2 (without binary) for production if needed
+
+# ============================================================================
+# PART 6: CORE UTILITIES
+# ============================================================================
+
+# Configuration
+python-dotenv>=1.0.0       # .env file support
+
+# Data processing
+pandas>=2.0.0,<3.0.0       # Data manipulation
+numpy>=1.24.0,<2.0.0       # Numerical computing
+
+# HTTP clients
+requests>=2.31.0           # Synchronous HTTP
+httpx>=0.27.0              # Async HTTP
+aiohttp>=3.9.0             # Alternative async HTTP
+
+# System utilities
+psutil>=5.9.0              # System monitoring
+chardet>=5.2.0             # Character encoding detection
+
+# File I/O
+ujson>=5.8.0               # Fast JSON
+xlsxwriter>=3.1.0          # Excel writing
+
+# ============================================================================
+# OPTIONAL: PERFORMANCE OPTIMIZATIONS
+# ============================================================================
+
+# Faster Hugging Face downloads (for EasyOCR models)
+hf-xet>=0.1.1
+
+# GPU acceleration (if available)
+# torch>=2.0.0             # Uncomment if you have CUDA GPU
+# torchvision>=0.15.0      # Uncomment if you have CUDA GPU
+
+# ============================================================================
+# OPTIONAL: ADVANCED TEXT PROCESSING
+# ============================================================================
+
+# Uncomment if needed:
+# spacy>=3.7.0             # Advanced NLP
+# nltk>=3.8.0              # Natural Language Toolkit
+# transformers>=4.30.0     # Hugging Face transformers
+
+# ============================================================================
+# DEVELOPMENT DEPENDENCIES (optional, for development only)
+# ============================================================================
+
+# Uncomment for development:
+# pytest>=7.4.0            # Testing
+# pytest-asyncio>=0.21.0   # Async testing
+# black>=23.7.0            # Code formatting
+# flake8>=6.1.0            # Linting
+# mypy>=1.5.0              # Type checking
+# ipython>=8.14.0          # Better REPL
+# jupyter>=1.0.0           # Jupyter notebooks
+
+# ============================================================================
+# COMPATIBILITY NOTES
+# ============================================================================
+
+# Python Version Requirements:
+# - Python 3.9+: Minimum supported
+# - Python 3.11: Recommended (best performance)
+# - Python 3.12: Supported but some dependencies may lag
+# - Python 3.13: Currently used, fully compatible
+
+# Docling 2.x Breaking Changes from 1.x:
+# 1. PdfPipelineOptions: No more manual 'backend' configuration
+# 2. Automatic backend detection (pypdfium2)
+# 3. New API for pipeline options
+# 4. Changed metadata structure in conversion results
+# 5. Enhanced OCR with easyocr integration
+# 6. docling-parse updated to 4.4.0+ (required by Docling 2.55.x)
+
+# Installation Order (recommended):
+# 1. pip install --upgrade pip setuptools wheel
+# 2. pip install torch torchvision (if using GPU)
+# 3. pip install -r requirements.txt
+
+# Common Installation Issues:
+# - EasyOCR: May take time to download models on first run
+# - Torch: Large download, consider CPU-only version if no GPU
+# - pypdfium2: Should install without issues on all platforms
+# - psycopg2: Use psycopg2-binary to avoid compilation issues
+# - docling-parse: Must be >=4.4.0 for Docling 2.55.x
+
+# GPU Support:
+# - EasyOCR will use GPU automatically if CUDA is available
+# - Set USE_GPU=true in .env to enable GPU acceleration
+# - Requires: CUDA 11.8+ and compatible PyTorch installation
+
+# ============================================================================
+# PACKAGE SIZE ESTIMATES
+# ============================================================================
+
+# Total installation size: ~3-5 GB
+# - PyTorch (if installed): ~2-3 GB
+# - EasyOCR models (auto-downloaded): ~500 MB
+# - Other dependencies: ~1-2 GB
+
+# Minimal installation (no OCR, CPU only): ~500 MB
+
+# ============================================================================
+# VERIFICATION COMMANDS
+# ============================================================================
+
+# After installation, verify with:
+# python -c "import docling; print(f'Docling: {docling.__version__}')"
+# python -c "import pypdfium2; print(f'pypdfium2: {pypdfium2.__version__}')"
+# python -c "import fastapi; print(f'FastAPI: {fastapi.__version__}')"
+# python -c "import llama_index; print('LlamaIndex: OK')"
+# python -c "import google.generativeai; print('Gemini API: OK')"
+
+# ============================================================================
+# SECURITY & UPDATES
+# ============================================================================
+
+# Keep dependencies updated regularly:
+# pip list --outdated
+# pip install --upgrade <package>
+
+# Security scanning:
+# pip install safety
+# safety check
+
+# ============================================================================
+# VERSION COMPATIBILITY MATRIX
+# ============================================================================
+
+# Docling 2.55.x requires:
+# - docling-parse >= 4.4.0
+# - docling-core >= 2.0.0
+# - docling-ibm-models >= 2.0.0
+# - pypdfium2 >= 4.30.0
+
+# FastAPI 0.115.x requires:
+# - pydantic >= 2.11.0
+# - uvicorn >= 0.32.0
+
+# LlamaIndex 0.14.x requires:
+# - numpy < 2.0.0 (important!)
+# - pydantic >= 2.0.0
+
+# ============================================================================

@@ -1,0 +1,54 @@
+DROP TABLE vecs.documents;
+
+CREATE TABLE vecs.documents (
+  id UUID PRIMARY KEY,
+  vec VECTOR(768), -- <--- УКАЖИТЕ 768
+  metadata JSONB
+);
+
+SELECT replace(metadata ->> 'text', E'\n', ' ') AS full_document
+FROM vecs.documents;
+
+
+SELECT 
+    metadata->>'file_name' as file_name,
+    COUNT(*) as chunks_count,
+    AVG(LENGTH(metadata->>'text')) as avg_chunk_size
+FROM vecs.documents
+GROUP BY metadata->>'file_name';
+
+
+I need backup for this table select COUNT(*) FROM vecs.documents in my local Supabase
+ThinkingThoughts
+(experimental)
+Auto
+Expand to view model thoughts
+
+chevron_right
+Of course! Backing up your data is a crucial step, especially in a local development environment. For your local Supabase setup, which runs on Docker, the most robust and standard way to back up a specific table like vecs.documents is by using the pg_dump utility.
+Here is a complete guide covering the best methods, from the most recommended to alternatives.
+Method 1: Use pg_dump via Docker (Highly Recommended)
+This is the standard PostgreSQL way. It creates a portable SQL file that contains the commands to recreate your table and its data. You'll execute pg_dump inside the Supabase database container.
+Step 1: Find your Database Container ID
+First, list your running Docker containers to find the ID or name of your PostgreSQL container.
+Generated bash
+docker ps
+Use code with caution.
+Bash
+You'll see output like this. Look for the service named db or an image like supabase/postgres.
+Generated code
+CONTAINER ID   IMAGE                  COMMAND                  CREATED         STATUS         PORTS                               NAMES
+a1b2c3d4e5f6   supabase/postgres:15   "docker-entrypoint.s�"   2 hours ago     Up 2 hours     0.0.0.0:5432->5432/tcp              supabase-db-your-project-ref
+...other containers...
+Use code with caution.
+The container name we need here is supabase-db-your-project-ref (yours will be different). Let's use this for the examples.
+Step 2: Run the pg_dump Command
+Now, you can execute pg_dump inside that container and redirect the output to a file on your local machine.
+Option A: Backup Only the vecs.documents Table (Structure and Data)
+This command will dump the CREATE TABLE statement and all the INSERT statements for your specific table.
+Generated bash
+docker exec supabase-db-your-project-ref pg_dump \
+  -U postgres \
+  -d postgres \
+  --schema=vecs \
+  --table=vecs.documents > documents_backup.sql

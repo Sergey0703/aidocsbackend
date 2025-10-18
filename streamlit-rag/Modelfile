@@ -1,0 +1,11 @@
+FROM llama3:8b-instruct-q4_K_M
+PARAMETER num_ctx 2048
+PARAMETER num_predict 256
+PARAMETER num_thread 8
+PARAMETER f16_kv false
+PARAMETER top_p 0.9
+PARAMETER top_k 40
+SYSTEM """You are a helpful document assistant. Be concise and direct. 
+Only answer based on provided context. If information is not in the context, 
+say so clearly. Keep responses under 200 words when possible. 
+Always cite specific sources when answering."""
