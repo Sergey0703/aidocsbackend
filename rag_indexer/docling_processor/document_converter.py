@@ -15,28 +15,39 @@ from docling.datamodel.base_models import InputFormat
 
 from .metadata_extractor import MetadataExtractor
 from .utils_docling import safe_write_file, format_time
+from .ocr_enhancer import create_ocr_enhancer
 
 
 class DocumentConverter:
     """Converter for documents using Docling 2.x"""
     
-    def __init__(self, config):
+    def __init__(self, config, enable_ocr_enhancement=True):
         """
         Initialize document converter.
-        
+
         Args:
             config: DoclingConfig instance.
+            enable_ocr_enhancement: Whether to enhance Docling output with EasyOCR (default: True)
         """
         self.config = config
         self.metadata_extractor = MetadataExtractor(config)
         self.docling = self._init_docling_converter()
+        self.enable_ocr_enhancement = enable_ocr_enhancement
+        self.ocr_enhancer = None  # Lazy initialization
         self.stats = {
             'total_files': 0, 'successful': 0, 'failed': 0, 'total_time': 0,
-            'failed_files': [], 'total_batch_time': 0
+            'failed_files': [], 'total_batch_time': 0,
+            'ocr_enhanced': 0, 'ocr_placeholders_replaced': 0
         }
-        
+
         # Print Docling version info
         self._print_docling_info()
+
+        # Print OCR enhancement status
+        if self.enable_ocr_enhancement:
+            print("🔍 OCR Enhancement: ENABLED (will process <!-- image --> placeholders)")
+        else:
+            print("⚠️  OCR Enhancement: DISABLED")
     
     def _print_docling_info(self):
         """Print Docling version and configuration info"""
@@ -58,11 +69,11 @@ class DocumentConverter:
     def _init_docling_converter(self):
         """
         Initialize Docling document converter for version 2.55.1
-        
+
         Uses the EXACT same initialization that worked in test_docling.py
         """
         print("🔧 Initializing Docling 2.x converter...")
-        
+
         try:
             # Use the EXACT same code that worked in the test script
             converter = DoclingConverter(
@@ -74,17 +85,24 @@ class DocumentConverter:
                     InputFormat.IMAGE,
                 ]
             )
-            
+
             print("✅ Docling 2.x converter initialized successfully")
             print(f"   Using default OCR and table extraction settings")
-            
+
             return converter
-            
+
         except Exception as e:
             print(f"❌ Failed to initialize Docling converter: {e}")
             import traceback
             traceback.print_exc()
             raise
+
+    def _get_ocr_enhancer(self):
+        """Lazy initialization of OCR enhancer (only when needed)"""
+        if self.ocr_enhancer is None and self.enable_ocr_enhancement:
+            print("🔍 Initializing EasyOCR enhancer (first use)...")
+            self.ocr_enhancer = create_ocr_enhancer(use_gpu=False)
+        return self.ocr_enhancer
     
     def convert_file(self, input_path):
         """
@@ -120,24 +138,52 @@ class DocumentConverter:
             # Write markdown file
             if not safe_write_file(output_path, markdown_content):
                 raise IOError(f"Failed to write markdown file to {output_path}")
-            
+
+            # OCR Enhancement: Replace <!-- image --> placeholders with EasyOCR text
+            if self.enable_ocr_enhancement and '<!-- image -->' in markdown_content:
+                try:
+                    print(f"   🔍 Image placeholders detected - running OCR enhancement...")
+                    enhancer = self._get_ocr_enhancer()
+
+                    enhanced_content, ocr_stats = enhancer.enhance_markdown(
+                        markdown_content,
+                        str(input_path)
+                    )
+
+                    # Update markdown file with enhanced content
+                    if ocr_stats['placeholders_replaced'] > 0:
+                        if not safe_write_file(output_path, enhanced_content):
+                            raise IOError(f"Failed to write enhanced markdown to {output_path}")
+
+                        markdown_content = enhanced_content  # Use enhanced version for metadata
+                        self.stats['ocr_enhanced'] += 1
+                        self.stats['ocr_placeholders_replaced'] += ocr_stats['placeholders_replaced']
+
+                        print(f"   ✅ OCR Enhancement: {ocr_stats['placeholders_replaced']} placeholder(s) replaced")
+                        print(f"   📊 Added {ocr_stats['ocr_chars_added']:,} chars of OCR text")
+
+                except Exception as ocr_error:
+                    print(f"   ⚠️  OCR enhancement failed: {ocr_error}")
+                    print(f"   Continuing with original Docling output...")
+                    # Not critical - continue with original markdown
+
             # Calculate conversion time
             conversion_time = time.time() - start_time
-            
+
             # Extract and save metadata
             metadata = self.metadata_extractor.extract_metadata(
-                input_path=input_path, 
+                input_path=input_path,
                 output_path=output_path,
-                markdown_content=markdown_content, 
+                markdown_content=markdown_content,
                 conversion_time=conversion_time,
                 docling_result=result
             )
             self.metadata_extractor.save_metadata(input_path, metadata)
-            
+
             # Success message
             print(f"   ✅ Success ({conversion_time:.2f}s)")
             print(f"   📊 Size: {len(markdown_content):,} chars")
-            
+
             return True, output_path, None
             
         except Exception as e:
@@ -286,13 +332,19 @@ class DocumentConverter:
                 avg_time = self.stats['total_time'] / self.stats['successful']
                 print(f"   Average per successful file: {avg_time:.2f}s")
         
+        # OCR Enhancement stats
+        if self.enable_ocr_enhancement and self.stats.get('ocr_enhanced', 0) > 0:
+            print(f"\n🔍 OCR Enhancement:")
+            print(f"   Documents enhanced: {self.stats['ocr_enhanced']}")
+            print(f"   Image placeholders replaced: {self.stats['ocr_placeholders_replaced']}")
+
         if self.stats['failed_files']:
             print(f"\n❌ Failed files (check logs in '{self.config.FAILED_CONVERSIONS_DIR}'):")
             for failed in self.stats['failed_files'][:5]:
                 print(f"   - {Path(failed['file']).name}: {failed['error'][:100]}...")
             if len(self.stats['failed_files']) > 5:
                 print(f"   ... and {len(self.stats['failed_files']) - 5} more.")
-        
+
         print(f"=" * 60)
     
     def get_conversion_stats(self):
