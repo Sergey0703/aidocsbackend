@@ -508,7 +508,7 @@ def main():
                 
                 # Update status for all processed documents
                 for registry_id in registry_ids:
-                    registry_manager.update_registry_status(registry_id, 'indexed')
+                    registry_manager.update_registry_status(registry_id, 'processed')
                 
                 print(f"   ✅ Updated status for {len(registry_ids)} documents in registry")
                 

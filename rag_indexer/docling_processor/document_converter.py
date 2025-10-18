@@ -21,23 +21,34 @@ from .ocr_enhancer import create_ocr_enhancer
 class DocumentConverter:
     """Converter for documents using Docling 2.x"""
     
-    def __init__(self, config, enable_ocr_enhancement=True):
+    def __init__(
+        self,
+        config,
+        enable_ocr_enhancement=True,
+        ocr_strategy='fallback',
+        ocr_fallback_threshold=0.70
+    ):
         """
         Initialize document converter.
 
         Args:
             config: DoclingConfig instance.
-            enable_ocr_enhancement: Whether to enhance Docling output with EasyOCR (default: True)
+            enable_ocr_enhancement: Whether to enhance Docling output with OCR (default: True)
+            ocr_strategy: OCR strategy ('easyocr', 'gemini', 'fallback', 'ensemble')
+            ocr_fallback_threshold: Confidence threshold for Gemini fallback
         """
         self.config = config
         self.metadata_extractor = MetadataExtractor(config)
         self.docling = self._init_docling_converter()
         self.enable_ocr_enhancement = enable_ocr_enhancement
+        self.ocr_strategy = ocr_strategy
+        self.ocr_fallback_threshold = ocr_fallback_threshold
         self.ocr_enhancer = None  # Lazy initialization
         self.stats = {
             'total_files': 0, 'successful': 0, 'failed': 0, 'total_time': 0,
             'failed_files': [], 'total_batch_time': 0,
-            'ocr_enhanced': 0, 'ocr_placeholders_replaced': 0
+            'ocr_enhanced': 0, 'ocr_placeholders_replaced': 0,
+            'easyocr_used': 0, 'gemini_used': 0, 'fallback_triggered': 0
         }
 
         # Print Docling version info
@@ -45,7 +56,10 @@ class DocumentConverter:
 
         # Print OCR enhancement status
         if self.enable_ocr_enhancement:
-            print("🔍 OCR Enhancement: ENABLED (will process <!-- image --> placeholders)")
+            print(f"🔍 OCR Enhancement: ENABLED")
+            print(f"   Strategy: {ocr_strategy}")
+            if ocr_strategy == 'fallback':
+                print(f"   Fallback threshold: {ocr_fallback_threshold:.0%}")
         else:
             print("⚠️  OCR Enhancement: DISABLED")
     
@@ -100,8 +114,12 @@ class DocumentConverter:
     def _get_ocr_enhancer(self):
         """Lazy initialization of OCR enhancer (only when needed)"""
         if self.ocr_enhancer is None and self.enable_ocr_enhancement:
-            print("🔍 Initializing EasyOCR enhancer (first use)...")
-            self.ocr_enhancer = create_ocr_enhancer(use_gpu=False)
+            print(f"🔍 Initializing OCR enhancer (strategy: {self.ocr_strategy})...")
+            self.ocr_enhancer = create_ocr_enhancer(
+                use_gpu=False,
+                strategy=self.ocr_strategy,
+                fallback_threshold=self.ocr_fallback_threshold
+            )
         return self.ocr_enhancer
     
     def convert_file(self, input_path):
@@ -139,7 +157,7 @@ class DocumentConverter:
             if not safe_write_file(output_path, markdown_content):
                 raise IOError(f"Failed to write markdown file to {output_path}")
 
-            # OCR Enhancement: Replace <!-- image --> placeholders with EasyOCR text
+            # OCR Enhancement: Replace <!-- image --> placeholders with OCR text
             if self.enable_ocr_enhancement and '<!-- image -->' in markdown_content:
                 try:
                     print(f"   🔍 Image placeholders detected - running OCR enhancement...")
@@ -159,8 +177,19 @@ class DocumentConverter:
                         self.stats['ocr_enhanced'] += 1
                         self.stats['ocr_placeholders_replaced'] += ocr_stats['placeholders_replaced']
 
+                        # Track which OCR engines were used
+                        self.stats['easyocr_used'] += ocr_stats.get('easyocr_used', 0)
+                        self.stats['gemini_used'] += ocr_stats.get('gemini_used', 0)
+                        self.stats['fallback_triggered'] += ocr_stats.get('fallback_triggered', 0)
+
                         print(f"   ✅ OCR Enhancement: {ocr_stats['placeholders_replaced']} placeholder(s) replaced")
                         print(f"   📊 Added {ocr_stats['ocr_chars_added']:,} chars of OCR text")
+
+                        # Show which engines were used
+                        if ocr_stats.get('easyocr_used', 0) > 0:
+                            print(f"   🔤 EasyOCR: {ocr_stats['easyocr_used']} image(s)")
+                        if ocr_stats.get('gemini_used', 0) > 0:
+                            print(f"   ✨ Gemini Vision: {ocr_stats['gemini_used']} image(s)")
 
                 except Exception as ocr_error:
                     print(f"   ⚠️  OCR enhancement failed: {ocr_error}")
@@ -335,8 +364,17 @@ class DocumentConverter:
         # OCR Enhancement stats
         if self.enable_ocr_enhancement and self.stats.get('ocr_enhanced', 0) > 0:
             print(f"\n🔍 OCR Enhancement:")
+            print(f"   Strategy: {self.ocr_strategy}")
             print(f"   Documents enhanced: {self.stats['ocr_enhanced']}")
             print(f"   Image placeholders replaced: {self.stats['ocr_placeholders_replaced']}")
+
+            # Show OCR engine usage
+            if self.stats.get('easyocr_used', 0) > 0:
+                print(f"   🔤 EasyOCR used: {self.stats['easyocr_used']} image(s)")
+            if self.stats.get('gemini_used', 0) > 0:
+                print(f"   ✨ Gemini Vision used: {self.stats['gemini_used']} image(s)")
+            if self.stats.get('fallback_triggered', 0) > 0:
+                print(f"   🔄 Fallback triggered: {self.stats['fallback_triggered']} time(s)")
 
         if self.stats['failed_files']:
             print(f"\n❌ Failed files (check logs in '{self.config.FAILED_CONVERSIONS_DIR}'):")

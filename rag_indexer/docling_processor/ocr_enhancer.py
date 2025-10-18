@@ -8,7 +8,7 @@ Replaces <!-- image --> placeholders with EasyOCR-extracted text
 import re
 import logging
 from pathlib import Path
-from typing import Optional, Tuple, List
+from typing import Optional, Tuple, List, Dict, Any
 
 logger = logging.getLogger(__name__)
 
@@ -16,35 +16,71 @@ logger = logging.getLogger(__name__)
 class OCREnhancer:
     """
     Enhances Docling markdown output by replacing image placeholders with OCR text
+    Supports multiple OCR engines with fallback strategy
     """
 
-    def __init__(self, use_gpu: bool = False):
+    def __init__(
+        self,
+        use_gpu: bool = False,
+        strategy: str = 'fallback',
+        fallback_threshold: float = 0.70
+    ):
         """
         Initialize OCR enhancer
 
         Args:
-            use_gpu: Whether to use GPU for OCR (faster but requires CUDA)
+            use_gpu: Whether to use GPU for EasyOCR (faster but requires CUDA)
+            strategy: OCR strategy ('easyocr', 'gemini', 'fallback', 'ensemble')
+            fallback_threshold: Confidence threshold to trigger Gemini fallback
         """
         self.use_gpu = use_gpu
-        self.reader = None
-        self._initialized = False
+        self.strategy = strategy
+        self.fallback_threshold = fallback_threshold
 
-    def _initialize_ocr(self):
-        """Lazy initialization of EasyOCR (only when needed)"""
-        if self._initialized:
+        # OCR engines (lazy initialization)
+        self.easyocr_reader = None
+        self.gemini_ocr = None
+        self._easyocr_initialized = False
+        self._gemini_initialized = False
+
+        # Statistics
+        self.stats = {
+            'easyocr_used': 0,
+            'gemini_used': 0,
+            'fallback_triggered': 0
+        }
+
+    def _initialize_easyocr(self):
+        """Lazy initialization of EasyOCR"""
+        if self._easyocr_initialized:
             return
 
         try:
             import easyocr
             logger.info("Initializing EasyOCR...")
-            self.reader = easyocr.Reader(['en'], gpu=self.use_gpu)
-            self._initialized = True
+            self.easyocr_reader = easyocr.Reader(['en'], gpu=self.use_gpu)
+            self._easyocr_initialized = True
             logger.info("✅ EasyOCR initialized successfully")
         except ImportError:
             logger.error("EasyOCR not installed. Run: pip install easyocr")
             raise
         except Exception as e:
             logger.error(f"Failed to initialize EasyOCR: {e}")
+            raise
+
+    def _initialize_gemini(self):
+        """Lazy initialization of Gemini Vision OCR"""
+        if self._gemini_initialized:
+            return
+
+        try:
+            from .gemini_vision_ocr import create_gemini_vision_ocr
+            logger.info("Initializing Gemini Vision OCR...")
+            self.gemini_ocr = create_gemini_vision_ocr()
+            self._gemini_initialized = True
+            logger.info("✅ Gemini Vision OCR initialized successfully")
+        except Exception as e:
+            logger.error(f"Failed to initialize Gemini Vision: {e}")
             raise
 
     def has_image_placeholders(self, markdown_text: str) -> bool:
@@ -93,9 +129,79 @@ class OCREnhancer:
             logger.error(f"Failed to extract images from PDF: {e}")
             return []
 
+    def _ocr_with_easyocr(self, image_pix) -> Dict[str, Any]:
+        """OCR using EasyOCR"""
+        if not self._easyocr_initialized:
+            self._initialize_easyocr()
+
+        try:
+            import tempfile
+            import os
+            import time
+
+            # Save to temp file
+            fd, tmp_path = tempfile.mkstemp(suffix='.png')
+            os.close(fd)
+            image_pix.save(tmp_path)
+
+            # Run EasyOCR
+            result = self.easyocr_reader.readtext(tmp_path)
+
+            # Extract text lines
+            text_lines = []
+            confidences = []
+            for (bbox, text, confidence) in result:
+                if confidence > 0.5:
+                    text_lines.append(text)
+                    confidences.append(confidence)
+
+            extracted_text = '\n'.join(text_lines)
+            avg_confidence = sum(confidences) / len(confidences) if confidences else 0.0
+
+            # Cleanup
+            try:
+                time.sleep(0.1)
+                os.unlink(tmp_path)
+            except:
+                pass
+
+            return {
+                'text': extracted_text,
+                'confidence': avg_confidence,
+                'method': 'easyocr',
+                'lines': len(text_lines)
+            }
+
+        except Exception as e:
+            logger.error(f"EasyOCR failed: {e}")
+            return {
+                'text': '',
+                'confidence': 0.0,
+                'method': 'easyocr',
+                'error': str(e)
+            }
+
+    def _ocr_with_gemini(self, image_pix) -> Dict[str, Any]:
+        """OCR using Gemini Vision"""
+        if not self._gemini_initialized:
+            self._initialize_gemini()
+
+        try:
+            result = self.gemini_ocr.extract_from_pixmap(image_pix)
+            return result
+
+        except Exception as e:
+            logger.error(f"Gemini Vision failed: {e}")
+            return {
+                'text': '',
+                'confidence': 0.0,
+                'method': 'gemini_vision',
+                'error': str(e)
+            }
+
     def ocr_image(self, image_pix) -> str:
         """
-        Perform OCR on a PyMuPDF pixmap
+        Perform OCR on a PyMuPDF pixmap using configured strategy
 
         Args:
             image_pix: PyMuPDF Pixmap object
@@ -103,49 +209,60 @@ class OCREnhancer:
         Returns:
             Extracted text
         """
-        if not self._initialized:
-            self._initialize_ocr()
+        if self.strategy == 'easyocr':
+            # EasyOCR only
+            result = self._ocr_with_easyocr(image_pix)
+            self.stats['easyocr_used'] += 1
+            return result['text']
 
-        try:
-            # Save pixmap to temporary file
-            import tempfile
-            import os
-            import time
+        elif self.strategy == 'gemini':
+            # Gemini only
+            result = self._ocr_with_gemini(image_pix)
+            self.stats['gemini_used'] += 1
+            return result['text']
 
-            # Create temp file
-            fd, tmp_path = tempfile.mkstemp(suffix='.png')
-            os.close(fd)  # Close file descriptor immediately
+        elif self.strategy == 'fallback':
+            # Try EasyOCR first, fallback to Gemini if confidence low
+            easy_result = self._ocr_with_easyocr(image_pix)
+            self.stats['easyocr_used'] += 1
 
-            # Save image
-            image_pix.save(tmp_path)
+            if easy_result['confidence'] >= self.fallback_threshold:
+                # EasyOCR confidence is good
+                logger.info(f"✅ EasyOCR succeeded (confidence: {easy_result['confidence']:.2%})")
+                return easy_result['text']
+            else:
+                # Fallback to Gemini
+                logger.warning(f"⚠️  EasyOCR low confidence ({easy_result['confidence']:.2%}), trying Gemini Vision...")
+                self.stats['fallback_triggered'] += 1
 
-            # Run OCR
-            result = self.reader.readtext(tmp_path)
+                gemini_result = self._ocr_with_gemini(image_pix)
+                self.stats['gemini_used'] += 1
 
-            # Extract text lines
-            text_lines = []
-            for (bbox, text, confidence) in result:
-                if confidence > 0.5:  # Filter low-confidence results
-                    text_lines.append(text)
+                if gemini_result['confidence'] > easy_result['confidence']:
+                    logger.info(f"✅ Gemini Vision better (confidence: {gemini_result['confidence']:.2%})")
+                    return gemini_result['text']
+                else:
+                    logger.info(f"Using EasyOCR result despite low confidence")
+                    return easy_result['text']
 
-            extracted_text = '\n'.join(text_lines)
-            logger.debug(f"OCR extracted {len(text_lines)} lines")
+        elif self.strategy == 'ensemble':
+            # Run both and compare
+            easy_result = self._ocr_with_easyocr(image_pix)
+            gemini_result = self._ocr_with_gemini(image_pix)
 
-            # Clean up temp file (delayed for Windows)
-            try:
-                time.sleep(0.1)  # Small delay for Windows file handles
-                os.unlink(tmp_path)
-            except Exception as cleanup_error:
-                logger.debug(f"Could not delete temp file {tmp_path}: {cleanup_error}")
-                # Not critical - temp files will be cleaned eventually
+            self.stats['easyocr_used'] += 1
+            self.stats['gemini_used'] += 1
 
-            return extracted_text
+            # Choose best result
+            if gemini_result['confidence'] > easy_result['confidence']:
+                logger.info(f"Ensemble: Using Gemini ({gemini_result['confidence']:.2%} vs {easy_result['confidence']:.2%})")
+                return gemini_result['text']
+            else:
+                logger.info(f"Ensemble: Using EasyOCR ({easy_result['confidence']:.2%} vs {gemini_result['confidence']:.2%})")
+                return easy_result['text']
 
-        except Exception as e:
-            logger.error(f"OCR failed: {e}")
-            import traceback
-            traceback.print_exc()
-            return ""
+        else:
+            raise ValueError(f"Unknown OCR strategy: {self.strategy}")
 
     def enhance_markdown(self, markdown_text: str, pdf_path: str) -> Tuple[str, dict]:
         """
@@ -208,6 +325,11 @@ class OCREnhancer:
 
         logger.info(f"Enhancement complete: {stats['placeholders_replaced']}/{stats['placeholders_found']} placeholders replaced")
 
+        # Add OCR engine usage stats
+        stats['easyocr_used'] = self.stats.get('easyocr_used', 0)
+        stats['gemini_used'] = self.stats.get('gemini_used', 0)
+        stats['fallback_triggered'] = self.stats.get('fallback_triggered', 0)
+
         return enhanced_text, stats
 
     def process_file(self, markdown_path: str, pdf_path: str, output_path: Optional[str] = None) -> bool:
@@ -247,17 +369,27 @@ class OCREnhancer:
             return False
 
 
-def create_ocr_enhancer(use_gpu: bool = False) -> OCREnhancer:
+def create_ocr_enhancer(
+    use_gpu: bool = False,
+    strategy: str = 'fallback',
+    fallback_threshold: float = 0.70
+) -> OCREnhancer:
     """
     Factory function to create OCR enhancer
 
     Args:
         use_gpu: Whether to use GPU acceleration
+        strategy: OCR strategy ('easyocr', 'gemini', 'fallback', 'ensemble')
+        fallback_threshold: Confidence threshold for Gemini fallback
 
     Returns:
         OCREnhancer instance
     """
-    return OCREnhancer(use_gpu=use_gpu)
+    return OCREnhancer(
+        use_gpu=use_gpu,
+        strategy=strategy,
+        fallback_threshold=fallback_threshold
+    )
 
 
 # Example usage
