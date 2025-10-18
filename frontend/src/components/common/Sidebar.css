@@ -1,0 +1,122 @@
+/* src/components/common/Sidebar.css */
+
+.sidebar {
+  width: 260px;
+  flex-shrink: 0;
+  background-color: var(--sidebar-background);
+  color: var(--sidebar-text);
+  display: flex;
+  flex-direction: column;
+  padding: 1.5rem 1rem;
+  height: 100vh; /* Make sidebar full height */
+}
+
+.sidebar-header {
+  text-align: center;
+  margin-bottom: 2rem;
+}
+
+.sidebar-title {
+  color: #fff;
+  font-size: 1.8rem;
+  font-weight: 700;
+  letter-spacing: 1px;
+}
+
+.sidebar-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  flex-grow: 1; /* Allow nav to grow and push footer down */
+}
+
+.nav-link {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.8rem 1rem;
+  border-radius: 8px;
+  transition: background-color 0.2s ease-in-out, color 0.2s ease-in-out;
+  font-size: 1rem;
+  font-weight: 500;
+}
+
+.nav-link:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+  color: var(--sidebar-text-active);
+}
+
+.nav-link.active {
+  background-color: var(--primary-color);
+  color: var(--sidebar-text-active);
+  font-weight: 600;
+}
+
+.nav-icon {
+  font-size: 1.3rem;
+  display: flex; /* Для центрирования иконки */
+  align-items: center;
+}
+
+.sidebar-footer {
+  margin-top: auto;
+  text-align: center;
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+}
+
+/* Адаптивность для мобильных устройств */
+@media (max-width: 768px) {
+  .sidebar {
+    width: 80px; /* Сворачиваем сайдбар */
+    padding: 1.5rem 0.5rem;
+  }
+
+  .sidebar-title {
+    font-size: 1.2rem;
+  }
+
+  .nav-text {
+    display: none; /* Скрываем текст, оставляем только иконки */
+  }
+
+  .nav-link {
+    justify-content: center;
+    gap: 0;
+  }
+}
+
+@media (max-width: 480px) {
+    /* На очень маленьких экранах сайдбар можно будет скрыть совсем,
+       но это требует JS-логики, пока оставим так */
+}
+.user-profile {
+  display: flex;
+  align-items: center;
+  padding: 1rem;
+  margin-top: auto;
+}
+
+.user-icon {
+  font-size: 2rem; /* Increased size */
+  margin-right: 1rem; /* Increased margin */
+  color: #fff; /* Make icon white */
+}
+
+.user-name {
+  font-weight: 600;
+  font-size: 1.1rem; /* Slightly larger name */
+}
+
+.sidebar-footer {
+  padding: 1rem;
+  text-align: center;
+  color: #adb5bd;
+  /* margin-top: auto; is handled by flex-grow on nav */
+}
+
+.sidebar-footer .version {
+  font-size: 0.8rem;
+  margin: 0;
+  margin-top: 0.5rem; /* Add some space above version */
+}

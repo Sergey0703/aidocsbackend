@@ -1,0 +1,183 @@
+/* src/components/PerformanceMetrics.css */
+.performance-metrics {
+  background: white;
+  padding: 1.5rem;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  margin-bottom: 2rem;
+}
+
+.metrics-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+}
+
+.metrics-header h3 {
+  margin: 0;
+  color: #333;
+}
+
+.toggle-details {
+  padding: 0.5rem 1rem;
+  background: #007bff;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: background 0.3s;
+}
+
+.toggle-details:hover {
+  background: #0056b3;
+}
+
+.metrics-summary {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.metric-card {
+  background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+  padding: 1rem;
+  border-radius: 8px;
+  text-align: center;
+  border: 1px solid #dee2e6;
+}
+
+.metric-label {
+  font-size: 0.9rem;
+  color: #666;
+  margin-bottom: 0.5rem;
+}
+
+.metric-value {
+  font-size: 1.5rem;
+  font-weight: bold;
+  color: #007bff;
+}
+
+.metrics-details {
+  border-top: 2px solid #eee;
+  padding-top: 1.5rem;
+}
+
+.metrics-details h4 {
+  margin-top: 0;
+  margin-bottom: 1rem;
+  color: #555;
+}
+
+.pipeline-stages {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.stage {
+  background: #f8f9fa;
+  padding: 1rem;
+  border-radius: 8px;
+}
+
+.stage-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.5rem;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.stage-name {
+  font-weight: 600;
+  color: #333;
+  flex: 1;
+}
+
+.stage-time {
+  color: #666;
+  font-size: 0.9rem;
+}
+
+.stage-percent {
+  color: #007bff;
+  font-weight: bold;
+  font-size: 0.9rem;
+}
+
+.progress-bar {
+  width: 100%;
+  height: 8px;
+  background: #e9ecef;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  transition: width 0.5s ease;
+  border-radius: 4px;
+}
+
+.progress-fill.extraction {
+  background: linear-gradient(90deg, #28a745, #20c997);
+}
+
+.progress-fill.rewrite {
+  background: linear-gradient(90deg, #17a2b8, #20c997);
+}
+
+.progress-fill.retrieval {
+  background: linear-gradient(90deg, #007bff, #6610f2);
+}
+
+.progress-fill.fusion {
+  background: linear-gradient(90deg, #fd7e14, #ffc107);
+}
+
+.progress-fill.answer {
+  background: linear-gradient(90deg, #6f42c1, #e83e8c);
+}
+
+.efficiency-summary {
+  margin-top: 1.5rem;
+  padding: 1rem;
+  background: linear-gradient(135deg, #e7f3ff, #b3d9ff);
+  border-radius: 8px;
+  text-align: center;
+}
+
+.efficiency-metric {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.efficiency-label {
+  font-weight: 600;
+  color: #004085;
+}
+
+.efficiency-value {
+  font-size: 1.2rem;
+  font-weight: bold;
+  color: #007bff;
+}
+
+@media (max-width: 768px) {
+  .metrics-summary {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  
+  .stage-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}

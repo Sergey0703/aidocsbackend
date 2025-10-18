@@ -450,9 +450,23 @@ class DatabaseRetriever(BaseRetriever):
         """Flexible terms matching for broader recall"""
         if exclude_ids is None:
             exclude_ids = []
-        
+
+        # Common stop words to exclude from search
+        stop_words = {
+            'the', 'a', 'an', 'and', 'or', 'but', 'in', 'on', 'at', 'to', 'for',
+            'of', 'with', 'is', 'are', 'was', 'were', 'be', 'been', 'have', 'has',
+            'do', 'does', 'did', 'will', 'would', 'could', 'should', 'may', 'might',
+            'can', 'this', 'that', 'these', 'those', 'it', 'its', 'what', 'which',
+            'who', 'whom', 'where', 'when', 'why', 'how'
+        }
+
         # Extract individual terms (more flexible than exact phrase)
-        terms = [term.strip().lower() for term in query.split() if len(term) > 2]
+        # Filter by length AND stop words
+        terms = [
+            term.strip().lower()
+            for term in query.split()
+            if len(term) > 2 and term.strip().lower() not in stop_words
+        ]
         if not terms:
             return []
         

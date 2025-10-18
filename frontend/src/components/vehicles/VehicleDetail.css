@@ -1,0 +1,461 @@
+/* src/components/vehicles/VehicleDetail.css */
+
+.detail-container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+/* ============================================================================
+   HEADER
+   ============================================================================ */
+
+.detail-header {
+  padding: 1.5rem;
+  border-bottom: 1px solid var(--border-color);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.detail-title h2 {
+  margin: 0;
+  font-size: 1.5rem;
+  color: var(--text-primary);
+}
+
+.detail-title p {
+  margin: 0.25rem 0 0;
+  color: var(--text-secondary);
+  font-size: 1rem;
+}
+
+.header-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.header-actions button {
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  border: 1px solid;
+  cursor: pointer;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  transition: all 0.2s;
+}
+
+.edit-btn {
+  border-color: var(--primary-color);
+  color: var(--primary-color);
+  background: white;
+}
+
+.edit-btn:hover {
+  background-color: var(--primary-color);
+  color: white;
+}
+
+.delete-btn {
+  border-color: #ef4444;
+  color: #ef4444;
+  background: white;
+}
+
+.delete-btn:hover {
+  background-color: #ef4444;
+  color: white;
+}
+
+/* ============================================================================
+   TABS
+   ============================================================================ */
+
+.detail-tabs {
+  padding: 0 1.5rem;
+  border-bottom: 1px solid var(--border-color);
+  display: flex;
+  gap: 1.5rem;
+}
+
+.tab-btn {
+  padding: 1rem 0.5rem;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 1rem;
+  color: var(--text-secondary);
+  border-bottom: 3px solid transparent;
+  transition: all 0.2s;
+  font-weight: 500;
+}
+
+.tab-btn:hover {
+  color: var(--text-primary);
+}
+
+.tab-btn.active {
+  color: var(--primary-color);
+  border-bottom-color: var(--primary-color);
+  font-weight: 600;
+}
+
+/* ============================================================================
+   BODY
+   ============================================================================ */
+
+.detail-body {
+  padding: 1.5rem;
+  overflow-y: auto;
+  flex-grow: 1;
+}
+
+/* ============================================================================
+   DETAILS TAB
+   ============================================================================ */
+
+.details-tab-content {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+}
+
+.info-section {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.info-section h3 {
+  margin: 0;
+  font-size: 1.1rem;
+  color: var(--text-primary);
+  padding-bottom: 0.5rem;
+  border-bottom: 2px solid var(--border-color);
+}
+
+.info-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 1.5rem;
+}
+
+.info-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.info-item label {
+  display: block;
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+.info-item span {
+  font-size: 1rem;
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+/* Status Badge */
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.4rem 0.8rem;
+  border-radius: 9999px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  width: fit-content;
+}
+
+.status-active {
+  background-color: #d1fae5;
+  color: #065f46;
+}
+
+.status-maintenance {
+  background-color: #fef3c7;
+  color: #92400e;
+}
+
+.status-inactive {
+  background-color: #e5e7eb;
+  color: #4b5563;
+}
+
+.status-sold {
+  background-color: #dbeafe;
+  color: #1e40af;
+}
+
+.status-archived {
+  background-color: #f3f4f6;
+  color: #6b7280;
+}
+
+/* Expiry Items */
+.expiry-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 1rem;
+  background-color: #f8f9fa;
+  border-radius: 8px;
+  border-left: 4px solid #e5e7eb;
+}
+
+.expiry-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.expiry-header label {
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.expiry-date {
+  font-size: 0.95rem;
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+/* Expiry Badge */
+.expiry-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.4rem 0.8rem;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  width: fit-content;
+}
+
+.expiry-badge.expired {
+  background-color: #fee2e2;
+  color: #b91c1c;
+  border-left-color: #ef4444;
+}
+
+.expiry-badge.expires-today {
+  background-color: #fef3c7;
+  color: #92400e;
+  border-left-color: #f59e0b;
+}
+
+.expiry-badge.expires-soon {
+  background-color: #ffedd5;
+  color: #c2410c;
+  border-left-color: #fb923c;
+}
+
+.expiry-badge.expires-later {
+  background-color: #d1fae5;
+  color: #065f46;
+  border-left-color: #10b981;
+}
+
+.expiry-item.expired {
+  border-left-color: #ef4444;
+}
+
+.expiry-item.expires-soon {
+  border-left-color: #fb923c;
+}
+
+/* ============================================================================
+   DOCUMENTS TAB
+   ============================================================================ */
+
+.documents-tab-content {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.doc-list-detail {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.doc-item-detail {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem;
+  background-color: #f8f9fa;
+  border-radius: 8px;
+  border: 1px solid var(--border-color);
+  gap: 1rem;
+}
+
+.doc-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.doc-name {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.doc-name svg {
+  color: var(--primary-color);
+}
+
+.doc-meta {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+/* Document Status Badge */
+.doc-status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.25rem 0.6rem;
+  border-radius: 9999px;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.doc-status-unassigned {
+  background-color: #f3f4f6;
+  color: #6b7280;
+}
+
+.doc-status-assigned {
+  background-color: #dbeafe;
+  color: #1e40af;
+}
+
+.doc-status-pending {
+  background-color: #fef3c7;
+  color: #92400e;
+}
+
+.doc-status-processed {
+  background-color: #d1fae5;
+  color: #065f46;
+}
+
+.doc-status-failed {
+  background-color: #fee2e2;
+  color: #b91c1c;
+}
+
+.doc-status-archived {
+  background-color: #e5e7eb;
+  color: #4b5563;
+}
+
+.doc-type-badge {
+  padding: 0.25rem 0.6rem;
+  border-radius: 9999px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  background-color: #e0e7ff;
+  color: #4338ca;
+}
+
+.unlink-btn {
+  padding: 0.4rem 0.8rem;
+  font-size: 0.85rem;
+  color: #ef4444;
+  background: white;
+  border: 1px solid #fecaca;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 600;
+  white-space: nowrap;
+  transition: all 0.2s;
+}
+
+.unlink-btn:hover:not(:disabled) {
+  background-color: #fee2e2;
+}
+
+.unlink-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* No Documents State */
+.no-documents {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 3rem 2rem;
+  color: var(--text-secondary);
+}
+
+.no-docs-icon {
+  font-size: 3rem;
+  color: var(--primary-color);
+  opacity: 0.5;
+  margin-bottom: 1rem;
+}
+
+.no-documents h3 {
+  margin: 0 0 0.5rem 0;
+  color: var(--text-primary);
+}
+
+.no-documents p {
+  margin: 0.25rem 0;
+}
+
+.no-documents .hint {
+  margin-top: 1rem;
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+  font-style: italic;
+}
+
+/* ============================================================================
+   RESPONSIVE DESIGN
+   ============================================================================ */
+
+@media (max-width: 768px) {
+  .detail-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .header-actions {
+    width: 100%;
+    justify-content: flex-end;
+  }
+
+  .info-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .doc-item-detail {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .unlink-btn {
+    width: 100%;
+  }
+}

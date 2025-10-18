@@ -1,0 +1,122 @@
+/* src/components/indexing/IndexingProgress.css */
+
+.indexing-progress {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem; /* Увеличен отступ */
+}
+
+/* --- Хедер --- */
+.progress-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.status-badge {
+  padding: 0.4rem 0.8rem;
+  border-radius: 9999px;
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+.status-badge.running { background-color: #dcfce7; color: #166534; }
+.status-badge.completed { background-color: #dcfce7; color: #166534; }
+.status-badge.failed { background-color: #fee2e2; color: #991b1b; }
+.status-badge.idle, .status-badge.cancelled { background-color: #e5e7eb; color: #4b5563; }
+
+.progress-percentage {
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: #16a34a; /* Зеленый цвет для индексации */
+}
+
+/* --- ИСПРАВЛЕНИЕ: Прогресс-бар --- */
+.progress-bar-container {
+  width: 100%;
+  height: 24px; /* Увеличена высота */
+  background-color: #e5e7eb;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.progress-bar-fill {
+  height: 100%;
+  background-color: #22c55e; /* Зеленый цвет */
+  border-radius: 12px;
+  transition: width 0.3s ease-in-out;
+  /* Добавлен Flexbox для центрирования текста */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  color: white;
+  font-weight: 600;
+  font-size: 0.85rem;
+}
+
+.progress-bar-text {
+  /* Этот класс теперь можно не использовать, стили применены к .progress-bar-fill */
+  z-index: 1;
+}
+
+
+/* --- Статистика --- */
+.processing-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 1rem;
+  font-size: 0.9rem;
+}
+
+.stat-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    padding: 0.75rem;
+    background-color: #f8f9fa;
+    border-radius: 8px;
+}
+
+.stat-header {
+  font-weight: 600;
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+}
+
+.stat-progress {
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.stat-failed {
+  font-size: 0.8rem;
+  color: #ef4444;
+  font-weight: 600;
+}
+
+.stat-speed {
+    font-size: 0.85rem;
+    color: var(--primary-color);
+}
+
+
+/* --- Остальные стили --- */
+.current-file, .time-info {
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+}
+.time-info {
+    display: flex;
+    justify-content: space-between;
+}
+
+.errors-section, .warnings-section {
+  font-size: 0.85rem;
+  padding: 0.75rem;
+  border-radius: 6px;
+}
+.errors-section { background-color: #fee2e2; color: #b91c1c; }
+.warnings-section { background-color: #fef3c7; color: #92400e; }
+.errors-section h4, .warnings-section h4 { margin: 0 0 0.5rem 0; }
+.errors-list, .warnings-list { padding-left: 1rem; margin: 0; }

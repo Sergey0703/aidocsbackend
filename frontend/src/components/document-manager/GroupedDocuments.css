@@ -1,0 +1,233 @@
+/* src/components/document-manager/GroupedDocuments.css */
+
+.group-card {
+  background-color: var(--card-background);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  box-shadow: 0 2px 4px var(--shadow-color);
+  display: flex;
+  flex-direction: column;
+}
+
+.group-header {
+  padding: 1rem 1.5rem;
+  border-bottom: 1px solid var(--border-color);
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.status-indicator {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+}
+.status-indicator.exists { background-color: #22c55e; } /* Green */
+.status-indicator.new { background-color: #f59e0b; } /* Amber */
+
+.group-title {
+  font-size: 1.2rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  flex-grow: 1;
+}
+.group-subtitle {
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+}
+
+.group-body {
+  padding: 1.5rem;
+}
+
+.doc-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.doc-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.5rem;
+  background-color: #f8f9fa;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+}
+
+.doc-item svg {
+  color: var(--primary-color);
+}
+
+.group-footer {
+  padding: 1rem 1.5rem;
+  border-top: 1px solid var(--border-color);
+  background-color: #f8f9fa;
+}
+
+.action-button {
+  width: 100%;
+  padding: 0.8rem 1.5rem;
+  font-size: 1rem;
+  font-weight: 600;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.action-button.link {
+  background-color: var(--primary-color);
+}
+.action-button.link:hover {
+  background-color: var(--primary-color-hover);
+}
+
+.action-button.create {
+  background-color: #22c55e; /* Green */
+}
+.action-button.create:hover {
+  background-color: #16a34a;
+}
+
+/* src/components/document-manager/GroupedDocuments.css */
+/* ДОБАВЬ ЭТИ СТИЛИ В КОНЕЦ СУЩЕСТВУЮЩЕГО ФАЙЛА */
+
+/* ============================================================================
+   ACTION BUTTONS - UPDATED
+   ============================================================================ */
+
+.grouped-actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.action-button {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px 20px;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.action-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.action-button svg {
+  width: 18px;
+  height: 18px;
+}
+
+/* Primary Button - Link to Existing Vehicle */
+.action-button.primary {
+  background: linear-gradient(135deg, #48bb78 0%, #38a169 100%);
+  color: white;
+  box-shadow: 0 4px 15px rgba(72, 187, 120, 0.4);
+}
+
+.action-button.primary:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(72, 187, 120, 0.6);
+}
+
+/* Create Button - Create New Vehicle */
+.action-button.create {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+}
+
+.action-button.create:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
+}
+
+.button-spinner {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-top-color: white;
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ============================================================================
+   STATUS FOOTER - NEW
+   ============================================================================ */
+
+.grouped-footer {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid #e2e8f0;
+}
+
+.status-text {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 500;
+  text-align: center;
+}
+
+.status-text.success {
+  color: #38a169;
+}
+
+.status-text.warning {
+  color: #d69e2e;
+}
+
+/* ============================================================================
+   VEHICLE INFO - ENHANCED
+   ============================================================================ */
+
+.vehicle-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+}
+
+.vehicle-make {
+  color: #4a5568;
+  font-weight: 600;
+}
+
+.vehicle-model {
+  color: #718096;
+  font-weight: 500;
+}
+
+/* ============================================================================
+   EXTRACTION METHOD BADGE
+   ============================================================================ */
+
+.extraction-method {
+  background: #e6fffa;
+  color: #047857;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+}

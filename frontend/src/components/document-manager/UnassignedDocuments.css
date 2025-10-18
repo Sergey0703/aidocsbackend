@@ -1,0 +1,250 @@
+/* src/components/document-manager/UnassignedDocuments.css */
+
+.unassigned-documents {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.unassigned-empty {
+  text-align: center;
+  padding: 48px 24px;
+}
+
+.unassigned-empty .empty-icon {
+  font-size: 64px;
+  margin-bottom: 16px;
+}
+
+.unassigned-empty h3 {
+  margin: 0 0 8px 0;
+  font-size: 20px;
+  font-weight: 700;
+  color: #1a202c;
+}
+
+.unassigned-empty p {
+  margin: 0;
+  color: #718096;
+  font-size: 14px;
+}
+
+/* Vehicle Search */
+.vehicle-search-section {
+  margin-bottom: 8px;
+}
+
+.search-input-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.search-icon {
+  position: absolute;
+  left: 12px;
+  width: 18px;
+  height: 18px;
+  color: #a0aec0;
+}
+
+.vehicle-search-input {
+  width: 100%;
+  padding: 10px 12px 10px 40px;
+  border: 2px solid #e2e8f0;
+  border-radius: 8px;
+  font-size: 14px;
+  transition: all 0.2s ease;
+}
+
+.vehicle-search-input:focus {
+  outline: none;
+  border-color: #667eea;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.loading-hint {
+  margin-top: 8px;
+  font-size: 12px;
+  color: #718096;
+  text-align: center;
+}
+
+/* Documents List */
+.unassigned-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-height: 500px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.unassigned-list::-webkit-scrollbar {
+  width: 6px;
+}
+
+.unassigned-list::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 3px;
+}
+
+.unassigned-list::-webkit-scrollbar-thumb {
+  background: #cbd5e0;
+  border-radius: 3px;
+}
+
+.unassigned-list::-webkit-scrollbar-thumb:hover {
+  background: #a0aec0;
+}
+
+/* Document Item */
+.unassigned-item {
+  background: #f7fafc;
+  border: 2px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 16px;
+  transition: all 0.2s ease;
+}
+
+.unassigned-item:hover {
+  border-color: #cbd5e0;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.unassigned-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.document-icon {
+  flex-shrink: 0;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: white;
+  border-radius: 8px;
+  color: #4299e1;
+}
+
+.document-icon svg {
+  width: 20px;
+  height: 20px;
+}
+
+.document-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.document-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: #1a202c;
+  margin-bottom: 4px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.document-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+}
+
+.document-date {
+  color: #718096;
+}
+
+.document-status {
+  background: #fed7d7;
+  color: #c53030;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-weight: 600;
+  font-size: 10px;
+  text-transform: uppercase;
+}
+
+/* Assignment Section */
+.assignment-section {
+  display: flex;
+  gap: 8px;
+  align-items: stretch;
+}
+
+.vehicle-select {
+  flex: 1;
+  padding: 8px 12px;
+  border: 2px solid #e2e8f0;
+  border-radius: 8px;
+  font-size: 14px;
+  background: white;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.vehicle-select:focus {
+  outline: none;
+  border-color: #667eea;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.assign-button {
+  padding: 8px 20px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  white-space: nowrap;
+}
+
+.assign-button:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+}
+
+.assign-button:disabled {
+  background: linear-gradient(135deg, #a0aec0 0%, #718096 100%);
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+/* Footer */
+.unassigned-footer {
+  margin-top: 8px;
+  padding-top: 12px;
+  border-top: 1px solid #e2e8f0;
+}
+
+.footer-hint {
+  margin: 0;
+  font-size: 13px;
+  color: #718096;
+  text-align: center;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .assignment-section {
+    flex-direction: column;
+  }
+
+  .assign-button {
+    width: 100%;
+  }
+
+  .unassigned-list {
+    max-height: 400px;
+  }
+}

@@ -1,0 +1,111 @@
+/* src/components/indexing/ConversionProgress.css */
+
+.conversion-progress {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem; /* Увеличим отступ для наглядности */
+}
+
+/* --- ИСПРАВЛЕНИЕ: Секция хедера --- */
+.progress-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.status-badge {
+  padding: 0.4rem 0.8rem;
+  border-radius: 9999px;
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+.status-badge.converting { background-color: #e0f2fe; color: #0284c7; }
+.status-badge.completed { background-color: #dcfce7; color: #166534; }
+.status-badge.failed { background-color: #fee2e2; color: #991b1b; }
+.status-badge.pending { background-color: #f3f4f6; color: #4b5563; }
+
+
+.progress-percentage {
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: var(--primary-color);
+}
+
+/* --- ИСПРАВЛЕНИЕ: Прогресс-бар --- */
+.progress-bar-container {
+  width: 100%;
+  height: 24px; /* Увеличена высота */
+  background-color: #e5e7eb;
+  border-radius: 12px;
+  overflow: hidden; /* Скрываем все, что выходит за пределы */
+}
+
+.progress-bar-fill {
+  height: 100%;
+  background-color: var(--primary-color);
+  border-radius: 12px;
+  transition: width 0.3s ease-in-out;
+  /* Добавлен Flexbox для центрирования текста */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  color: white;
+  font-weight: 600;
+  font-size: 0.85rem;
+}
+
+/* --- ИСПРАВЛЕНИЕ: Секция статистики --- */
+.conversion-stats {
+  display: grid;
+  /* Адаптивная сетка, которая переносится на новую строку при необходимости */
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 1rem;
+}
+
+.stat-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem;
+  background-color: #f8f9fa;
+  border-radius: 8px;
+  border-left: 3px solid transparent;
+}
+
+/* Разные цвета для разных статусов */
+.stat-item.success { border-left-color: #22c55e; }
+.stat-item.error { border-left-color: #ef4444; }
+.stat-item.skipped { border-left-color: #64748b; }
+
+.stat-icon {
+  font-size: 1.5rem;
+}
+
+.stat-content {
+  display: flex;
+  flex-direction: column;
+}
+
+.stat-label {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+}
+
+.stat-value {
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+
+/* --- Остальные стили --- */
+.current-file, .time-info {
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+}
+
+.time-info {
+    display: flex;
+    justify-content: space-between;
+}

@@ -1,0 +1,353 @@
+/* src/components/document-manager/VehicleSearchInput.css */
+
+/* ============================================================================
+   CONTAINER
+   ============================================================================ */
+
+.vehicle-search-container {
+  position: relative;
+  width: 100%;
+}
+
+/* ============================================================================
+   INPUT WRAPPER
+   ============================================================================ */
+
+.vehicle-search-input-wrapper {
+  position: relative;
+  width: 100%;
+}
+
+.vehicle-search-input {
+  width: 100%;
+  padding: 0.75rem 3rem 0.75rem 1rem;
+  font-size: 1rem;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  outline: none;
+  transition: all 0.2s ease;
+  background-color: white;
+}
+
+.vehicle-search-input:focus {
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.vehicle-search-input:disabled {
+  background-color: #f8f9fa;
+  color: var(--text-secondary);
+  cursor: not-allowed;
+}
+
+.vehicle-search-input::placeholder {
+  color: var(--text-secondary);
+  opacity: 0.6;
+}
+
+/* ============================================================================
+   ICON WRAPPER
+   ============================================================================ */
+
+.search-icon-wrapper {
+  position: absolute;
+  right: 1rem;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.search-icon {
+  color: var(--text-secondary);
+  font-size: 1.2rem;
+}
+
+/* ============================================================================
+   LOADING SPINNER
+   ============================================================================ */
+
+.search-spinner {
+  width: 18px;
+  height: 18px;
+  border: 2px solid #f3f4f6;
+  border-top-color: var(--primary-color);
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* ============================================================================
+   CLEAR BUTTON
+   ============================================================================ */
+
+.clear-button {
+  background: none;
+  border: none;
+  padding: 0.25rem;
+  cursor: pointer;
+  color: var(--text-secondary);
+  font-size: 1.2rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  transition: all 0.2s;
+}
+
+.clear-button:hover {
+  background-color: #f3f4f6;
+  color: var(--text-primary);
+}
+
+/* ============================================================================
+   DROPDOWN
+   ============================================================================ */
+
+.vehicle-search-dropdown {
+  position: absolute;
+  top: calc(100% + 0.5rem);
+  left: 0;
+  right: 0;
+  background: white;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  max-height: 300px;
+  overflow-y: auto;
+  z-index: 1000;
+  animation: slideDown 0.2s ease;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ============================================================================
+   SEARCH RESULT ITEM
+   ============================================================================ */
+
+.search-result-item {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.75rem 1rem;
+  cursor: pointer;
+  transition: background-color 0.15s;
+  border-bottom: 1px solid #f3f4f6;
+}
+
+.search-result-item:last-child {
+  border-bottom: none;
+}
+
+.search-result-item:hover,
+.search-result-item.selected {
+  background-color: #f8f9fa;
+}
+
+.search-result-item.selected {
+  background-color: rgba(59, 130, 246, 0.05);
+}
+
+/* Result Icon */
+.result-icon {
+  flex-shrink: 0;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #e0f2fe;
+  border-radius: 8px;
+  color: var(--primary-color);
+  font-size: 1.2rem;
+}
+
+/* Result Info */
+.result-info {
+  flex-grow: 1;
+  min-width: 0;
+}
+
+.result-vrn {
+  font-weight: 600;
+  color: var(--text-primary);
+  font-size: 1rem;
+  margin-bottom: 0.25rem;
+}
+
+.result-details {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Result Status Badge */
+.result-status {
+  flex-shrink: 0;
+  padding: 0.25rem 0.75rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  border-radius: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.result-status.status-active {
+  background-color: #d1fae5;
+  color: #065f46;
+}
+
+.result-status.status-maintenance {
+  background-color: #fef3c7;
+  color: #92400e;
+}
+
+.result-status.status-inactive {
+  background-color: #f3f4f6;
+  color: #6b7280;
+}
+
+.result-status.status-sold {
+  background-color: #dbeafe;
+  color: #1e40af;
+}
+
+.result-status.status-archived {
+  background-color: #e5e7eb;
+  color: #374151;
+}
+
+/* ============================================================================
+   NO RESULTS STATE
+   ============================================================================ */
+
+.search-no-results {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem 1rem;
+  color: var(--text-secondary);
+  text-align: center;
+}
+
+.search-no-results svg {
+  font-size: 2.5rem;
+  margin-bottom: 0.75rem;
+  opacity: 0.5;
+}
+
+.search-no-results p {
+  margin: 0;
+  font-size: 0.95rem;
+}
+
+/* ============================================================================
+   ERROR MESSAGE
+   ============================================================================ */
+
+.search-error {
+  margin-top: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  background-color: #fee2e2;
+  border: 1px solid #fecaca;
+  border-radius: 6px;
+  color: #b91c1c;
+  font-size: 0.85rem;
+  animation: slideDown 0.2s ease;
+}
+
+/* ============================================================================
+   SCROLLBAR STYLING
+   ============================================================================ */
+
+.vehicle-search-dropdown::-webkit-scrollbar {
+  width: 8px;
+}
+
+.vehicle-search-dropdown::-webkit-scrollbar-track {
+  background: #f8f9fa;
+  border-radius: 0 8px 8px 0;
+}
+
+.vehicle-search-dropdown::-webkit-scrollbar-thumb {
+  background: #d1d5db;
+  border-radius: 4px;
+}
+
+.vehicle-search-dropdown::-webkit-scrollbar-thumb:hover {
+  background: #9ca3af;
+}
+
+/* ============================================================================
+   RESPONSIVE DESIGN
+   ============================================================================ */
+
+@media (max-width: 768px) {
+  .vehicle-search-dropdown {
+    max-height: 250px;
+  }
+
+  .search-result-item {
+    padding: 0.65rem 0.85rem;
+  }
+
+  .result-icon {
+    width: 32px;
+    height: 32px;
+    font-size: 1rem;
+  }
+
+  .result-vrn {
+    font-size: 0.95rem;
+  }
+
+  .result-details {
+    font-size: 0.8rem;
+  }
+
+  .result-status {
+    font-size: 0.7rem;
+    padding: 0.2rem 0.6rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .vehicle-search-input {
+    padding: 0.65rem 2.5rem 0.65rem 0.85rem;
+    font-size: 0.95rem;
+  }
+
+  .search-icon-wrapper {
+    right: 0.75rem;
+  }
+
+  .vehicle-search-dropdown {
+    max-height: 200px;
+  }
+
+  .search-no-results {
+    padding: 1.5rem 0.75rem;
+  }
+
+  .search-no-results svg {
+    font-size: 2rem;
+  }
+}

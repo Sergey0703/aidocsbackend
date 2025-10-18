@@ -1,0 +1,4 @@
+/* src/components/buildings/BuildingDetail.css */
+
+/* Using the same styles as VehicleDetail for consistency */
+@import url('../vehicles/VehicleDetail.css');

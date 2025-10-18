@@ -1,0 +1,364 @@
+/* src/components/document-manager/FindVRNProgress.css */
+
+/* ============================================================================
+   PROGRESS CONTAINER
+   ============================================================================ */
+
+.find-vrn-progress {
+  background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+  border: 2px solid var(--primary-color);
+  border-radius: 12px;
+  padding: 1.5rem;
+  margin-bottom: 2rem;
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.15);
+  animation: slideDown 0.3s ease;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.find-vrn-progress.running {
+  border-color: var(--primary-color);
+  background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+}
+
+.find-vrn-progress.completed {
+  border-color: #10b981;
+  animation: pulse 0.5s ease;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.02);
+  }
+}
+
+/* ============================================================================
+   PROGRESS HEADER
+   ============================================================================ */
+
+.progress-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+  gap: 1rem;
+}
+
+.progress-title {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  flex-grow: 1;
+}
+
+.progress-icon {
+  font-size: 1.5rem;
+  flex-shrink: 0;
+}
+
+.progress-icon.spinning {
+  color: var(--primary-color);
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.progress-icon.success {
+  color: #10b981;
+}
+
+.progress-icon.warning {
+  color: #f59e0b;
+}
+
+.progress-icon.info {
+  color: #6b7280;
+}
+
+.progress-percentage {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--primary-color);
+  min-width: 60px;
+  text-align: right;
+}
+
+/* ============================================================================
+   PROGRESS BAR
+   ============================================================================ */
+
+.progress-bar-container {
+  width: 100%;
+  height: 32px;
+  background-color: #e5e7eb;
+  border-radius: 16px;
+  overflow: hidden;
+  position: relative;
+  margin-bottom: 1.25rem;
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.progress-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--primary-color) 0%, #2563eb 100%);
+  border-radius: 16px;
+  transition: width 0.4s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  box-shadow: 0 2px 4px rgba(59, 130, 246, 0.3);
+}
+
+.progress-bar-fill::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.3) 50%,
+    transparent 100%
+  );
+  animation: shimmer 2s infinite;
+}
+
+@keyframes shimmer {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+.progress-bar-text {
+  color: white;
+  font-weight: 600;
+  font-size: 0.9rem;
+  z-index: 1;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+}
+
+/* ============================================================================
+   STATISTICS
+   ============================================================================ */
+
+.progress-stats {
+  display: flex;
+  gap: 1.5rem;
+  margin-bottom: 1rem;
+  flex-wrap: wrap;
+}
+
+.stat-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  background-color: #f8f9fa;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  flex: 1;
+  min-width: 140px;
+}
+
+.stat-item svg {
+  font-size: 1.2rem;
+  flex-shrink: 0;
+}
+
+.stat-item.success {
+  background-color: #d1fae5;
+  color: #065f46;
+}
+
+.stat-item.success svg {
+  color: #10b981;
+}
+
+.stat-item.info {
+  background-color: #e0e7ff;
+  color: #3730a3;
+}
+
+.stat-item.info svg {
+  color: #6366f1;
+}
+
+.stat-item.error {
+  background-color: #fee2e2;
+  color: #991b1b;
+}
+
+.stat-item.error svg {
+  color: #ef4444;
+}
+
+.stat-label {
+  font-weight: 500;
+  margin-right: 0.25rem;
+}
+
+.stat-value {
+  font-weight: 700;
+  font-size: 1.1rem;
+  margin-left: auto;
+}
+
+/* ============================================================================
+   STATUS MESSAGE
+   ============================================================================ */
+
+.progress-message {
+  padding: 0.75rem 1rem;
+  border-radius: 8px;
+  background-color: #f1f5f9;
+  border-left: 4px solid var(--primary-color);
+}
+
+.progress-message p {
+  margin: 0;
+  font-size: 0.95rem;
+  line-height: 1.5;
+  color: var(--text-secondary);
+}
+
+.status-running {
+  color: var(--primary-color);
+  font-weight: 500;
+}
+
+.status-success {
+  color: #065f46;
+  font-weight: 500;
+  border-left-color: #10b981;
+}
+
+.status-info {
+  color: #1e40af;
+  font-weight: 500;
+  border-left-color: #3b82f6;
+}
+
+/* ============================================================================
+   RESPONSIVE DESIGN
+   ============================================================================ */
+
+@media (max-width: 768px) {
+  .find-vrn-progress {
+    padding: 1.25rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .progress-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .progress-percentage {
+    font-size: 1.3rem;
+    align-self: flex-end;
+  }
+
+  .progress-title {
+    font-size: 1rem;
+  }
+
+  .progress-icon {
+    font-size: 1.3rem;
+  }
+
+  .progress-bar-container {
+    height: 28px;
+    margin-bottom: 1rem;
+  }
+
+  .progress-bar-text {
+    font-size: 0.85rem;
+  }
+
+  .progress-stats {
+    gap: 1rem;
+  }
+
+  .stat-item {
+    font-size: 0.9rem;
+    padding: 0.4rem 0.85rem;
+    min-width: 120px;
+  }
+
+  .stat-item svg {
+    font-size: 1.1rem;
+  }
+
+  .stat-value {
+    font-size: 1rem;
+  }
+
+  .progress-message {
+    padding: 0.65rem 0.85rem;
+  }
+
+  .progress-message p {
+    font-size: 0.9rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .find-vrn-progress {
+    padding: 1rem;
+  }
+
+  .progress-title {
+    font-size: 0.95rem;
+  }
+
+  .progress-percentage {
+    font-size: 1.2rem;
+  }
+
+  .progress-bar-container {
+    height: 24px;
+  }
+
+  .progress-stats {
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  .stat-item {
+    min-width: 100%;
+    justify-content: space-between;
+  }
+
+  .stat-label {
+    margin-right: 0;
+  }
+
+  .stat-value {
+    margin-left: auto;
+  }
+}

@@ -1,0 +1,77 @@
+/* src/components/buildings/BuildingList.css */
+
+.building-list-container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background-color: #f8f9fa;
+  border-right: 1px solid #dee2e6;
+}
+
+.list-header {
+  padding: 1rem;
+  border-bottom: 1px solid #dee2e6;
+}
+
+.list-title {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.list-title h3 {
+  margin: 0;
+  font-size: 1.25rem;
+  color: #343a40;
+}
+
+.search-bar input {
+  width: 100%;
+  padding: 0.5rem;
+  border: 1px solid #ced4da;
+  border-radius: 0.25rem;
+  font-size: 0.9rem;
+}
+
+.list-body {
+  flex-grow: 1;
+  overflow-y: auto;
+}
+
+.building-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.building-item {
+  padding: 1rem;
+  border-bottom: 1px solid #e9ecef;
+  cursor: pointer;
+  transition: background-color 0.2s ease-in-out;
+}
+
+.building-item:hover {
+  background-color: #e9ecef;
+}
+
+.building-item.active {
+  background-color: #007bff;
+  color: white;
+}
+
+.building-item.active .building-address {
+  color: #e0e0e0;
+}
+
+.building-name {
+  font-weight: 600;
+  font-size: 1rem;
+  margin-bottom: 0.25rem;
+}
+
+.building-address {
+  font-size: 0.85rem;
+  color: #6c757d;
+}

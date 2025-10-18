@@ -1,0 +1,314 @@
+/* src/components/indexing/PipelineStages.css */
+.pipeline-stages {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+/* Stages Container */
+.stages-container {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  overflow-x: auto;
+  padding: 1rem 0;
+}
+
+/* Individual Stage */
+.stage {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 1.5rem 1rem;
+  background: white;
+  border: 2px solid #e0e0e0;
+  border-radius: 12px;
+  min-width: 180px;
+  flex: 1;
+  transition: all 0.3s;
+  position: relative;
+}
+
+.stage.pending {
+  background: #f8f9fa;
+  border-color: #dee2e6;
+  opacity: 0.6;
+}
+
+.stage.active {
+  background: linear-gradient(135deg, #e7f3ff, #cfe2ff);
+  border-color: #007bff;
+  box-shadow: 0 4px 12px rgba(0, 123, 255, 0.3);
+  transform: scale(1.05);
+}
+
+.stage.completed {
+  background: linear-gradient(135deg, #d4edda, #c3e6cb);
+  border-color: #28a745;
+}
+
+.stage-icon {
+  font-size: 2.5rem;
+  transition: transform 0.3s;
+}
+
+.stage.active .stage-icon {
+  animation: bounce 2s ease-in-out infinite;
+}
+
+@keyframes bounce {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+.stage-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  text-align: center;
+  width: 100%;
+}
+
+.stage-name {
+  font-size: 1rem;
+  font-weight: bold;
+  color: #333;
+}
+
+.stage-description {
+  font-size: 0.85rem;
+  color: #666;
+  line-height: 1.4;
+}
+
+.stage-count {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #007bff;
+  font-family: 'Courier New', monospace;
+  padding: 0.25rem 0.5rem;
+  background: rgba(0, 123, 255, 0.1);
+  border-radius: 4px;
+}
+
+.stage.completed .stage-count {
+  color: #28a745;
+  background: rgba(40, 167, 69, 0.1);
+}
+
+.stage-status-indicator {
+  margin-top: 0.5rem;
+}
+
+.status-icon {
+  font-size: 1.5rem;
+  display: inline-block;
+}
+
+.status-icon.active {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.spinner {
+  width: 24px;
+  height: 24px;
+  border: 3px solid rgba(0, 123, 255, 0.3);
+  border-top-color: #007bff;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Stage Connector */
+.stage-connector {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-width: 40px;
+  flex-shrink: 0;
+}
+
+.connector-line {
+  width: 30px;
+  height: 3px;
+  background: #dee2e6;
+  transition: background 0.3s;
+}
+
+.stage-connector.active .connector-line {
+  background: linear-gradient(90deg, #28a745, #007bff);
+}
+
+.connector-arrow {
+  font-size: 1.5rem;
+  color: #dee2e6;
+  font-weight: bold;
+  transition: color 0.3s;
+}
+
+.stage-connector.active .connector-arrow {
+  color: #007bff;
+  animation: arrow-pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes arrow-pulse {
+  0%, 100% {
+    transform: translateX(0);
+  }
+  50% {
+    transform: translateX(5px);
+  }
+}
+
+/* Pipeline Summary */
+.pipeline-summary {
+  display: flex;
+  justify-content: space-around;
+  gap: 1rem;
+  padding: 1.5rem;
+  background: rgba(255, 255, 255, 0.9);
+  border-radius: 8px;
+  border: 1px solid #dee2e6;
+  flex-wrap: wrap;
+}
+
+.summary-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+}
+
+.summary-label {
+  font-size: 0.85rem;
+  color: #666;
+  font-weight: 500;
+  text-align: center;
+}
+
+.summary-value {
+  font-size: 1.3rem;
+  font-weight: bold;
+  color: #007bff;
+  font-family: 'Courier New', monospace;
+}
+
+.summary-value.success {
+  color: #28a745;
+}
+
+.summary-value.api {
+  color: #6610f2;
+}
+
+/* Responsive Design */
+@media (max-width: 1024px) {
+  .stages-container {
+    overflow-x: auto;
+    padding-bottom: 1.5rem;
+  }
+
+  .stage {
+    min-width: 160px;
+  }
+
+  .stage-icon {
+    font-size: 2rem;
+  }
+}
+
+@media (max-width: 768px) {
+  .stages-container {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .stage {
+    min-width: auto;
+    width: 100%;
+  }
+
+  .stage-connector {
+    min-width: auto;
+    width: 100%;
+    flex-direction: row;
+    height: 40px;
+  }
+
+  .connector-line {
+    width: 3px;
+    height: 30px;
+  }
+
+  .connector-arrow {
+    transform: rotate(90deg);
+  }
+
+  .stage-connector.active .connector-arrow {
+    animation: arrow-pulse-vertical 1.5s ease-in-out infinite;
+  }
+
+  @keyframes arrow-pulse-vertical {
+    0%, 100% {
+      transform: rotate(90deg) translateX(0);
+    }
+    50% {
+      transform: rotate(90deg) translateX(5px);
+    }
+  }
+
+  .pipeline-summary {
+    flex-direction: column;
+  }
+
+  .summary-item {
+    flex-direction: row;
+    justify-content: space-between;
+    width: 100%;
+  }
+
+  .summary-label {
+    text-align: left;
+  }
+}
+
+@media (max-width: 480px) {
+  .stage {
+    padding: 1rem 0.75rem;
+  }
+
+  .stage-icon {
+    font-size: 1.8rem;
+  }
+
+  .stage-name {
+    font-size: 0.95rem;
+  }
+
+  .stage-description {
+    font-size: 0.8rem;
+  }
+
+  .stage-count {
+    font-size: 0.85rem;
+  }
+
+  .summary-value {
+    font-size: 1.1rem;
+  }
+}

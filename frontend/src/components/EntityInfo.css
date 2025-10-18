@@ -1,0 +1,159 @@
+/* src/components/EntityInfo.css */
+.entity-info {
+  background: linear-gradient(135deg, #e7f3ff, #b3d9ff);
+  border: 2px solid #007bff;
+  padding: 1.5rem;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  margin-bottom: 2rem;
+}
+
+.entity-info h3 {
+  margin-top: 0;
+  margin-bottom: 1rem;
+  color: #004085;
+}
+
+.entity-main {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.entity-row {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.5rem;
+  background: rgba(255, 255, 255, 0.7);
+  border-radius: 6px;
+}
+
+.entity-row.highlight {
+  background: rgba(255, 255, 255, 0.95);
+  border: 1px solid #007bff;
+}
+
+.entity-row .label {
+  font-weight: 600;
+  color: #004085;
+  min-width: 140px;
+}
+
+.entity-row .value {
+  color: #333;
+  flex: 1;
+}
+
+.entity-row .value.original {
+  font-style: italic;
+  color: #666;
+}
+
+.entity-row .value.entity {
+  font-size: 1.2rem;
+  font-weight: bold;
+  color: #007bff;
+}
+
+.entity-row .value.method {
+  background: #007bff;
+  color: white;
+  padding: 0.25rem 0.75rem;
+  border-radius: 12px;
+  font-size: 0.9rem;
+  display: inline-block;
+}
+
+.entity-row .value.confidence {
+  font-weight: bold;
+  color: #28a745;
+}
+
+.entity-row .value.alternatives {
+  color: #666;
+  font-size: 0.95rem;
+}
+
+.rewrites-section {
+  margin-top: 1.5rem;
+  padding-top: 1rem;
+  border-top: 2px solid rgba(0, 123, 255, 0.3);
+}
+
+.rewrites-toggle {
+  background: white;
+  border: 1px solid #007bff;
+  color: #007bff;
+  padding: 0.75rem 1rem;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+  width: 100%;
+  text-align: left;
+  transition: all 0.3s;
+}
+
+.rewrites-toggle:hover {
+  background: #007bff;
+  color: white;
+}
+
+.rewrites-list {
+  margin-top: 1rem;
+  background: rgba(255, 255, 255, 0.8);
+  padding: 1rem;
+  border-radius: 8px;
+}
+
+.rewrite-info {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid #dee2e6;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.rewrite-method {
+  font-weight: 600;
+  color: #004085;
+}
+
+.rewrite-confidence {
+  color: #28a745;
+  font-weight: bold;
+}
+
+.variants-list {
+  margin: 0;
+  padding-left: 1.5rem;
+}
+
+.variant-item {
+  padding: 0.5rem 0;
+  color: #333;
+  line-height: 1.5;
+}
+
+.variant-item:not(:last-child) {
+  border-bottom: 1px solid #e9ecef;
+}
+
+@media (max-width: 768px) {
+  .entity-row {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  
+  .entity-row .label {
+    min-width: auto;
+  }
+  
+  .rewrite-info {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}

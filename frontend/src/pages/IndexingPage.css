@@ -1,0 +1,97 @@
+/* src/pages/IndexingPage.css */
+
+.indexing-page {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2rem;
+  align-items: start;
+}
+
+.indexing-left-column,
+.indexing-right-column {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+}
+
+/* Generic Card Style */
+.card {
+  background-color: var(--card-background);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  box-shadow: 0 4px 6px var(--shadow-color);
+  display: flex;
+  flex-direction: column;
+}
+
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem 1.5rem;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.card-header h3 {
+  margin: 0;
+  font-size: 1.2rem;
+  color: var(--text-primary);
+}
+
+.card-body {
+  padding: 1.5rem;
+}
+
+.card-body p {
+  margin-top: 0;
+  margin-bottom: 1rem;
+  color: var(--text-secondary);
+}
+
+/* Specific Buttons */
+.start-indexing-button {
+  width: 100%;
+  padding: 0.8rem 1.5rem;
+  font-size: 1rem;
+  font-weight: 600;
+  color: white;
+  background-color: var(--primary-color);
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  margin-bottom: 1.5rem;
+}
+.start-indexing-button:hover:not(:disabled) {
+  background-color: var(--primary-color-hover);
+}
+.start-indexing-button:disabled {
+  background-color: #9ca3af;
+  cursor: not-allowed;
+}
+
+.refresh-button {
+  padding: 0.5rem 1rem;
+  font-size: 0.9rem;
+  background-color: #f1f5f9;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.refresh-button:hover:not(:disabled) {
+  background-color: #e2e8f0;
+  color: var(--primary-color);
+}
+.refresh-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+
+/* Responsive Design */
+@media (max-width: 1024px) {
+  .indexing-page {
+    grid-template-columns: 1fr;
+  }
+}

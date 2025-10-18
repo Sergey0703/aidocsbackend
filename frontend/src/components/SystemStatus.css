@@ -1,0 +1,171 @@
+/* src/components/SystemStatus.css */
+
+.system-status-card {
+  background-color: var(--card-background);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  box-shadow: 0 4px 6px var(--shadow-color);
+}
+
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem 1.25rem;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.card-header h3 {
+  margin: 0;
+  font-size: 1.1rem;
+}
+
+.refresh-button {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--text-secondary);
+  font-size: 1.2rem;
+  padding: 0.5rem;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+}
+.refresh-button:hover {
+  background-color: #f1f5f9;
+  color: var(--primary-color);
+}
+.refresh-button .spinning {
+  animation: spin 1s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.status-body {
+  padding: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.status-loading, .status-error-msg {
+  text-align: center;
+  color: var(--text-secondary);
+  padding: 2rem;
+}
+.status-error-msg {
+  color: #dc3545;
+}
+
+.status-badge.hybrid-enabled {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  background-color: #d1fae5;
+  color: #065f46;
+  padding: 0.5rem 1rem;
+  border-radius: 9999px;
+  font-weight: 600;
+  font-size: 0.9rem;
+  width: fit-content;
+}
+
+.status-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.8rem;
+}
+.status-section h4 {
+  margin: 0;
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.status-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+.status-icon {
+  font-weight: bold;
+  font-size: 0.9rem;
+}
+.status-icon.ok { color: #10b981; }
+.status-icon.error { color: #ef4444; }
+
+.status-content {
+  flex-grow: 1;
+}
+.status-title {
+  font-weight: 500;
+  color: var(--text-primary);
+}
+.status-details {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+}
+
+.rerank-options {
+  display: flex;
+  gap: 0.5rem;
+}
+.rerank-option {
+  flex: 1;
+  padding: 0.75rem;
+  border: 2px solid var(--border-color);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+  position: relative;
+}
+.rerank-option:hover {
+  border-color: var(--primary-color);
+}
+.rerank-option.active {
+  border-color: var(--primary-color);
+  background-color: rgba(59, 130, 246, 0.1);
+}
+.rerank-option input {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+.rerank-title {
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+.rerank-desc {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+}
+
+.rerank-info {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  background-color: #f8f9fa;
+  padding: 0.5rem 0.75rem;
+  border-radius: 6px;
+  text-align: center;
+}
+
+.last-search-metrics {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+.metric-item {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.9rem;
+}
+.metric-item span:first-child {
+  color: var(--text-secondary);
+}
+.metric-item span:last-child {
+  font-weight: 600;
+  font-family: monospace;
+}

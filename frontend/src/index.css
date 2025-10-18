@@ -1,0 +1,71 @@
+/* src/index.css */
+
+/* 1. Глобальный сброс и настройка box-sizing */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+/* 2. Определение цветовой палитры и основных переменных */
+:root {
+  --background-color: #f4f7fa; /* Светло-серый фон, как в примере */
+  --sidebar-background: #1e293b; /* Темно-синий для боковой панели */
+  --sidebar-text: #cbd5e1;
+  --sidebar-text-active: #ffffff;
+  --header-background: #ffffff;
+  --card-background: #ffffff;
+  
+  --primary-color: #3b82f6; /* Основной синий цвет для акцентов */
+  --primary-color-hover: #2563eb;
+
+  --text-primary: #1e293b; /* Основной цвет текста */
+  --text-secondary: #64748b; /* Вторичный цвет текста */
+  
+  --border-color: #e2e8f0; /* Цвет рамок */
+  --shadow-color: rgba(0, 0, 0, 0.05);
+}
+
+/* 3. Стили для body - задаем фон и основной шрифт */
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background-color: var(--background-color);
+  color: var(--text-primary);
+  line-height: 1.5;
+}
+
+/* 4. Стилизация скроллбара для более приятного вида */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f1f1;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #a8a8a8;
+}
+
+/* 5. Убираем стандартные стили для ссылок и кнопок */
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+button {
+  font-family: inherit;
+  cursor: pointer;
+}

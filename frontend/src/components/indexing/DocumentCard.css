@@ -1,0 +1,72 @@
+/* src/components/indexing/DocumentCard.css */
+.document-card {
+  background-color: white;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  font-size: 0.9rem;
+}
+
+.card-header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  cursor: pointer;
+}
+
+.filename {
+  flex-grow: 1;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.chunks-badge {
+  background-color: #f1f5f9;
+  padding: 0.2rem 0.6rem;
+  border-radius: 9999px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.expand-button {
+  background: none; border: none; cursor: pointer; color: var(--text-secondary);
+}
+
+.card-content {
+  padding: 1rem;
+  border-top: 1px solid var(--border-color);
+}
+
+.document-details {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.5rem 1rem;
+  margin-bottom: 1rem;
+  font-size: 0.85rem;
+}
+.detail-row {
+  display: flex;
+  justify-content: space-between;
+}
+.detail-label { color: var(--text-secondary); }
+.detail-value { font-weight: 500; }
+
+.card-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+.delete-button {
+  background-color: #fee2e2;
+  color: #b91c1c;
+  border: 1px solid #fecaca;
+  padding: 0.4rem 0.8rem;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+.delete-button:hover { background-color: #fecaca; }
+.delete-button:disabled { opacity: 0.6; cursor: not-allowed; }
