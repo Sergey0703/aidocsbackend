@@ -129,24 +129,22 @@ AND schemaname = 'vecs';
 
 ---
 
-### 4. Fix Pydantic Warning (LOW PRIORITY)
+### 4. ✅ Fix Pydantic Warning (FIXED)
 
-**Issue**: Pydantic `validate_default` warning in config models
+**Issue**: Pydantic `validate_default` warning from llama-index library
 
 **Impact**:
 - No functional impact
 - Just noise in logs
 
-**Solution**: This is a Pydantic library issue in the configuration models. You can:
+**Root Cause**: The warning comes from `llama_index/core/node_parser/interface.py`, which uses `Field(validate_default=True)` inside `Annotated[]` type - this pattern is deprecated in Pydantic 2.x.
 
-**Option A**: Suppress the warning
-```python
-# Add to the top of simple_search.py or console_search.py
-import warnings
-warnings.filterwarnings('ignore', category=UserWarning, module='pydantic')
-```
+**Solution (ALREADY APPLIED)**: Warning suppression added to all entry points:
+- ✅ `simple_search.py` (line 39-47)
+- ✅ `console_search.py` (line 30-37)
+- ✅ `run_api.py` (line 8-14)
 
-**Option B**: Update Pydantic models (requires code changes in config/settings.py)
+The warning is now completely suppressed. This is NOT your code - it's a known issue in llama-index library that will be fixed in future versions.
 
 ---
 

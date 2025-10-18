@@ -27,6 +27,15 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+# Suppress Pydantic warning from llama-index library
+import warnings
+warnings.filterwarnings(
+    'ignore',
+    category=UserWarning,
+    module='pydantic._internal._generate_schema',
+    message='.*validate_default.*'
+)
+
 # Import configuration and retrieval components
 try:
     from config.settings import ProductionRAGConfig

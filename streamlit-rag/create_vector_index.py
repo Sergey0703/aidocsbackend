@@ -3,6 +3,19 @@
 """
 Create vector index for fast similarity search
 This significantly improves search performance
+
+IMPORTANT: This script is an ALTERNATIVE to creating the index via SQL.
+The RECOMMENDED approach is to create the index when setting up the database schema:
+
+    -- In Supabase SQL Editor:
+    CREATE INDEX IF NOT EXISTS idx_documents_vec_hnsw
+    ON vecs.documents
+    USING hnsw (vec vector_cosine_ops);
+
+Use this script only if:
+- You forgot to create the index during schema setup
+- You need to recreate the index programmatically
+- SQL approach is not available in your environment
 """
 
 import os
@@ -45,10 +58,17 @@ def create_index():
         print("🔧 Creating HNSW vector index for cosine distance...")
         print("   (This may take a few minutes for large collections)")
 
-        collection.create_index(
-            method=vecs.IndexMeasure.cosine_distance,
-            replace=True  # Replace existing index if any
-        )
+        # Check if index already exists
+        try:
+            # vecs library uses create_index without method parameter
+            # It creates an HNSW index by default
+            collection.create_index(replace=True)
+        except Exception as e:
+            if "already exists" in str(e).lower():
+                print("ℹ️  Index already exists, attempting to replace...")
+                collection.create_index(replace=True)
+            else:
+                raise
 
         print("✅ Vector index created successfully!")
         print("\n📊 Benefits:")

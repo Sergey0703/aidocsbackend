@@ -3,6 +3,15 @@
 
 import uvicorn
 import logging
+import warnings
+
+# Suppress Pydantic warning from llama-index library
+warnings.filterwarnings(
+    'ignore',
+    category=UserWarning,
+    module='pydantic._internal._generate_schema',
+    message='.*validate_default.*'
+)
 
 logging.basicConfig(
     level=logging.INFO,

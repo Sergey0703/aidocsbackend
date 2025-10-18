@@ -36,6 +36,16 @@ logging.basicConfig(
     format='%(message)s'
 )
 
+# Suppress Pydantic warning from llama-index library
+# This is a known issue in llama-index, not our code
+import warnings
+warnings.filterwarnings(
+    'ignore',
+    category=UserWarning,
+    module='pydantic._internal._generate_schema',
+    message='.*validate_default.*'
+)
+
 
 async def search(query: str, top_k: int = 20, threshold: float = 0.30, verbose: bool = False):
     """Execute a simple search"""
