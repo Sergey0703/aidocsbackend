@@ -44,20 +44,39 @@ async def search(query: str, top_k: int = 20, threshold: float = 0.30, verbose: 
         from retrieval.multi_retriever import MultiStrategyRetriever
         from query_processing.entity_extractor import ProductionEntityExtractor
         from query_processing.query_rewriter import ProductionQueryRewriter
+        from query_processing.query_validator import QueryValidator
 
         # Initialize system
         if verbose:
             print("\n🔧 Initializing system...")
 
         config = ProductionRAGConfig()
+
+        # Step 1: Validate query first (professional approach)
+        validator = QueryValidator(config)
+        validation_result = await validator.validate_query(query)
+
+        if not validation_result.is_valid:
+            print(f"\n❌ Invalid query: {validation_result.reason}")
+            if verbose:
+                print(f"   Intent: {validation_result.intent.value}")
+                print(f"   Confidence: {validation_result.confidence:.2f}")
+            return
+
+        if verbose:
+            print(f"✅ Query validated")
+            print(f"   Intent: {validation_result.intent.value}")
+            print(f"   Confidence: {validation_result.confidence:.2f}")
+            print(f"   Reason: {validation_result.reason}")
+
         retriever = MultiStrategyRetriever(config)
 
-        # Optional: Extract entities
+        # Step 2: Extract entities
         entity_extractor = ProductionEntityExtractor(config)
         extracted_entity = None
 
         if verbose:
-            print("🔎 Analyzing query...")
+            print("🔎 Extracting entities...")
 
         try:
             entity_result = await entity_extractor.extract_entity(query)

@@ -50,15 +50,14 @@ class LLMEntityExtractor(BaseEntityExtractor):
         """Initialize LLM for extraction"""
         try:
             from llama_index.llms.google_genai import GoogleGenAI
-            
+
             self.llm = GoogleGenAI(
                 model=self.llm_config.extraction_model,
                 api_key=self.llm_config.api_key,
                 temperature=self.llm_config.extraction_temperature,
-                max_tokens=self.llm_config.extraction_max_tokens,
             )
             logger.info(f"✅ LLM Entity Extractor initialized with Gemini: {self.llm_config.extraction_model}")
-            
+
         except Exception as e:
             logger.error(f"❌ Failed to initialize LLM Entity Extractor with Gemini: {e}")
             self.llm = None
@@ -79,9 +78,12 @@ class LLMEntityExtractor(BaseEntityExtractor):
         try:
             from config.settings import config
             extraction_prompt = config.entity_extraction.person_extraction_prompt.format(query=query)
-            
-            # FIXED: Use async method
-            response = await self.llm.acomplete(extraction_prompt)
+
+            # FIXED: Use async method with max_tokens parameter
+            response = await self.llm.acomplete(
+                extraction_prompt,
+                max_tokens=self.llm_config.extraction_max_tokens
+            )
             extracted_entity = response.text.strip()
             
             # Clean extraction

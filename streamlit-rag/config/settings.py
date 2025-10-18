@@ -37,13 +37,13 @@ class LLMConfig:
     extraction_model: str = "gemini-pro"
     extraction_timeout: float = 30.0
     extraction_temperature: float = 0.0
-    extraction_max_tokens: int = 10
+    extraction_max_tokens: int = 50  # Увеличено с 10 до 50 для Gemini
     
     # Query rewriting LLM (creative)
     rewrite_model: str = "gemini-pro"
     rewrite_timeout: float = 20.0
     rewrite_temperature: float = 0.3
-    rewrite_max_tokens: int = 100
+    rewrite_max_tokens: int = 150  # Увеличено со 100 до 150 для Gemini
     
     # Gemini API performance settings
     request_rate_limit: int = 10  # requests per second
@@ -99,6 +99,49 @@ class SearchConfig:
     person_query_strategy: str = "database_priority"  # Prioritize DB for person names
     general_query_strategy: str = "vector_priority"   # Prioritize vector for general queries
     hybrid_merge_strategy: str = "score_weighted"     # How to merge results
+
+@dataclass
+class DomainConfig:
+    """Domain boundaries and validation configuration"""
+    # Domain description for LLM validation
+    domain_name: str = "vehicle documentation search system"
+
+    document_types: List[str] = None
+
+    # Validation prompt template
+    validation_prompt_template: str = None
+
+    def __post_init__(self):
+        if self.document_types is None:
+            self.document_types = [
+                "Vehicle registration certificates",
+                "Insurance documents",
+                "NCT (vehicle inspection) records",
+                "Driver information and certifications",
+                "Service and maintenance records",
+                "Fuel cards and expense reports",
+                "Toll receipts and road usage records"
+            ]
+
+        if self.validation_prompt_template is None:
+            doc_types_str = '\n'.join([f"- {dt}" for dt in self.document_types])
+            self.validation_prompt_template = f"""You are a query validator for a {self.domain_name}.
+
+The system contains:
+{doc_types_str}
+
+Analyze this search query and determine:
+1. Is it a VALID search query? (not random text, gibberish, or meaningless)
+2. What is the INTENT? (vehicle_search, person_search, document_search, date_query, or invalid)
+
+Query: "{{query}}"
+
+Respond in this EXACT format:
+VALID: yes/no
+INTENT: vehicle_search/person_search/document_search/date_query/invalid
+CONFIDENCE: 0.0-1.0
+REASON: brief explanation"""
+
 
 @dataclass
 class EntityExtractionConfig:
@@ -234,10 +277,13 @@ class ProductionRAGConfig:
             connection_string=self._get_connection_string(),
             table_name=os.getenv("TABLE_NAME", "documents")
         )
-        
+
+        # Domain configuration (boundaries for query validation)
+        self.domain = DomainConfig()
+
         # UPDATED: Gemini API key for embeddings
         gemini_api_key = self._get_gemini_api_key()
-        
+
         self.embedding = EmbeddingConfig(
             model_name=os.getenv("EMBED_MODEL", "text-embedding-004"),
             dimension=int(os.getenv("EMBED_DIM", "3072")),

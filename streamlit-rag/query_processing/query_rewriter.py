@@ -48,15 +48,14 @@ class LLMQueryRewriter(BaseQueryRewriter):
         """Initialize LLM for query rewriting"""
         try:
             from llama_index.llms.google_genai import GoogleGenAI
-            
+
             self.llm = GoogleGenAI(
                 model=self.llm_config.rewrite_model,
                 api_key=self.llm_config.api_key,
                 temperature=self.llm_config.rewrite_temperature,
-                max_tokens=self.llm_config.rewrite_max_tokens,
             )
             logger.info(f"✅ LLM Query Rewriter initialized with Gemini: {self.llm_config.rewrite_model}")
-            
+
         except Exception as e:
             logger.error(f"❌ Failed to initialize LLM Query Rewriter with Gemini: {e}")
             self.llm = None
@@ -110,27 +109,33 @@ class LLMQueryRewriter(BaseQueryRewriter):
     async def _expand_query(self, query: str, num_rewrites: int) -> List[str]:
         """Expand query into multiple variations - ASYNC"""
         from config.settings import config
-        
+
         prompt = config.query_rewrite.expand_query_prompt.format(
-            query=query, 
+            query=query,
             num_queries=num_rewrites
         )
-        
-        # FIXED: Use async method
-        response = await self.llm.acomplete(prompt)
+
+        # FIXED: Use async method with max_tokens parameter
+        response = await self.llm.acomplete(
+            prompt,
+            max_tokens=self.llm_config.rewrite_max_tokens
+        )
         rewrites = self._parse_llm_response(response.text)
         return rewrites
     
     async def _simplify_query(self, query: str) -> List[str]:
         """Simplify complex query - ASYNC"""
         from config.settings import config
-        
+
         prompt = config.query_rewrite.simplify_query_prompt.format(query=query)
-        
-        # FIXED: Use async method
-        response = await self.llm.acomplete(prompt)
+
+        # FIXED: Use async method with max_tokens parameter
+        response = await self.llm.acomplete(
+            prompt,
+            max_tokens=self.llm_config.rewrite_max_tokens
+        )
         simplified = response.text.strip()
-        
+
         if simplified and simplified != query:
             return [simplified]
         return []

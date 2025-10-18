@@ -270,6 +270,13 @@ With your virtual environment activated, install all the required Python package
 pip install -r requirements.txt
 ```
 
+**Important:** After installing dependencies, download the SpaCy language model for entity extraction:
+```bash
+python -m spacy download en_core_web_sm
+```
+
+This downloads the English language model (~12 MB) required for Named Entity Recognition (NER) in query processing. If you skip this step, the system will fall back to regex-based entity extraction with slightly lower accuracy (85% vs 90%).
+
 ### 4. Configure Environment Variables
 
 The application requires API keys and connection strings to be configured in an environment file.

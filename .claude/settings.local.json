@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(dir \"c:\\projects\\aidocsbackend\\streamlit-rag\\api\")",
+      "Bash(dir \"c:\\projects\\aidocsbackend\\streamlit-rag\\retrieval\")",
+      "Bash(dir \"c:\\projects\\aidocsbackend\\streamlit-rag\\config\")"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}
