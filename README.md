@@ -356,6 +356,26 @@ uvicorn api:app --reload
 
 Your backend API is now running and ready to accept requests! You can typically access it at `http://127.0.0.1:8000`.
 
+## Testing the System
+
+The system includes two search tools for testing and exploration:
+
+### Quick CLI Search
+```bash
+cd streamlit-rag
+python simple_search.py "231-D-54321"
+python simple_search.py "John Nolan" --verbose
+```
+
+### Interactive Console Search
+```bash
+cd streamlit-rag
+python console_search.py
+# Then choose from the interactive menu
+```
+
+**📚 For detailed guide on both tools, see [SEARCH_TOOLS_GUIDE.md](streamlit-rag/SEARCH_TOOLS_GUIDE.md)**
+
 ## Troubleshooting
 
 ### Warning: "Query does not have a covering index"
