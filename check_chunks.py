@@ -26,9 +26,9 @@ cur.execute("""
 results = cur.fetchall()
 
 print("\n" + "="*70)
-print("АНАЛИЗ ЧАНКОВ ДЛЯ VCR.md")
+print("CHUNK ANALYSIS FOR VCR.md")
 print("="*70)
-print(f"Всего чанков: {len(results)}")
+print(f"Total chunks: {len(results)}")
 print("="*70 + "\n")
 
 total_chars = 0
@@ -36,12 +36,12 @@ for i, (chunk_id, text_len, preview) in enumerate(results, 1):
     total_chars += text_len
     print(f"Chunk {i}:")
     print(f"  ID: {chunk_id[:50]}...")
-    print(f"  Длина текста: {text_len} символов")
-    print(f"  Превью: {preview}...")
+    print(f"  Text length: {text_len} chars")
+    print(f"  Preview: {preview}...")
     print()
 
 print("="*70)
-print(f"ИТОГО: {len(results)} чанков, {total_chars} символов")
+print(f"TOTAL: {len(results)} chunks, {total_chars} chars")
 print("="*70)
 
 # Also check the original document
@@ -53,10 +53,10 @@ cur.execute("""
     WHERE metadata->>'file_name' = 'VCR.md'
 """)
 
-total_chunks, total_chars = cur.fetchone()
-print(f"\nСтатистика из БД:")
-print(f"  Всего чанков: {total_chunks}")
-print(f"  Всего символов во всех чанках: {total_chars}")
+total_chunks, total_chars_db = cur.fetchone()
+print(f"\nDatabase stats:")
+print(f"  Total chunks: {total_chunks}")
+print(f"  Total chars in all chunks: {total_chars_db}")
 
 cur.close()
 conn.close()
@@ -67,7 +67,7 @@ if os.path.exists(original_file):
     with open(original_file, 'r', encoding='utf-8') as f:
         content = f.read()
 
-    print(f"\nИсходный документ VCR.md:")
-    print(f"  Длина: {len(content)} символов")
-    print(f"  Слов: {len(content.split())} слов")
-    print(f"  Строк: {len(content.splitlines())} строк")
+    print(f"\nOriginal VCR.md file:")
+    print(f"  Length: {len(content)} chars")
+    print(f"  Words: {len(content.split())} words")
+    print(f"  Lines: {len(content.splitlines())} lines")
