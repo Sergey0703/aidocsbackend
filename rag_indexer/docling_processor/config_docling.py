@@ -40,6 +40,10 @@ class DoclingConfig:
         self.MIRROR_DIRECTORY_STRUCTURE = os.getenv("MIRROR_DIRECTORY_STRUCTURE", "true").lower() == "true"
         self.PRESERVE_IMAGES = os.getenv("PRESERVE_IMAGES", "false").lower() == "true"
         self.EXTRACT_TABLES = os.getenv("EXTRACT_TABLES", "true").lower() == "true"
+
+        # --- JSON OUTPUT FOR HYBRID CHUNKING ---
+        self.SAVE_JSON_OUTPUT = os.getenv("SAVE_JSON_OUTPUT", "true").lower() == "true"  # Save DoclingDocument JSON for HybridChunker
+        self.JSON_OUTPUT_DIR = os.getenv("JSON_OUTPUT_DIR", str(base_dir / "json"))  # Directory for JSON files
         
         # --- OCR SETTINGS ---
         self.ENABLE_OCR = os.getenv("ENABLE_OCR", "true").lower() == "true"
@@ -80,6 +84,8 @@ class DoclingConfig:
         Path(self.FAILED_CONVERSIONS_DIR).mkdir(parents=True, exist_ok=True)
         Path(self.METADATA_DIR).mkdir(parents=True, exist_ok=True)
         Path(self.LOG_DIR).mkdir(parents=True, exist_ok=True)
+        if self.SAVE_JSON_OUTPUT:
+            Path(self.JSON_OUTPUT_DIR).mkdir(parents=True, exist_ok=True)
         
         # Validate batch size
         if self.BATCH_SIZE < 1:
@@ -160,6 +166,50 @@ class DoclingConfig:
         else:
             filename = f"{stem}.md"
         
+        return output_dir / filename
+
+    def get_json_output_path(self, input_path, timestamp=None):
+        """
+        Get output JSON path for input file (for Hybrid Chunking)
+
+        Args:
+            input_path: Input file path
+            timestamp: Optional timestamp string
+
+        Returns:
+            Path: Output JSON file path
+        """
+        if not self.SAVE_JSON_OUTPUT:
+            return None
+
+        input_path = Path(input_path)
+
+        # Get relative path from RAW_DOCUMENTS_DIR
+        try:
+            rel_path = input_path.relative_to(self.RAW_DOCUMENTS_DIR)
+        except ValueError:
+            # If not relative to RAW_DOCUMENTS_DIR, use just the filename
+            rel_path = Path(input_path.name)
+
+        # Build output path
+        if self.MIRROR_DIRECTORY_STRUCTURE:
+            # Mirror directory structure
+            output_dir = Path(self.JSON_OUTPUT_DIR) / rel_path.parent
+        else:
+            # Flat structure
+            output_dir = Path(self.JSON_OUTPUT_DIR)
+
+        # Ensure output directory exists
+        output_dir.mkdir(parents=True, exist_ok=True)
+
+        # Build filename
+        stem = input_path.stem
+
+        if self.USE_TIMESTAMP_PREFIX and timestamp:
+            filename = f"{timestamp}_{stem}.json"
+        else:
+            filename = f"{stem}.json"
+
         return output_dir / filename
 
 

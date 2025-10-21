@@ -158,7 +158,22 @@ class MarkdownLoader:
                 'word_count': len(content.split()),
                 'loader_timestamp': datetime.now().isoformat(),
             }
-            
+
+            # Look for corresponding JSON file (for Hybrid Chunking)
+            # JSON files should be in data/json/ with same structure as data/markdown/
+            json_dir = self.input_dir.parent / "json"
+            if json_dir.exists():
+                try:
+                    # Calculate relative path from markdown dir
+                    rel_path = md_file_path.relative_to(self.input_dir)
+                    # Build corresponding JSON path (same structure, .json extension)
+                    json_path = json_dir / rel_path.parent / f"{md_file_path.stem}.json"
+                    if json_path.exists():
+                        base_metadata['json_path'] = str(json_path.resolve())
+                        logger.debug(f"Found JSON for hybrid chunking: {json_path.name}")
+                except Exception as e:
+                    logger.debug(f"Could not locate JSON file for {md_file_path.name}: {e}")
+
             final_metadata = {**base_metadata, **json_metadata}
             cleaned_metadata = clean_metadata_recursive(final_metadata)
 

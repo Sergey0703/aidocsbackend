@@ -130,10 +130,10 @@ class HybridChunkerWrapper:
             # Create a new DoclingDocument
             doc = DoclingDocument(name=metadata.get('file_name', 'document') if metadata else 'document')
 
-            # Create main body group for the document
+            # Create main section group for the document
             body_group = GroupItem(
-                label=GroupLabel.BODY,
-                name="body",
+                label=GroupLabel.SECTION,
+                name="main",
                 parent=None
             )
 
@@ -250,14 +250,26 @@ class HybridChunkerWrapper:
             try:
                 self.stats['documents_processed'] += 1
 
-                # Get markdown content
-                markdown_content = doc.text if hasattr(doc, 'text') else str(doc)
-
                 # Preserve original metadata
                 source_metadata = doc.metadata if hasattr(doc, 'metadata') else {}
 
-                # Convert to DoclingDocument
-                docling_doc = self._markdown_to_docling_document(markdown_content, source_metadata)
+                # Try to load DoclingDocument from JSON (if available)
+                docling_doc = None
+                json_path = source_metadata.get('json_path')
+
+                if json_path and Path(json_path).exists():
+                    try:
+                        # Load from JSON (preferred for Hybrid Chunking)
+                        docling_doc = DoclingDocument.load_from_json(json_path)
+                        logger.debug(f"   Loaded DoclingDocument from JSON: {json_path}")
+                    except Exception as e:
+                        logger.warning(f"   Failed to load JSON {json_path}: {e}")
+                        logger.warning(f"   Falling back to markdown conversion...")
+
+                if docling_doc is None:
+                    # Fallback: Convert markdown to DoclingDocument (less accurate)
+                    markdown_content = doc.text if hasattr(doc, 'text') else str(doc)
+                    docling_doc = self._markdown_to_docling_document(markdown_content, source_metadata)
 
                 # Chunk using HybridChunker
                 chunk_iter = self.chunker.chunk(dl_doc=docling_doc)

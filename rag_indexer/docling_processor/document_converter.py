@@ -56,29 +56,29 @@ class DocumentConverter:
 
         # Print OCR enhancement status
         if self.enable_ocr_enhancement:
-            print(f"🔍 OCR Enhancement: ENABLED")
+            print(f"[*] OCR Enhancement: ENABLED")
             print(f"   Strategy: {ocr_strategy}")
             if ocr_strategy == 'fallback':
                 print(f"   Fallback threshold: {ocr_fallback_threshold:.0%}")
         else:
-            print("⚠️  OCR Enhancement: DISABLED")
+            print("[!] OCR Enhancement: DISABLED")
     
     def _print_docling_info(self):
         """Print Docling version and configuration info"""
         try:
             import docling
             version = getattr(docling, '__version__', 'unknown')
-            print(f"📦 Docling version: {version}")
-            
+            print(f"[*] Docling version: {version}")
+
             # Check if pypdfium2 is available
             try:
                 import pypdfium2
                 pypdfium2_version = getattr(pypdfium2, '__version__', 'unknown')
-                print(f"📦 pypdfium2 backend: {pypdfium2_version}")
+                print(f"[*] pypdfium2 backend: {pypdfium2_version}")
             except ImportError:
-                print("⚠️  pypdfium2 not installed - PDF processing may be limited")
+                print("[!] pypdfium2 not installed - PDF processing may be limited")
         except Exception as e:
-            print(f"⚠️  Could not determine Docling version: {e}")
+            print(f"[!] Could not determine Docling version: {e}")
     
     def _init_docling_converter(self):
         """
@@ -86,7 +86,7 @@ class DocumentConverter:
 
         Uses the EXACT same initialization that worked in test_docling.py
         """
-        print("🔧 Initializing Docling 2.x converter...")
+        print("[*] Initializing Docling 2.x converter...")
 
         try:
             # Use the EXACT same code that worked in the test script
@@ -100,13 +100,13 @@ class DocumentConverter:
                 ]
             )
 
-            print("✅ Docling 2.x converter initialized successfully")
+            print("[+] Docling 2.x converter initialized successfully")
             print(f"   Using default OCR and table extraction settings")
 
             return converter
 
         except Exception as e:
-            print(f"❌ Failed to initialize Docling converter: {e}")
+            print(f"[-] Failed to initialize Docling converter: {e}")
             import traceback
             traceback.print_exc()
             raise
@@ -114,7 +114,7 @@ class DocumentConverter:
     def _get_ocr_enhancer(self):
         """Lazy initialization of OCR enhancer (only when needed)"""
         if self.ocr_enhancer is None and self.enable_ocr_enhancement:
-            print(f"🔍 Initializing OCR enhancer (strategy: {self.ocr_strategy})...")
+            print(f"[*] Initializing OCR enhancer (strategy: {self.ocr_strategy})...")
             self.ocr_enhancer = create_ocr_enhancer(
                 use_gpu=False,
                 strategy=self.ocr_strategy,
@@ -137,8 +137,8 @@ class DocumentConverter:
         timestamp = datetime.now().strftime(self.config.TIMESTAMP_FORMAT)
         output_path = self.config.get_output_path(input_path, timestamp)
         
-        print(f"\n📄 Converting: {input_path.name}")
-        print(f"   → {output_path.relative_to(self.config.MARKDOWN_OUTPUT_DIR)}")
+        print(f"\n[*] Converting: {input_path.name}")
+        print(f"   -> {output_path.relative_to(self.config.MARKDOWN_OUTPUT_DIR)}")
         
         start_time = time.time()
         
@@ -157,10 +157,22 @@ class DocumentConverter:
             if not safe_write_file(output_path, markdown_content):
                 raise IOError(f"Failed to write markdown file to {output_path}")
 
+            # Save JSON output for Hybrid Chunking (if enabled)
+            if self.config.SAVE_JSON_OUTPUT:
+                json_output_path = self.config.get_json_output_path(input_path, timestamp)
+                if json_output_path:
+                    try:
+                        # Save DoclingDocument as JSON
+                        result.document.save_as_json(str(json_output_path))
+                        print(f"   [+] JSON saved: {json_output_path.relative_to(self.config.JSON_OUTPUT_DIR)}")
+                    except Exception as json_error:
+                        print(f"   [!] Failed to save JSON: {json_error}")
+                        # Not critical - continue with conversion
+
             # OCR Enhancement: Replace <!-- image --> placeholders with OCR text
             if self.enable_ocr_enhancement and '<!-- image -->' in markdown_content:
                 try:
-                    print(f"   🔍 Image placeholders detected - running OCR enhancement...")
+                    print(f"   [*] Image placeholders detected - running OCR enhancement...")
                     enhancer = self._get_ocr_enhancer()
 
                     enhanced_content, ocr_stats = enhancer.enhance_markdown(
@@ -182,17 +194,17 @@ class DocumentConverter:
                         self.stats['gemini_used'] += ocr_stats.get('gemini_used', 0)
                         self.stats['fallback_triggered'] += ocr_stats.get('fallback_triggered', 0)
 
-                        print(f"   ✅ OCR Enhancement: {ocr_stats['placeholders_replaced']} placeholder(s) replaced")
-                        print(f"   📊 Added {ocr_stats['ocr_chars_added']:,} chars of OCR text")
+                        print(f"   [+] OCR Enhancement: {ocr_stats['placeholders_replaced']} placeholder(s) replaced")
+                        print(f"   [*] Added {ocr_stats['ocr_chars_added']:,} chars of OCR text")
 
                         # Show which engines were used
                         if ocr_stats.get('easyocr_used', 0) > 0:
-                            print(f"   🔤 EasyOCR: {ocr_stats['easyocr_used']} image(s)")
+                            print(f"   [*] EasyOCR: {ocr_stats['easyocr_used']} image(s)")
                         if ocr_stats.get('gemini_used', 0) > 0:
-                            print(f"   ✨ Gemini Vision: {ocr_stats['gemini_used']} image(s)")
+                            print(f"   [*] Gemini Vision: {ocr_stats['gemini_used']} image(s)")
 
                 except Exception as ocr_error:
-                    print(f"   ⚠️  OCR enhancement failed: {ocr_error}")
+                    print(f"   [!] OCR enhancement failed: {ocr_error}")
                     print(f"   Continuing with original Docling output...")
                     # Not critical - continue with original markdown
 
@@ -210,16 +222,16 @@ class DocumentConverter:
             self.metadata_extractor.save_metadata(input_path, metadata)
 
             # Success message
-            print(f"   ✅ Success ({conversion_time:.2f}s)")
-            print(f"   📊 Size: {len(markdown_content):,} chars")
+            print(f"   [+] Success ({conversion_time:.2f}s)")
+            print(f"   [*] Size: {len(markdown_content):,} chars")
 
             return True, output_path, None
-            
+
         except Exception as e:
             error_msg = str(e)
             conversion_time = time.time() - start_time
-            
-            print(f"   ❌ Failed ({conversion_time:.2f}s): {error_msg}")
+
+            print(f"   [-] Failed ({conversion_time:.2f}s): {error_msg}")
             
             # Print full traceback for debugging
             import traceback
