@@ -53,6 +53,14 @@ class Config:
         self.CHUNK_SIZE = int(os.getenv("CHUNK_SIZE", "512"))
         self.CHUNK_OVERLAP = int(os.getenv("CHUNK_OVERLAP", "128"))
         self.MIN_CHUNK_LENGTH = int(os.getenv("MIN_CHUNK_LENGTH", "50"))
+
+        # --- HYBRID CHUNKING SETTINGS (Docling HybridChunker) ---
+        self.USE_HYBRID_CHUNKING = os.getenv("USE_HYBRID_CHUNKING", "false").lower() == "true"
+        self.HYBRID_MAX_TOKENS = int(os.getenv("HYBRID_MAX_TOKENS", str(self.CHUNK_SIZE)))
+        self.HYBRID_MERGE_PEERS = os.getenv("HYBRID_MERGE_PEERS", "true").lower() == "true"
+        self.HYBRID_USE_CONTEXTUALIZE = os.getenv("HYBRID_USE_CONTEXTUALIZE", "false").lower() == "true"
+        self.HYBRID_TOKENIZER = os.getenv("HYBRID_TOKENIZER", "huggingface")
+        self.HYBRID_TOKENIZER_MODEL = os.getenv("HYBRID_TOKENIZER_MODEL", "sentence-transformers/all-MiniLM-L6-v2")
         
         # --- BATCH PROCESSING SETTINGS ---
         self.PROCESSING_BATCH_SIZE = int(os.getenv("PROCESSING_BATCH_SIZE", "50"))
@@ -176,7 +184,18 @@ class Config:
             'chunk_overlap': self.CHUNK_OVERLAP,
             'min_chunk_length': self.MIN_CHUNK_LENGTH
         }
-    
+
+    def get_hybrid_chunking_settings(self):
+        """Return hybrid chunking settings as a dictionary"""
+        return {
+            'enabled': self.USE_HYBRID_CHUNKING,
+            'max_tokens': self.HYBRID_MAX_TOKENS,
+            'merge_peers': self.HYBRID_MERGE_PEERS,
+            'use_contextualize': self.HYBRID_USE_CONTEXTUALIZE,
+            'tokenizer': self.HYBRID_TOKENIZER,
+            'tokenizer_model': self.HYBRID_TOKENIZER_MODEL,
+        }
+
     def get_embedding_settings(self):
         """Return Gemini embedding settings as a dictionary"""
         return {

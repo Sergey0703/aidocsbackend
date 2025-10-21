@@ -3,34 +3,80 @@
 """
 Chunk helpers module for RAG Document Indexer
 Contains helper functions for chunk creation, filtering, and processing
+UPDATED: Now supports both SentenceSplitter and Docling HybridChunker
 """
 
 import time
+import logging
 from .embedding_processor import create_node_processor
+
+logger = logging.getLogger(__name__)
 
 
 def create_and_filter_chunks_enhanced(documents, config, node_parser, progress_tracker):
     """
     Enhanced chunk creation and filtering with quality analysis
-    
+    UPDATED: Now supports both SentenceSplitter and HybridChunker
+
     Args:
         documents: List of documents
         config: Enhanced configuration object
-        node_parser: Node parser instance
+        node_parser: Node parser instance (SentenceSplitter)
         progress_tracker: Progress tracker instance
-    
+
     Returns:
         tuple: (valid_nodes, invalid_nodes, enhanced_node_stats)
     """
     print("\n🧩 Enhanced chunk creation and quality analysis...")
     chunk_start_time = time.time()
-    
+
+    # Check if hybrid chunking is enabled
+    hybrid_settings = config.get_hybrid_chunking_settings() if hasattr(config, 'get_hybrid_chunking_settings') else {'enabled': False}
+    use_hybrid = hybrid_settings.get('enabled', False)
+
     try:
-        # Create nodes with enhanced metadata
-        all_nodes = node_parser.get_nodes_from_documents(documents, show_progress=True)
+        if use_hybrid:
+            # Hybrid chunking path (Docling HybridChunker)
+            print("   Using Hybrid Chunking (Docling HybridChunker)")
+            logger.info("🧩 Using Hybrid Chunking (Docling HybridChunker)")
+
+            try:
+                from .hybrid_chunker import create_hybrid_chunker, is_hybrid_chunking_available
+
+                if not is_hybrid_chunking_available():
+                    print("   ❌ Hybrid chunking not available! Falling back to SentenceSplitter.")
+                    print("      Install with: pip install 'docling-core[chunking]' transformers")
+                    logger.error("❌ Hybrid chunking requested but not available! Falling back to SentenceSplitter.")
+                    use_hybrid = False
+                else:
+                    # Create hybrid chunker and chunk documents
+                    chunker = create_hybrid_chunker(config)
+                    all_nodes = chunker.chunk_documents(documents)
+                    print(f"   ✅ Hybrid chunking created {len(all_nodes)} chunks from {len(documents)} documents")
+                    logger.info(f"   ✅ Hybrid chunking created {len(all_nodes)} chunks from {len(documents)} documents")
+
+            except Exception as e:
+                print(f"   ❌ Hybrid chunking failed: {e}")
+                print("      Falling back to SentenceSplitter")
+                logger.error(f"❌ Hybrid chunking failed: {e}")
+                logger.error("   Falling back to SentenceSplitter")
+                use_hybrid = False
+
+        if not use_hybrid:
+            # Legacy path: SentenceSplitter
+            print("   Using Legacy Chunking (SentenceSplitter)")
+            logger.info("🧩 Using Legacy Chunking (SentenceSplitter)")
+
+            # Create nodes with enhanced metadata
+            all_nodes = node_parser.get_nodes_from_documents(documents, show_progress=True)
+            print(f"   ✅ SentenceSplitter created {len(all_nodes)} chunks from {len(documents)} documents")
+            logger.info(f"   ✅ SentenceSplitter created {len(all_nodes)} chunks from {len(documents)} documents")
+
         progress_tracker.add_checkpoint("Enhanced chunks created", len(all_nodes))
+
     except Exception as e:
         print(f"❌ Failed to parse documents into chunks: {e}")
+        logger.error(f"Failed to parse documents into chunks: {e}")
         raise
     
     chunk_time = time.time() - chunk_start_time
@@ -73,31 +119,35 @@ def create_and_filter_chunks_enhanced(documents, config, node_parser, progress_t
 def print_enhanced_chunk_statistics(node_stats, invalid_nodes):
     """
     Print comprehensive chunk statistics
-    
+
     Args:
         node_stats: Enhanced node statistics
         invalid_nodes: List of invalid nodes with reasons
     """
     print(f"\n📊 ENHANCED CHUNK STATISTICS:")
-    print(f"📝 Total chunks created: {node_stats['total_nodes_created']:,}")
-    print(f"✅ Valid chunks: {node_stats['valid_nodes']:,}")
-    print(f"❌ Invalid chunks filtered: {node_stats['invalid_nodes']:,}")
-    print(f"📈 Filter success rate: {node_stats['filter_success_rate']:.1f}%")
-    
-    print(f"\n🎯 Quality Metrics:")
-    print(f"   Average content length: {node_stats['avg_content_length']:.0f} characters")
-    print(f"   Length range: {node_stats['min_content_length']}-{node_stats['max_content_length']}")
-    print(f"   Average words per chunk: {node_stats['avg_word_count']:.1f}")
-    print(f"   Word count range: {node_stats['min_word_count']}-{node_stats['max_word_count']}")
-    
-    print(f"\n📁 File Distribution:")
-    print(f"   Unique files processed: {node_stats['unique_files']:,}")
-    print(f"   Average chunks per file: {node_stats['chunks_per_file']:.1f}")
-    
+    print(f"📝 Total chunks created: {node_stats.get('total_nodes_created', 0):,}")
+    print(f"✅ Valid chunks: {node_stats.get('valid_nodes', 0):,}")
+    print(f"❌ Invalid chunks filtered: {node_stats.get('invalid_nodes', 0):,}")
+    print(f"📈 Filter success rate: {node_stats.get('filter_success_rate', 0):.1f}%")
+
+    # Only print quality metrics if there are valid chunks
+    if node_stats.get('valid_nodes', 0) > 0:
+        print(f"\n🎯 Quality Metrics:")
+        print(f"   Average content length: {node_stats.get('avg_content_length', 0):.0f} characters")
+        print(f"   Length range: {node_stats.get('min_content_length', 0)}-{node_stats.get('max_content_length', 0)}")
+        print(f"   Average words per chunk: {node_stats.get('avg_word_count', 0):.1f}")
+        print(f"   Word count range: {node_stats.get('min_word_count', 0)}-{node_stats.get('max_word_count', 0)}")
+
+        print(f"\n📁 File Distribution:")
+        print(f"   Unique files processed: {node_stats.get('unique_files', 0):,}")
+        print(f"   Average chunks per file: {node_stats.get('chunks_per_file', 0):.1f}")
+    else:
+        print(f"\n⚠️ No valid chunks created - cannot compute quality metrics")
+
     print(f"\n⚡ Processing Performance:")
-    print(f"   Chunk creation time: {node_stats['chunk_creation_time']:.2f}s")
-    print(f"   Quality filtering time: {node_stats['filter_processing_time']:.2f}s")
-    print(f"   Total processing time: {node_stats['total_processing_time']:.2f}s")
+    print(f"   Chunk creation time: {node_stats.get('chunk_creation_time', 0):.2f}s")
+    print(f"   Quality filtering time: {node_stats.get('filter_processing_time', 0):.2f}s")
+    print(f"   Total processing time: {node_stats.get('total_processing_time', 0):.2f}s")
     
     # Show sample of invalid chunk reasons
     if invalid_nodes:

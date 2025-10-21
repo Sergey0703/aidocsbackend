@@ -20,6 +20,7 @@ __pycache__/
 *.pyc
 *.pyo
 *.pyd
+nul
 
 # Logs
 *.log

@@ -432,12 +432,12 @@ def main():
             chunk_report = create_chunk_processing_report(valid_nodes, invalid_nodes, enhanced_node_stats, config)
             save_chunk_processing_report(chunk_report, log_dir)
             
-            stats['chunks_created'] = enhanced_node_stats['total_nodes_created']
-            stats['valid_chunks'] = enhanced_node_stats['valid_nodes']
+            stats['chunks_created'] = enhanced_node_stats.get('total_nodes_created', 0)
+            stats['valid_chunks'] = enhanced_node_stats.get('valid_nodes', 0)
             stats['quality_analysis_results'] = {
-                'filter_success_rate': enhanced_node_stats['filter_success_rate'],
-                'invalid_chunks': enhanced_node_stats['invalid_nodes'],
-                'avg_content_length': enhanced_node_stats['avg_content_length']
+                'filter_success_rate': enhanced_node_stats.get('filter_success_rate', 0),
+                'invalid_chunks': enhanced_node_stats.get('invalid_nodes', 0),
+                'avg_content_length': enhanced_node_stats.get('avg_content_length', 0)
             }
             stats['processing_stages'].append('chunk_processing')
             

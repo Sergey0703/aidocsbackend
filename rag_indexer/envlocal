@@ -4,7 +4,7 @@
 # ============================================================================
 # DATABASE SETTINGS
 # ============================================================================
-SUPABASE_CONNECTION_STRING="postgresql://"
+SUPABASE_CONNECTION_STRING=""
 TABLE_NAME=documents
 
 # ============================================================================
@@ -24,9 +24,21 @@ EMBED_DIM=768                  # gemini supports 768, 1536, or 3072 dimensions
 # ============================================================================
 # TEXT CHUNKING SETTINGS
 # ============================================================================
-CHUNK_SIZE=512                 # Characters per chunk
-CHUNK_OVERLAP=128              # Overlap between chunks
+CHUNK_SIZE=512                 # Characters per chunk (for SentenceSplitter fallback)
+CHUNK_OVERLAP=128              # Overlap between chunks (for SentenceSplitter fallback)
 MIN_CHUNK_LENGTH=50            # Minimum chunk length to keep
+
+# ============================================================================
+# HYBRID CHUNKING SETTINGS (Docling HybridChunker)
+# ============================================================================
+USE_HYBRID_CHUNKING=false      # Enable Docling HybridChunker (structure-aware chunking) - REQUIRES JSON from Docling conversion
+HYBRID_MAX_TOKENS=512          # Max tokens per chunk (matching CHUNK_SIZE for consistency)
+HYBRID_MERGE_PEERS=true        # Merge sibling paragraphs in same section
+HYBRID_USE_CONTEXTUALIZE=false # Add heading hierarchy to chunk content (can enable later)
+
+# Tokenizer settings for HybridChunker
+HYBRID_TOKENIZER=huggingface   # Options: huggingface, openai
+HYBRID_TOKENIZER_MODEL=sentence-transformers/all-MiniLM-L6-v2  # HuggingFace tokenizer model (free, offline after first download)
 
 # ============================================================================
 # BATCH PROCESSING SETTINGS
