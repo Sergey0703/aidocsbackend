@@ -4,7 +4,7 @@
 Simplified Configuration module for RAG Document Indexer (Part 2: Chunking & Vectors Only)
 Handles environment variables, validation, and default settings
 SIMPLIFIED: Removed all document conversion, OCR, and PDF processing settings
-PURPOSE: This module now only handles markdown input → chunking → embeddings → vector storage
+PURPOSE: This module now only handles markdown input -> chunking -> embeddings -> vector storage
 """
 
 import os
@@ -99,13 +99,13 @@ class Config:
         # Это делает приложение более устойчивым к первому запуску.
         docs_path = Path(self.DOCUMENTS_DIR)
         if not docs_path.exists():
-            print(f"⚠️ WARNING: Documents directory does not exist: {self.DOCUMENTS_DIR}")
+            print(f"[!] WARNING: Documents directory does not exist: {self.DOCUMENTS_DIR}")
             print(f"   Creating directory...")
             docs_path.mkdir(parents=True, exist_ok=True)
             
         logs_path = Path(self.ERROR_LOG_FILE).parent
         if not logs_path.exists():
-            print(f"⚠️ WARNING: Logs directory does not exist: {logs_path}")
+            print(f"[!] WARNING: Logs directory does not exist: {logs_path}")
             print(f"   Creating directory...")
             logs_path.mkdir(parents=True, exist_ok=True)
         # --- END ИСПРАВЛЕНИЕ ---
@@ -263,21 +263,21 @@ def print_feature_status():
     ]
     
     for feature_name, enabled in features:
-        status = "✓ ENABLED" if enabled else "✗ DISABLED"
+        status = "[+] ENABLED" if enabled else "[-] DISABLED"
         print(f"  {feature_name:<35}: {status}")
     
-    print(f"\n🔧 Directory Settings:")
+    print(f"\n[*] Directory Settings:")
     print(f"  Markdown input directory: {config.DOCUMENTS_DIR}")
     print(f"  Blacklisted directories: {', '.join(config.BLACKLIST_DIRECTORIES)}")
     
-    print(f"\n📊 Gemini API Settings:")
+    print(f"\n[*] Gemini API Settings:")
     print(f"  Model: {config.EMBED_MODEL}")
     print(f"  Embedding dimension: {config.EMBED_DIM}")
     print(f"  Rate limit: {config.GEMINI_REQUEST_RATE_LIMIT} requests/sec")
     print(f"  Retry attempts: {config.GEMINI_RETRY_ATTEMPTS}")
     print(f"  Timeout: {config.GEMINI_TIMEOUT}s")
     
-    print(f"\n📝 Processing Settings:")
+    print(f"\n[*] Processing Settings:")
     print(f"  Chunk size: {config.CHUNK_SIZE}")
     print(f"  Chunk overlap: {config.CHUNK_OVERLAP}")
     print(f"  Min chunk length: {config.MIN_CHUNK_LENGTH}")
@@ -332,29 +332,29 @@ def print_gemini_environment_status():
     validation = validate_gemini_environment()
     
     print("\n" + "=" * 60)
-    print("🚀 GEMINI API ENVIRONMENT STATUS")
+    print("[*] GEMINI API ENVIRONMENT STATUS")
     print("=" * 60)
-    
+
     if validation['ready']:
-        print("✅ Gemini API environment is READY")
+        print("[+] Gemini API environment is READY")
     else:
-        print("❌ Gemini API environment has ISSUES")
-    
+        print("[-] Gemini API environment has ISSUES")
+
     if validation['configuration_issues']:
-        print("\n⚠️ Configuration Issues:")
+        print("\n[!] Configuration Issues:")
         for issue in validation['configuration_issues']:
-            print(f"  ❌ {issue}")
-    
+            print(f"  [-] {issue}")
+
     if validation['warnings']:
-        print("\n⚠️ Warnings:")
+        print("\n[!] Warnings:")
         for warning in validation['warnings']:
-            print(f"  ⚠️ {warning}")
-    
+            print(f"  [!] {warning}")
+
     if validation['ready']:
-        print("\n✅ Gemini API key is configured")
-        print("✅ Configuration is valid")
+        print("\n[+] Gemini API key is configured")
+        print("[+] Configuration is valid")
         if validation['warnings']:
-            print("⚠️ Some warnings present but processing will work")
+            print("[!] Some warnings present but processing will work")
     
     print("=" * 60)
 
@@ -403,7 +403,7 @@ def print_gemini_env_recommendations():
     recommended = get_recommended_gemini_env_vars()
     
     print("\n" + "=" * 60)
-    print("🔧 RECOMMENDED GEMINI API .ENV SETTINGS")
+    print("[*] RECOMMENDED GEMINI API .ENV SETTINGS")
     print("=" * 60)
     print("Add these to your .env file for optimal Gemini API processing:")
     print()
@@ -446,20 +446,20 @@ def print_gemini_env_recommendations():
         print()
     
     print("=" * 60)
-    print("💡 Tip: Copy these settings to your .env file and restart the application")
-    print("🔑 Important: Replace 'your_gemini_api_key_here' with your actual Gemini API key")
-    print("📁 Note: DOCUMENTS_DIR should point to markdown files output from Docling (Part 1)")
+    print("[*] Tip: Copy these settings to your .env file and restart the application")
+    print("[*] Important: Replace 'your_gemini_api_key_here' with your actual Gemini API key")
+    print("[*] Note: DOCUMENTS_DIR should point to markdown files output from Docling (Part 1)")
     print("=" * 60)
 
 
 if __name__ == "__main__":
     # Test configuration when run directly
-    print("🚀 Simplified RAG Indexer Configuration Test (Gemini API)")
+    print("[*] Simplified RAG Indexer Configuration Test (Gemini API)")
     print("=" * 60)
     
     try:
         config = get_config()
-        print("✅ Configuration loaded successfully")
+        print("[+] Configuration loaded successfully")
         config.print_config()
         
         # Print feature status
@@ -472,5 +472,5 @@ if __name__ == "__main__":
         print_gemini_env_recommendations()
         
     except Exception as e:
-        print(f"❌ Configuration error: {e}")
+        print(f"[-] Configuration error: {e}")
         print("Check your .env file and fix any issues")

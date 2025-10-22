@@ -157,19 +157,8 @@ class DocumentConverter:
             if not safe_write_file(output_path, markdown_content):
                 raise IOError(f"Failed to write markdown file to {output_path}")
 
-            # Save JSON output for Hybrid Chunking (if enabled)
-            if self.config.SAVE_JSON_OUTPUT:
-                json_output_path = self.config.get_json_output_path(input_path, timestamp)
-                if json_output_path:
-                    try:
-                        # Save DoclingDocument as JSON
-                        result.document.save_as_json(str(json_output_path))
-                        print(f"   [+] JSON saved: {json_output_path.relative_to(self.config.JSON_OUTPUT_DIR)}")
-                    except Exception as json_error:
-                        print(f"   [!] Failed to save JSON: {json_error}")
-                        # Not critical - continue with conversion
-
             # OCR Enhancement: Replace <!-- image --> placeholders with OCR text
+            # NOTE: Do OCR BEFORE saving JSON so JSON includes OCR text
             if self.enable_ocr_enhancement and '<!-- image -->' in markdown_content:
                 try:
                     print(f"   [*] Image placeholders detected - running OCR enhancement...")
@@ -207,6 +196,19 @@ class DocumentConverter:
                     print(f"   [!] OCR enhancement failed: {ocr_error}")
                     print(f"   Continuing with original Docling output...")
                     # Not critical - continue with original markdown
+
+            # Save JSON output for Hybrid Chunking (if enabled)
+            # NOTE: Saved AFTER OCR so JSON contains full content
+            if self.config.SAVE_JSON_OUTPUT:
+                json_output_path = self.config.get_json_output_path(input_path, timestamp)
+                if json_output_path:
+                    try:
+                        # Save DoclingDocument as JSON
+                        result.document.save_as_json(str(json_output_path))
+                        print(f"   [+] JSON saved: {json_output_path.relative_to(self.config.JSON_OUTPUT_DIR)}")
+                    except Exception as json_error:
+                        print(f"   [!] Failed to save JSON: {json_error}")
+                        # Not critical - continue with conversion
 
             # Calculate conversion time
             conversion_time = time.time() - start_time

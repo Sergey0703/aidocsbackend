@@ -375,14 +375,14 @@ if __name__ == "__main__":
     
     try:
         manager = RegistryManager(test_connection_string)
-        print("✅ RegistryManager initialized successfully")
+        print("[+] RegistryManager initialized successfully")
         
         # Test registry entry creation
         test_file = "/path/to/test.pdf"
         test_metadata = {"test": "data"}
         
         registry_id = manager.get_or_create_registry_entry(test_file, test_metadata)
-        print(f"✅ Created/retrieved registry entry: {registry_id}")
+        print(f"[+] Created/retrieved registry entry: {registry_id}")
         
     except Exception as e:
-        print(f"❌ Test failed: {e}")
+        print(f"[-] Test failed: {e}")

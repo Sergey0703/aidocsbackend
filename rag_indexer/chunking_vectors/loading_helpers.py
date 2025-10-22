@@ -22,14 +22,14 @@ def load_markdown_documents(config, progress_tracker):
     Returns:
         tuple: (documents, loading_stats)
     """
-    print(f"📁 Loading markdown documents from: {config.DOCUMENTS_DIR}")
+    print(f"[*] Loading markdown documents from: {config.DOCUMENTS_DIR}")
     progress_tracker.add_checkpoint("Markdown loading started")
     
     # Print configuration summary
-    print("\n📊 Loading Configuration:")
-    print(f"   📂 Input directory: {config.DOCUMENTS_DIR}")
-    print(f"   🚫 Blacklisted directories: {', '.join(config.BLACKLIST_DIRECTORIES)}")
-    print(f"   📝 Expected input: Markdown files from Docling (Part 1)")
+    print("\n[*] Loading Configuration:")
+    print(f"   [*] Input directory: {config.DOCUMENTS_DIR}")
+    print(f"   [*] Blacklisted directories: {', '.join(config.BLACKLIST_DIRECTORIES)}")
+    print(f"   [*] Expected input: Markdown files from Docling (Part 1)")
     
     # Import markdown loader
     from .markdown_loader import create_markdown_loader
@@ -43,7 +43,7 @@ def load_markdown_documents(config, progress_tracker):
     )
     
     # Load markdown documents
-    print("🔄 Loading markdown files...")
+    print("[*] Loading markdown files...")
     documents, loading_stats = loader.load_data()
     
     progress_tracker.add_checkpoint("Markdown documents loaded", len(documents))
@@ -75,32 +75,32 @@ def print_loading_summary(documents, processing_summary, loading_time):
     """
     loading_stats = processing_summary.get('loading_stats', {})
     
-    print(f"\n📊 MARKDOWN LOADING RESULTS:")
-    print(f"⏱️ Loading time: {loading_time:.2f}s ({loading_time/60:.1f}m)")
-    print(f"📄 Total documents loaded: {len(documents)}")
+    print(f"\n[*] MARKDOWN LOADING RESULTS:")
+    print(f"[*] Loading time: {loading_time:.2f}s ({loading_time/60:.1f}m)")
+    print(f"[*] Total documents loaded: {len(documents)}")
     
     if loading_stats:
-        print(f"📁 Directories scanned: {loading_stats.get('directories_scanned', 0)}")
+        print(f"[*] Directories scanned: {loading_stats.get('directories_scanned', 0)}")
         
         if loading_stats.get('directories_skipped', 0) > 0:
-            print(f"🚫 Directories skipped: {loading_stats.get('directories_skipped', 0)}")
+            print(f"[*] Directories skipped: {loading_stats.get('directories_skipped', 0)}")
         
-        print(f"📄 Markdown files found: {loading_stats.get('markdown_files', 0)}")
-        print(f"✅ Successfully loaded: {loading_stats.get('documents_created', 0)}")
-        print(f"❌ Failed to load: {loading_stats.get('failed_files', 0)}")
+        print(f"[*] Markdown files found: {loading_stats.get('markdown_files', 0)}")
+        print(f"[+] Successfully loaded: {loading_stats.get('documents_created', 0)}")
+        print(f"[-] Failed to load: {loading_stats.get('failed_files', 0)}")
         
         if loading_stats.get('total_characters', 0) > 0:
             total_chars = loading_stats['total_characters']
-            print(f"📝 Total characters: {total_chars:,}")
+            print(f"[*] Total characters: {total_chars:,}")
             
             if len(documents) > 0:
                 avg_chars = total_chars / len(documents)
-                print(f"📊 Average characters per document: {avg_chars:.0f}")
+                print(f"[*] Average characters per document: {avg_chars:.0f}")
         
         # Show failed files if any
         if loading_stats.get('failed_files', 0) > 0:
             failed_list = loading_stats.get('failed_files_list', [])
-            print(f"\n⚠️ Failed Files:")
+            print(f"\n[!] Failed Files:")
             for i, failed_file in enumerate(failed_list[:5], 1):
                 print(f"   {i}. {failed_file}")
             
@@ -109,11 +109,11 @@ def print_loading_summary(documents, processing_summary, loading_time):
     
     # Blacklist information
     if processing_summary.get('blacklist_applied', False):
-        print(f"\n🚫 Blacklist Filtering Applied:")
+        print(f"\n[*] Blacklist Filtering Applied:")
         blacklist_dirs = processing_summary.get('blacklisted_directories', [])
         print(f"   Excluded directories: {', '.join(blacklist_dirs)}")
     
-    print(f"\n✅ Ready for chunking and embedding generation")
+    print(f"\n[+] Ready for chunking and embedding generation")
 
 
 def validate_documents_for_processing(documents, config):
@@ -130,7 +130,7 @@ def validate_documents_for_processing(documents, config):
     documents_with_content = []
     documents_without_content = []
     
-    print("\n🔍 Validating documents for processing...")
+    print("\n[*] Validating documents for processing...")
     
     min_length = config.MIN_CHUNK_LENGTH if config else 50
     
@@ -161,17 +161,17 @@ def print_document_validation_summary(documents_with_content, documents_without_
     """
     total_documents = len(documents_with_content) + len(documents_without_content)
     
-    print(f"\n📋 Document Validation Results:")
-    print(f"   📄 Total documents: {total_documents}")
-    print(f"   ✅ Valid documents: {len(documents_with_content)}")
-    print(f"   ❌ Invalid documents: {len(documents_without_content)}")
+    print(f"\n[*] Document Validation Results:")
+    print(f"   [*] Total documents: {total_documents}")
+    print(f"   [+] Valid documents: {len(documents_with_content)}")
+    print(f"   [-] Invalid documents: {len(documents_without_content)}")
     
     if total_documents > 0:
         validation_rate = (len(documents_with_content) / total_documents) * 100
-        print(f"   📈 Validation success rate: {validation_rate:.1f}%")
+        print(f"   [*] Validation success rate: {validation_rate:.1f}%")
     
     if documents_without_content:
-        print(f"\n⚠️ Invalid Documents:")
+        print(f"\n[!] Invalid Documents:")
         
         # Categorize by reason
         reasons = {}
@@ -191,15 +191,15 @@ def print_document_validation_summary(documents_with_content, documents_without_
         if len(documents_without_content) > 5:
             print(f"      ... and {len(documents_without_content) - 5} more")
         
-        print(f"\n💡 Suggestions:")
+        print(f"\n[*] Suggestions:")
         print(f"   - Check markdown files have readable content")
         print(f"   - Verify Docling (Part 1) processed files correctly")
         print(f"   - Consider adjusting MIN_CHUNK_LENGTH setting")
     
     if len(documents_with_content) > 0:
-        print(f"\n✅ Proceeding with {len(documents_with_content)} valid documents")
+        print(f"\n[+] Proceeding with {len(documents_with_content)} valid documents")
     else:
-        print(f"\n❌ No valid documents found for processing")
+        print(f"\n[-] No valid documents found for processing")
 
 
 def check_processing_requirements(config):
@@ -215,29 +215,29 @@ def check_processing_requirements(config):
     missing_requirements = []
     warnings = []
     
-    print("\n🔍 Checking Processing Requirements:")
+    print("\n[*] Checking Processing Requirements:")
     
     # Check database connection
     if not config.CONNECTION_STRING:
         missing_requirements.append("Database connection string")
-        print(f"   💾 Database: ❌ Connection string missing")
+        print(f"   [*] Database: [-] Connection string missing")
     else:
-        print(f"   💾 Database: ✅ Connection string configured")
+        print(f"   [*] Database: [+] Connection string configured")
     
     # Check Gemini API key
     if not config.GEMINI_API_KEY:
         missing_requirements.append("Gemini API key")
-        print(f"   🚀 Gemini API: ❌ API key missing")
+        print(f"   [*] Gemini API: [-] API key missing")
     else:
-        print(f"   🚀 Gemini API: ✅ API key configured")
+        print(f"   [*] Gemini API: [+] API key configured")
     
     # Check documents directory
     if not config.DOCUMENTS_DIR:
         missing_requirements.append("Documents directory path")
-        print(f"   📂 Documents Dir: ❌ Path not configured")
+        print(f"   [*] Documents Dir: [-] Path not configured")
     elif not os.path.exists(config.DOCUMENTS_DIR):
         missing_requirements.append(f"Documents directory does not exist: {config.DOCUMENTS_DIR}")
-        print(f"   📂 Documents Dir: ❌ Does not exist: {config.DOCUMENTS_DIR}")
+        print(f"   [*] Documents Dir: [-] Does not exist: {config.DOCUMENTS_DIR}")
     else:
         # Check for markdown files
         from .markdown_loader import scan_markdown_files
@@ -253,28 +253,28 @@ def check_processing_requirements(config):
         
         if actual_count == 0:
             warnings.append(f"No markdown files found in {config.DOCUMENTS_DIR}")
-            print(f"   📂 Documents Dir: ⚠️ No markdown files found")
+            print(f"   [*] Documents Dir: [!] No markdown files found")
         else:
-            print(f"   📂 Documents Dir: ✅ {actual_count} markdown files found")
+            print(f"   [*] Documents Dir: [+] {actual_count} markdown files found")
     
     # Check blacklist configuration
     if config.BLACKLIST_DIRECTORIES:
-        print(f"   🚫 Blacklist: ✅ {len(config.BLACKLIST_DIRECTORIES)} directories excluded")
+        print(f"   [*] Blacklist: [+] {len(config.BLACKLIST_DIRECTORIES)} directories excluded")
     else:
         warnings.append("No directories blacklisted - temp/log directories may be processed")
-        print(f"   🚫 Blacklist: ⚠️ No directories excluded")
+        print(f"   [*] Blacklist: [!] No directories excluded")
     
     # Print summary
     all_good = len(missing_requirements) == 0
     
     if all_good:
-        print(f"\n✅ All processing requirements met!")
+        print(f"\n[+] All processing requirements met!")
         if warnings:
-            print(f"⚠️ Warnings: {len(warnings)}")
+            print(f"[!] Warnings: {len(warnings)}")
             for warning in warnings:
                 print(f"   - {warning}")
     else:
-        print(f"\n❌ Missing requirements: {len(missing_requirements)}")
+        print(f"\n[-] Missing requirements: {len(missing_requirements)}")
         for requirement in missing_requirements:
             print(f"   - {requirement}")
         print(f"\nPlease fix missing requirements before proceeding.")
@@ -402,7 +402,7 @@ def print_loading_recommendations(recommendations):
     if not recommendations:
         return
     
-    print(f"\n💡 LOADING RECOMMENDATIONS:")
+    print(f"\n[*] LOADING RECOMMENDATIONS:")
     for i, rec in enumerate(recommendations, 1):
         print(f"   {i}. {rec}")
 

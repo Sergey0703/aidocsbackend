@@ -49,14 +49,14 @@ def create_and_filter_chunks_enhanced(documents, node_parser, config, stats):
     use_hybrid = hybrid_settings.get('enabled', False)
 
     if use_hybrid:
-        logger.info("🧩 Using Hybrid Chunking (Docling HybridChunker)")
+        logger.info("[*] Using Hybrid Chunking (Docling HybridChunker)")
         processing_report['chunking_method'] = 'hybrid_docling'
 
         try:
             from chunking_vectors.hybrid_chunker import create_hybrid_chunker, is_hybrid_chunking_available
 
             if not is_hybrid_chunking_available():
-                logger.error("❌ Hybrid chunking requested but not available! Falling back to SentenceSplitter.")
+                logger.error("[-] Hybrid chunking requested but not available! Falling back to SentenceSplitter.")
                 logger.error("   Install with: pip install 'docling-core[chunking]' transformers")
                 use_hybrid = False
                 processing_report['chunking_method'] = 'sentence_splitter_fallback'
@@ -65,10 +65,10 @@ def create_and_filter_chunks_enhanced(documents, node_parser, config, stats):
                 chunker = create_hybrid_chunker(config)
                 all_nodes = chunker.chunk_documents(documents)
 
-                logger.info(f"   ✅ Hybrid chunking created {len(all_nodes)} chunks from {len(documents)} documents")
+                logger.info(f"   [+] Hybrid chunking created {len(all_nodes)} chunks from {len(documents)} documents")
 
         except Exception as e:
-            logger.error(f"❌ Hybrid chunking failed: {e}")
+            logger.error(f"[-] Hybrid chunking failed: {e}")
             logger.error("   Falling back to SentenceSplitter")
             use_hybrid = False
             processing_report['chunking_method'] = 'sentence_splitter_fallback'
@@ -77,7 +77,7 @@ def create_and_filter_chunks_enhanced(documents, node_parser, config, stats):
 
     if not use_hybrid:
         # Legacy path: SentenceSplitter
-        logger.info("🧩 Using Legacy Chunking (SentenceSplitter)")
+        logger.info("[*] Using Legacy Chunking (SentenceSplitter)")
         processing_report['chunking_method'] = 'sentence_splitter'
 
         if node_parser is None:
@@ -92,7 +92,7 @@ def create_and_filter_chunks_enhanced(documents, node_parser, config, stats):
                 logger.error(f"Failed to chunk document {doc.metadata.get('file_name', 'unknown')}: {e}")
                 continue
 
-        logger.info(f"   ✅ SentenceSplitter created {len(all_nodes)} chunks from {len(documents)} documents")
+        logger.info(f"   [+] SentenceSplitter created {len(all_nodes)} chunks from {len(documents)} documents")
 
     # Update report
     processing_report['total_chunks'] = len(all_nodes)
@@ -164,7 +164,7 @@ def create_and_filter_chunks_enhanced(documents, node_parser, config, stats):
     stats['filtered_chunks'] = filtered_count
 
     # Print summary
-    logger.info(f"✅ Chunking complete:")
+    logger.info(f"[+] Chunking complete:")
     logger.info(f"   Method: {processing_report['chunking_method']}")
     logger.info(f"   Total chunks: {len(all_nodes)}")
     logger.info(f"   Valid chunks: {len(valid_nodes)}")
@@ -262,7 +262,7 @@ def save_chunk_processing_report(report, output_dir):
         with open(output_path, 'w', encoding='utf-8') as f:
             json.dump(report, f, indent=2, ensure_ascii=False)
 
-        logger.info(f"📄 Chunk processing report saved: {output_path}")
+        logger.info(f"[*] Chunk processing report saved: {output_path}")
         return str(output_path)
 
     except Exception as e:
@@ -274,7 +274,7 @@ def save_chunk_processing_report(report, output_dir):
 def print_chunk_processing_summary(processing_report):
     """Print chunk processing summary to console"""
     print("\n" + "=" * 60)
-    print("📊 CHUNK PROCESSING SUMMARY")
+    print("[*] CHUNK PROCESSING SUMMARY")
     print("=" * 60)
     print(f"Chunking method: {processing_report['chunking_method']}")
     print(f"Total documents: {processing_report['total_documents']}")
@@ -304,7 +304,7 @@ def print_chunk_processing_summary(processing_report):
 
 
 if __name__ == "__main__":
-    print("✅ chunk_helpers_hybrid.py - Hybrid Chunking Support Module")
+    print("[+] chunk_helpers_hybrid.py - Hybrid Chunking Support Module")
     print("This module provides updated functions for chunk_helpers.py")
     print("\nTo integrate:")
     print("1. Copy functions to existing chunk_helpers.py")

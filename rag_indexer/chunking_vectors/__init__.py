@@ -1,6 +1,6 @@
 """
 Part 2: Chunking & Vectors Module
-Loads markdown → chunks → embeddings → vector storage
+Loads markdown -> chunks -> embeddings -> vector storage
 """
 
 __version__ = "2.0.0"

@@ -205,7 +205,7 @@ class MarkdownLoader:
                 self.loading_stats['registry_failures'] += 1
                 return document
             
-            # 🔧 FIXED: Call with correct parameters (only file_path)
+            # [*] FIXED: Call with correct parameters (only file_path)
             # Get or create registry entry using ONLY the markdown file path
             registry_id = registry_manager.get_or_create_registry_entry(
                 file_path=file_path
@@ -215,9 +215,9 @@ class MarkdownLoader:
                 # Add registry_id to metadata
                 document.metadata['registry_id'] = registry_id
                 self.loading_stats['registry_enrichments'] += 1
-                logger.debug(f"✅ Added registry_id {registry_id} to {document.metadata.get('file_name')}")
+                logger.debug(f"[+] Added registry_id {registry_id} to {document.metadata.get('file_name')}")
             else:
-                logger.error(f"❌ Failed to get registry_id for {file_path}")
+                logger.error(f"[-] Failed to get registry_id for {file_path}")
                 self.loading_stats['registry_failures'] += 1
             
             return document
@@ -240,24 +240,24 @@ class MarkdownLoader:
             Tuple of (documents, loading_stats)
         """
         start_time = time.time()
-        logger.info(f"📁 Starting markdown load from: {self.input_dir}")
+        logger.info(f"[*] Starting markdown load from: {self.input_dir}")
         
         if self.blacklist_directories:
-            logger.info(f"🚫 Blacklisted directories: {', '.join(self.blacklist_directories)}")
+            logger.info(f"[*] Blacklisted directories: {', '.join(self.blacklist_directories)}")
         
         if registry_manager:
-            logger.info("🔗 Registry enrichment: ENABLED")
+            logger.info("[*] Registry enrichment: ENABLED")
         else:
-            logger.warning("⚠️ Registry enrichment: DISABLED (registry_id will be NULL)")
+            logger.warning("[!] Registry enrichment: DISABLED (registry_id will be NULL)")
 
         markdown_files = self._scan_markdown_files()
         
         if not markdown_files:
-            logger.warning("⚠️ No markdown files found to load.")
+            logger.warning("[!] No markdown files found to load.")
             self.loading_stats['loading_time'] = time.time() - start_time
             return [], self.loading_stats
 
-        logger.info(f"📄 Found {len(markdown_files)} markdown files. Loading content...")
+        logger.info(f"[*] Found {len(markdown_files)} markdown files. Loading content...")
         
         documents = []
         for file_path in markdown_files:
@@ -279,7 +279,7 @@ class MarkdownLoader:
                 if registry_manager:
                     document = self._enrich_with_registry_id(document, registry_manager)
                 else:
-                    logger.warning(f"⚠️ Document {document.metadata.get('file_name')} will NOT have registry_id")
+                    logger.warning(f"[!] Document {document.metadata.get('file_name')} will NOT have registry_id")
                 
                 documents.append(document)
                 self.loading_stats['documents_created'] += 1
@@ -301,20 +301,20 @@ class MarkdownLoader:
         stats = self.loading_stats
         summary = [
             "="*50,
-            "📊 MARKDOWN LOADING SUMMARY",
+            "[*] MARKDOWN LOADING SUMMARY",
             "="*50,
-            f"⏱️ Loading time: {stats['loading_time']:.2f}s",
-            f"📄 Markdown files found: {stats['markdown_files_found']}",
-            f"✅ Documents created: {stats['documents_created']}",
-            f"❌ Failed to load: {stats['failed_files']}",
-            f"📝 Total characters loaded: {stats['total_characters']:,}",
-            f"📋 Metadata files loaded: {stats['metadata_files_loaded']}",
-            f"❓ Metadata files missing: {stats['metadata_files_missing']}",
-            f"🔗 Registry enrichments: {stats['registry_enrichments']}",
+            f"[*] Loading time: {stats['loading_time']:.2f}s",
+            f"[*] Markdown files found: {stats['markdown_files_found']}",
+            f"[+] Documents created: {stats['documents_created']}",
+            f"[-] Failed to load: {stats['failed_files']}",
+            f"[*] Total characters loaded: {stats['total_characters']:,}",
+            f"[*] Metadata files loaded: {stats['metadata_files_loaded']}",
+            f"[?] Metadata files missing: {stats['metadata_files_missing']}",
+            f"[*] Registry enrichments: {stats['registry_enrichments']}",
         ]
         
         if stats['registry_failures'] > 0:
-            summary.append(f"⚠️ Registry failures: {stats['registry_failures']}")
+            summary.append(f"[!] Registry failures: {stats['registry_failures']}")
         
         for line in summary:
             logger.info(line)
@@ -329,7 +329,7 @@ class MarkdownLoader:
         # Warning if no registry enrichments
         if stats['documents_created'] > 0 and stats['registry_enrichments'] == 0:
             logger.warning("="*50)
-            logger.warning("⚠️ WARNING: NO REGISTRY ENRICHMENTS!")
+            logger.warning("[!] WARNING: NO REGISTRY ENRICHMENTS!")
             logger.warning("Documents will be created WITHOUT registry_id")
             logger.warning("This will cause database constraint violations!")
             logger.warning("Make sure to pass registry_manager to load_data()")
@@ -413,15 +413,15 @@ def print_markdown_scan_summary(scan_results: Dict[str, Any]):
     Print a summary of a markdown file scan.
     """
     if 'error' in scan_results:
-        print(f"❌ Scan error: {scan_results['error']}")
+        print(f"[-] Scan error: {scan_results['error']}")
         return
     
-    print("\n📊 MARKDOWN FILES SCAN SUMMARY:")
-    print(f"   📄 Total markdown files: {scan_results.get('total_markdown_files', 0)}")
+    print("\n[*] MARKDOWN FILES SCAN SUMMARY:")
+    print(f"   [*] Total markdown files: {scan_results.get('total_markdown_files', 0)}")
     
     if scan_results.get('total_markdown_files', 0) > 0:
-        print(f"   💾 Total size: {scan_results.get('total_size_mb', 0):.2f} MB")
-        print(f"   📊 Average file size: {scan_results.get('average_size_bytes', 0) / 1024:.1f} KB")
+        print(f"   [*] Total size: {scan_results.get('total_size_mb', 0):.2f} MB")
+        print(f"   [*] Average file size: {scan_results.get('average_size_bytes', 0) / 1024:.1f} KB")
         
         files_list = scan_results.get('files', [])
         print("\n   Files (first 10):")
@@ -434,7 +434,7 @@ def print_markdown_scan_summary(scan_results: Dict[str, Any]):
 
 if __name__ == "__main__":
     # Test markdown loader when run directly
-    print("📁 Markdown Loader Test (with JSON metadata and registry_id enrichment)")
+    print("[*] Markdown Loader Test (with JSON metadata and registry_id enrichment)")
     print("=" * 60)
     
     # Configure basic logging for standalone test
@@ -460,7 +460,7 @@ if __name__ == "__main__":
             loader = create_markdown_loader(test_dir, config=MockConfig())
             
             # Load WITHOUT registry manager for basic test
-            print("\n⚠️ Loading without registry_manager (registry_id will be NULL)")
+            print("\n[!] Loading without registry_manager (registry_id will be NULL)")
             docs, stats = loader.load_data(registry_manager=None)
             
             if docs:
@@ -471,11 +471,11 @@ if __name__ == "__main__":
                 
                 # Check for registry_id
                 if 'registry_id' in first_doc_meta:
-                    print("\n✅ SUCCESS: 'registry_id' found in metadata!")
+                    print("\n[+] SUCCESS: 'registry_id' found in metadata!")
                 else:
-                    print("\n⚠️ WARNING: 'registry_id' is MISSING (expected when no registry_manager provided)")
+                    print("\n[!] WARNING: 'registry_id' is MISSING (expected when no registry_manager provided)")
         except Exception as e:
-            print(f"\n❌ An error occurred during the full loader test: {e}")
+            print(f"\n[-] An error occurred during the full loader test: {e}")
             import traceback
             traceback.print_exc()
 

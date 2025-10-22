@@ -180,7 +180,7 @@ def should_skip_directory(directory_path, blacklist_directories=None, verbose=Fa
     # Check blacklist
     if blacklist_directories and is_blacklisted_directory(directory_path, blacklist_directories):
         if verbose:
-            print(f"   🚫 Skipping blacklisted directory: {path_obj.name}")
+            print(f"   [*] Skipping blacklisted directory: {path_obj.name}")
         return True, f"Directory '{path_obj.name}' is blacklisted"
     
     return False, None
@@ -204,9 +204,9 @@ def scan_files_in_directory(directory, recursive=True, blacklist_directories=Non
 
     try:
         if verbose:
-            print(f"📂 Scanning directory: {directory}")
+            print(f"[*] Scanning directory: {directory}")
             if blacklist_directories:
-                print(f"🚫 Blacklisted directories: {', '.join(blacklist_directories)}")
+                print(f"[*] Blacklisted directories: {', '.join(blacklist_directories)}")
 
         if recursive:
             # Use os.walk for better control over directory traversal
@@ -227,7 +227,7 @@ def scan_files_in_directory(directory, recursive=True, blacklist_directories=Non
 
                 # Add ONLY .md files from current directory
                 for file_name in files:
-                    # 🔧 FIXED: Filter only .md files
+                    # [*] FIXED: Filter only .md files
                     if file_name.lower().endswith('.md'):
                         file_path = os.path.join(root, file_name)
                         file_list.append(file_path)
@@ -235,22 +235,22 @@ def scan_files_in_directory(directory, recursive=True, blacklist_directories=Non
             # Non-recursive scan
             directory_path = Path(directory)
             for item in directory_path.iterdir():
-                # 🔧 FIXED: Filter only .md files
+                # [*] FIXED: Filter only .md files
                 if item.is_file() and item.suffix.lower() == '.md':
                     file_list.append(str(item))
         
         if verbose and skipped_dirs:
-            print(f"🚫 Skipped {len(skipped_dirs)} blacklisted directories:")
+            print(f"[*] Skipped {len(skipped_dirs)} blacklisted directories:")
             for skipped_dir, reason in skipped_dirs[:5]:  # Show first 5
                 print(f"   - {Path(skipped_dir).name}: {reason}")
             if len(skipped_dirs) > 5:
                 print(f"   ... and {len(skipped_dirs) - 5} more")
         
         if verbose:
-            print(f"📄 Found {len(file_list)} files total")
+            print(f"[*] Found {len(file_list)} files total")
     
     except Exception as e:
-        print(f"❌ ERROR: Failed to scan directory {directory}: {e}")
+        print(f"[-] ERROR: Failed to scan directory {directory}: {e}")
     
     return file_list
 
@@ -275,7 +275,7 @@ def ensure_directory_exists(directory_path):
 
 if __name__ == "__main__":
     # Test simplified utilities when run directly
-    print("🔧 Simplified File Utilities - Part 2: Chunking & Vectors Only")
+    print("[*] Simplified File Utilities - Part 2: Chunking & Vectors Only")
     print("=" * 60)
     
     # Test content cleaning
@@ -298,5 +298,5 @@ if __name__ == "__main__":
     print(f"  Original: {test_metadata}")
     print(f"  Cleaned: {cleaned_metadata}")
     
-    print("\n✅ Simplified utilities for markdown processing ready")
+    print("\n[+] Simplified utilities for markdown processing ready")
     print("=" * 60)

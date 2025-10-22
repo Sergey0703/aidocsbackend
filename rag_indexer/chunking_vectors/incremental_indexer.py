@@ -43,18 +43,18 @@ class IncrementalIndexer:
             dict: State dictionary
         """
         if not self.state_file.exists():
-            print("📝 No previous indexing state found (first run)")
+            print("[*] No previous indexing state found (first run)")
             return {}
         
         try:
             with open(self.state_file, 'r', encoding='utf-8') as f:
                 state = json.load(f)
             
-            print(f"📂 Loaded state: {len(state)} previously indexed files")
+            print(f"[*] Loaded state: {len(state)} previously indexed files")
             return state
             
         except Exception as e:
-            print(f"⚠️ Could not load state file: {e}")
+            print(f"[!] Could not load state file: {e}")
             return {}
     
     def _save_state(self):
@@ -64,7 +64,7 @@ class IncrementalIndexer:
                 json.dump(self.indexed_files, f, indent=2, ensure_ascii=False)
             return True
         except Exception as e:
-            print(f"⚠️ Could not save state file: {e}")
+            print(f"[!] Could not save state file: {e}")
             return False
     
     def _calculate_file_hash(self, file_path):
@@ -85,7 +85,7 @@ class IncrementalIndexer:
                     sha256_hash.update(byte_block)
             return sha256_hash.hexdigest()
         except Exception as e:
-            print(f"⚠️ Could not hash {file_path}: {e}")
+            print(f"[!] Could not hash {file_path}: {e}")
             return None
     
     def get_file_info(self, file_path):
@@ -111,7 +111,7 @@ class IncrementalIndexer:
                 'indexed_at': datetime.now().isoformat()
             }
         except Exception as e:
-            print(f"⚠️ Could not get file info for {file_path}: {e}")
+            print(f"[!] Could not get file info for {file_path}: {e}")
             return None
     
     def is_file_indexed(self, file_path):
@@ -160,7 +160,7 @@ class IncrementalIndexer:
         modified_docs = []
         unchanged_docs = []
         
-        print("\n🔍 Checking for new/modified files...")
+        print("\n[*] Checking for new/modified files...")
         
         for doc in documents:
             file_path = doc.metadata.get('file_path')
@@ -180,8 +180,8 @@ class IncrementalIndexer:
                 unchanged_docs.append(doc)
         
         print(f"   🆕 New files: {len(new_docs)}")
-        print(f"   🔄 Modified files: {len(modified_docs)}")
-        print(f"   ✅ Unchanged files: {len(unchanged_docs)}")
+        print(f"   [*] Modified files: {len(modified_docs)}")
+        print(f"   [+] Unchanged files: {len(unchanged_docs)}")
         
         return new_docs, modified_docs, unchanged_docs
     
@@ -205,7 +205,7 @@ class IncrementalIndexer:
             return file_name in files_in_db or str(file_path) in files_in_db
             
         except Exception as e:
-            print(f"⚠️ Could not check database: {e}")
+            print(f"[!] Could not check database: {e}")
             return False
     
     def mark_as_indexed(self, file_path):
@@ -227,7 +227,7 @@ class IncrementalIndexer:
         Args:
             documents: List of Document objects
         """
-        print("\n📝 Updating indexing state...")
+        print("\n[*] Updating indexing state...")
         
         count = 0
         for doc in documents:
@@ -238,9 +238,9 @@ class IncrementalIndexer:
         
         # Save state
         if self._save_state():
-            print(f"   ✅ Saved state for {count} files")
+            print(f"   [+] Saved state for {count} files")
         else:
-            print(f"   ⚠️ Could not save state")
+            print(f"   [!] Could not save state")
     
     def remove_deleted_files(self):
         """
@@ -249,7 +249,7 @@ class IncrementalIndexer:
         Returns:
             dict: Cleanup statistics
         """
-        print("\n🗑️ Checking for deleted files...")
+        print("\n[*] Checking for deleted files...")
         
         deleted_count = 0
         files_to_remove = []
@@ -261,7 +261,7 @@ class IncrementalIndexer:
                 deleted_count += 1
         
         if deleted_count == 0:
-            print("   ✅ No deleted files found")
+            print("   [+] No deleted files found")
             return {'deleted': 0}
         
         print(f"   Found {deleted_count} deleted files")
@@ -278,9 +278,9 @@ class IncrementalIndexer:
         if hasattr(self.db_manager, 'delete_by_file_paths'):
             try:
                 db_removed = self.db_manager.delete_by_file_paths(files_to_remove)
-                print(f"   🗑️ Removed {db_removed} records from database")
+                print(f"   [*] Removed {db_removed} records from database")
             except Exception as e:
-                print(f"   ⚠️ Could not remove from database: {e}")
+                print(f"   [!] Could not remove from database: {e}")
         
         return {
             'deleted': deleted_count,
@@ -321,7 +321,7 @@ class IncrementalIndexer:
         """Print indexing statistics"""
         stats = self.get_statistics()
         
-        print("\n📊 Indexing State Statistics:")
+        print("\n[*] Indexing State Statistics:")
         print(f"   Total indexed files: {stats['total_indexed_files']}")
         print(f"   Total size: {stats['total_size_mb']:.1f} MB")
         
@@ -337,11 +337,11 @@ class IncrementalIndexer:
         try:
             if self.state_file.exists():
                 self.state_file.unlink()
-                print("✅ Indexing state reset")
+                print("[+] Indexing state reset")
             self.indexed_files = {}
             return True
         except Exception as e:
-            print(f"❌ Could not reset state: {e}")
+            print(f"[-] Could not reset state: {e}")
             return False
 
 

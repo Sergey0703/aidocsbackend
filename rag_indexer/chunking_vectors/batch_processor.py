@@ -131,10 +131,10 @@ class BatchProcessor:
             pause_type = "standard"
             self.batch_stats['gemini_pauses_applied'] += 1
         
-        print(f"🔄 Applying {pause_type} pause for Gemini API health...")
-        print(f"⏰ Pause duration: {pause_duration:.1f} seconds")
-        print(f"📊 API rate limit: {self.rate_limit} requests/sec")
-        print(f"💡 This prevents API quota exhaustion and improves reliability")
+        print(f"[*] Applying {pause_type} pause for Gemini API health...")
+        print(f"[*] Pause duration: {pause_duration:.1f} seconds")
+        print(f"[*] API rate limit: {self.rate_limit} requests/sec")
+        print(f"[*] This prevents API quota exhaustion and improves reliability")
         
         start_pause = time.time()
         
@@ -153,9 +153,9 @@ class BatchProcessor:
         actual_pause_time = time.time() - start_pause
         self.batch_stats['total_pause_time'] += actual_pause_time
         
-        print(f"\n✅ GEMINI API PAUSE COMPLETED: Ready for batch {batch_num + 1}")
-        print(f"⏱️ Actual pause time: {actual_pause_time:.1f}s")
-        print(f"🎯 API health maintained, processing continues")
+        print(f"\n[+] GEMINI API PAUSE COMPLETED: Ready for batch {batch_num + 1}")
+        print(f"[*] Actual pause time: {actual_pause_time:.1f}s")
+        print(f"[*] API health maintained, processing continues")
         print(f"{'='*60}\n")
         
         return True  # Always successful for Gemini API
@@ -225,7 +225,7 @@ class BatchProcessor:
             # Print batch summary
             if nodes_with_embeddings:
                 avg_speed = len(nodes_with_embeddings) / batch_result['processing_time']
-                print(f"   ✅ SUCCESS: Batch {batch_num} completed safely in {batch_result['processing_time']:.2f}s")
+                print(f"   [+] SUCCESS: Batch {batch_num} completed safely in {batch_result['processing_time']:.2f}s")
                 print(f"   INFO: Speed: {avg_speed:.2f} chunks/sec")
                 print(f"   INFO: Batch saved: {batch_result['records_saved']}")
             
@@ -245,7 +245,7 @@ class BatchProcessor:
             batch_result['error'] = str(e)
             batch_result['processing_time'] = time.time() - batch_start_time
             
-            print(f"   ❌ ERROR: Batch {batch_num} failed completely: {e}")
+            print(f"   [-] ERROR: Batch {batch_num} failed completely: {e}")
             self.batch_stats['failed_batches'] += 1
             
             # Log batch failure
@@ -339,8 +339,8 @@ class BatchProcessor:
         print(f"Processing batch size: {self.processing_batch_size} chunks")
         print(f"Embedding batch size: {embedding_batch_size} chunks")
         print(f"Database batch size: {db_batch_size} chunks")
-        print(f"🚀 GEMINI API FEATURE: Health pauses every {self.batch_restart_interval} batches")
-        print(f"📊 API rate limit: {self.rate_limit} requests/sec")
+        print(f"[*] GEMINI API FEATURE: Health pauses every {self.batch_restart_interval} batches")
+        print(f"[*] API rate limit: {self.rate_limit} requests/sec")
         print(f"Error recovery: Enabled with encoding detection")
         print("=" * 60)
         
@@ -396,12 +396,12 @@ class BatchProcessor:
         
         print("\n" + "=" * 60)
         if success:
-            print("✅ SUCCESS: SAFE ROBUST INDEXING WITH GEMINI API COMPLETED SUCCESSFULLY!")
+            print("[+] SUCCESS: SAFE ROBUST INDEXING WITH GEMINI API COMPLETED SUCCESSFULLY!")
         elif results['total_saved'] > 0:
-            print("⚠️ WARNING: SAFE ROBUST INDEXING WITH GEMINI API COMPLETED WITH SOME ERRORS!")
-            print("✅ SUCCESS: Partial success - some data was saved successfully")
+            print("[!] WARNING: SAFE ROBUST INDEXING WITH GEMINI API COMPLETED WITH SOME ERRORS!")
+            print("[+] SUCCESS: Partial success - some data was saved successfully")
         else:
-            print("❌ ERROR: INDEXING FAILED - NO DATA SAVED!")
+            print("[-] ERROR: INDEXING FAILED - NO DATA SAVED!")
         
         print("=" * 60)
         print(f"FINAL STATISTICS:")
@@ -418,7 +418,7 @@ class BatchProcessor:
         print(f"   Records deleted: {deletion_info['records_deleted']}")
         
         # UPDATED: Gemini API pause statistics
-        print(f"\n🚀 GEMINI API HEALTH MANAGEMENT:")
+        print(f"\n[*] GEMINI API HEALTH MANAGEMENT:")
         print(f"   API provider: {results.get('api_provider', 'gemini').title()}")
         print(f"   Pause interval: {results['batch_pause_interval']} batches")
         print(f"   Standard pauses: {results['gemini_pauses_applied']}")
@@ -450,7 +450,7 @@ class BatchProcessor:
             print(f"   - Database save failures: {results['total_failed_chunks']}")
             print(f"   - Batch processing failures: {results['failed_batches']} batches")
         
-        print(f"\n🎯 SAFE PROCESSING FEATURES:")
+        print(f"\n[*] SAFE PROCESSING FEATURES:")
         print(f"   - Processing batch size: {self.processing_batch_size} chunks")
         print(f"   - Error recovery: Individual chunk processing")
         print(f"   - Binary data detection: Enabled")
@@ -462,21 +462,21 @@ class BatchProcessor:
         print("=" * 60)
         
         if success:
-            print("🎉 SUCCESS: Ready for RAG queries! All documents indexed safely with Gemini API.")
+            print("[*] SUCCESS: Ready for RAG queries! All documents indexed safely with Gemini API.")
         elif results['total_saved'] > 0:
-            print("⚠️ WARNING: Ready for RAG queries with partial data.")
+            print("[!] WARNING: Ready for RAG queries with partial data.")
             print("INFO: Check error logs for details on failed items:")
             print("   - failed_chunks.log")
             print("   - embedding_errors.log") 
             print("   - batch_failures.log")
             print("   - invalid_chunks_report.log")
         else:
-            print("❌ ERROR: No data available for RAG queries.")
+            print("[-] ERROR: No data available for RAG queries.")
         
         # Final pause advice
         if total_pauses > 0:
             efficiency = (results['total_saved'] / results['total_time']) * 60  # chunks per minute
-            print(f"\n💡 GEMINI API OPTIMIZATION:")
+            print(f"\n[*] GEMINI API OPTIMIZATION:")
             print(f"   Processing efficiency: {efficiency:.1f} chunks/minute")
             print(f"   API health pauses maintained optimal performance")
             print(f"   No API quota exhaustion detected")

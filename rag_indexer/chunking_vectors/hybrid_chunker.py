@@ -41,6 +41,7 @@ class HybridChunkerWrapper:
             'documents_processed': 0,
             'chunks_created': 0,
             'markdown_conversions': 0,
+            'markdown_fallback_used': 0,
             'contextualized_chunks': 0,
             'errors': 0
         }
@@ -82,7 +83,7 @@ class HybridChunkerWrapper:
             else:
                 raise ValueError(f"Unknown tokenizer type: {tokenizer_type}")
 
-            logger.info(f"✅ Tokenizer initialized: {tokenizer_type} (max_tokens={max_tokens})")
+            logger.info(f"[+] Tokenizer initialized: {tokenizer_type} (max_tokens={max_tokens})")
 
         except Exception as e:
             logger.error(f"Failed to initialize tokenizer: {e}")
@@ -101,7 +102,7 @@ class HybridChunkerWrapper:
                 merge_peers=merge_peers
             )
 
-            logger.info(f"✅ HybridChunker initialized (merge_peers={merge_peers})")
+            logger.info(f"[+] HybridChunker initialized (merge_peers={merge_peers})")
 
         except Exception as e:
             logger.error(f"Failed to initialize HybridChunker: {e}")
@@ -244,7 +245,7 @@ class HybridChunkerWrapper:
         hybrid_settings = self.config.get_hybrid_chunking_settings()
         use_contextualize = hybrid_settings['use_contextualize']
 
-        logger.info(f"🧩 Hybrid chunking {len(documents)} documents...")
+        logger.info(f"[*] Hybrid chunking {len(documents)} documents...")
 
         for doc in documents:
             try:
@@ -277,6 +278,21 @@ class HybridChunkerWrapper:
 
                 logger.debug(f"   Created {len(chunks)} chunks from {source_metadata.get('file_name', 'unknown')}")
 
+                # If JSON produced no chunks, try markdown fallback
+                if len(chunks) == 0 and json_path:
+                    logger.warning(f"   JSON chunking produced 0 chunks, trying markdown fallback...")
+                    markdown_content = doc.text if hasattr(doc, 'text') else str(doc)
+                    try:
+                        docling_doc = self._markdown_to_docling_document(markdown_content, source_metadata)
+                        chunk_iter = self.chunker.chunk(dl_doc=docling_doc)
+                        chunks = list(chunk_iter)
+                        logger.info(f"   Markdown fallback created {len(chunks)} chunks")
+                        self.stats['markdown_fallback_used'] += 1
+                    except Exception as fallback_error:
+                        logger.error(f"   Markdown fallback also failed: {fallback_error}")
+                        self.stats['errors'] += 1
+                        continue
+
                 # Convert chunks to LlamaIndex nodes
                 for chunk in chunks:
                     # Optionally use contextualized content for embeddings
@@ -301,14 +317,14 @@ class HybridChunkerWrapper:
                 self.stats['errors'] += 1
                 continue
 
-        logger.info(f"✅ Hybrid chunking complete: {len(all_nodes)} nodes from {len(documents)} documents")
+        logger.info(f"[+] Hybrid chunking complete: {len(all_nodes)} nodes from {len(documents)} documents")
         self._print_stats()
 
         return all_nodes
 
     def _print_stats(self):
         """Print chunking statistics"""
-        logger.info(f"📊 Hybrid Chunking Stats:")
+        logger.info(f"[*] Hybrid Chunking Stats:")
         logger.info(f"   Documents processed: {self.stats['documents_processed']}")
         logger.info(f"   Total chunks: {self.stats['chunks_created']}")
         logger.info(f"   Markdown conversions: {self.stats['markdown_conversions']}")
@@ -349,11 +365,11 @@ def is_hybrid_chunking_available():
 def print_hybrid_chunking_info():
     """Print information about hybrid chunking setup"""
     print("=" * 60)
-    print("🧩 HYBRID CHUNKING INFORMATION")
+    print("[*] HYBRID CHUNKING INFORMATION")
     print("=" * 60)
 
     if is_hybrid_chunking_available():
-        print("✅ Docling HybridChunker: AVAILABLE")
+        print("[+] Docling HybridChunker: AVAILABLE")
 
         try:
             import docling_core
@@ -365,19 +381,19 @@ def print_hybrid_chunking_info():
         # Check tokenizers
         try:
             import transformers
-            print(f"✅ HuggingFace tokenizer: AVAILABLE")
+            print(f"[+] HuggingFace tokenizer: AVAILABLE")
         except ImportError:
-            print(f"⚠️  HuggingFace tokenizer: NOT AVAILABLE")
+            print(f"[!]  HuggingFace tokenizer: NOT AVAILABLE")
             print(f"   Install with: pip install transformers")
 
         try:
             import tiktoken
-            print(f"✅ OpenAI tokenizer: AVAILABLE")
+            print(f"[+] OpenAI tokenizer: AVAILABLE")
         except ImportError:
-            print(f"⚠️  OpenAI tokenizer: NOT AVAILABLE")
+            print(f"[!]  OpenAI tokenizer: NOT AVAILABLE")
             print(f"   Install with: pip install tiktoken")
     else:
-        print("❌ Docling HybridChunker: NOT AVAILABLE")
+        print("[-] Docling HybridChunker: NOT AVAILABLE")
         print("   Install with: pip install 'docling-core[chunking]'")
 
     print("=" * 60)
@@ -423,13 +439,13 @@ Another paragraph here with more content to test chunking.
 
             nodes = chunker.chunk_documents([test_doc])
 
-            print(f"✅ Test successful: Created {len(nodes)} chunks")
+            print(f"[+] Test successful: Created {len(nodes)} chunks")
             print(f"\nSample chunk metadata:")
             if nodes:
                 import json
                 print(json.dumps(nodes[0].metadata, indent=2, default=str))
 
         except Exception as e:
-            print(f"❌ Test failed: {e}")
+            print(f"[-] Test failed: {e}")
             import traceback
             traceback.print_exc()

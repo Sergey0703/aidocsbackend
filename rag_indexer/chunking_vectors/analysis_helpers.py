@@ -24,7 +24,7 @@ def analyze_final_results_enhanced(config, db_manager, log_dir, processing_stats
         dict: Comprehensive analysis results
     """
     print(f"\n{'='*70}")
-    print("🔍 END-TO-END ANALYSIS")
+    print("[*] END-TO-END ANALYSIS")
     print(f"{'='*70}")
     
     # Perform comprehensive directory vs database comparison WITH blacklist
@@ -41,11 +41,11 @@ def analyze_final_results_enhanced(config, db_manager, log_dir, processing_stats
     missing_files_detailed = analysis_results['missing_files_detailed']
     success_rate = analysis_results['success_rate']
     
-    print(f"\n📊 Final Processing Results:")
-    print(f"   📁 Total markdown files in directory: {total_files:,}")
-    print(f"   ✅ Files successfully in database: {files_in_db:,}")
-    print(f"   ❌ Files missing from database: {missing_files:,}")
-    print(f"   📈 End-to-end success rate: {success_rate:.1f}%")
+    print(f"\n[*] Final Processing Results:")
+    print(f"   [*] Total markdown files in directory: {total_files:,}")
+    print(f"   [+] Files successfully in database: {files_in_db:,}")
+    print(f"   [-] Files missing from database: {missing_files:,}")
+    print(f"   [*] End-to-end success rate: {success_rate:.1f}%")
     
     # Simplified pipeline analysis
     if processing_stats:
@@ -73,22 +73,22 @@ def print_pipeline_analysis(processing_stats):
     Args:
         processing_stats: Processing statistics dictionary
     """
-    print(f"\n🔄 Processing Pipeline Analysis:")
+    print(f"\n[*] Processing Pipeline Analysis:")
     
     # Document loading stage
     if 'documents_loaded' in processing_stats:
-        print(f"   📄 Documents loaded: {processing_stats['documents_loaded']:,}")
+        print(f"   [*] Documents loaded: {processing_stats['documents_loaded']:,}")
     
     # Chunk processing stage  
     if 'chunks_created' in processing_stats:
-        print(f"   🧩 Chunks created: {processing_stats['chunks_created']:,}")
+        print(f"   [*] Chunks created: {processing_stats['chunks_created']:,}")
     
     if 'valid_chunks' in processing_stats:
-        print(f"   ✅ Valid chunks: {processing_stats['valid_chunks']:,}")
+        print(f"   [+] Valid chunks: {processing_stats['valid_chunks']:,}")
     
     # Database stage
     if 'records_saved' in processing_stats:
-        print(f"   💾 Records saved to database: {processing_stats['records_saved']:,}")
+        print(f"   [*] Records saved to database: {processing_stats['records_saved']:,}")
     
     # Calculate pipeline loss at each stage
     total_attempted = processing_stats.get('chunks_created', 0)
@@ -97,7 +97,7 @@ def print_pipeline_analysis(processing_stats):
         pipeline_loss = total_attempted - saved_records
         loss_rate = (pipeline_loss / total_attempted * 100)
         
-        print(f"\n📉 Pipeline Loss Analysis:")
+        print(f"\n[*] Pipeline Loss Analysis:")
         print(f"   Total chunks attempted: {total_attempted:,}")
         print(f"   Successfully saved: {saved_records:,}")
         print(f"   Lost in pipeline: {pipeline_loss:,}")
@@ -116,27 +116,27 @@ def analyze_failed_files(missing_files_detailed, log_dir):
         dict: Failure analysis results
     """
     if not missing_files_detailed:
-        print(f"\n🎉 PERFECT PROCESSING: All files successfully indexed!")
+        print(f"\n[*] PERFECT PROCESSING: All files successfully indexed!")
         return {'total_failed': 0, 'categories': {}, 'perfect_processing': True}
     
-    print(f"\n📝 Saving detailed analysis...")
+    print(f"\n[*] Saving detailed analysis...")
     log_file_path = save_failed_files_details(missing_files_detailed, log_dir)
     
     if log_file_path:
-        print(f"   📋 Missing files details saved to: {log_file_path}")
+        print(f"   [*] Missing files details saved to: {log_file_path}")
     else:
-        print(f"   ⚠️ Could not save missing files details")
+        print(f"   [!] Could not save missing files details")
     
     # Show categorized failure analysis
     failure_categories = categorize_failures(missing_files_detailed)
     
     if failure_categories:
-        print(f"\n🔍 Failure Category Analysis:")
+        print(f"\n[*] Failure Category Analysis:")
         for category, count in sorted(failure_categories.items(), key=lambda x: x[1], reverse=True):
             print(f"   {category}: {count} files")
     
     # Show first few missing files for quick reference
-    print(f"\n❌ Sample Missing Files:")
+    print(f"\n[-] Sample Missing Files:")
     for i, missing_detail in enumerate(missing_files_detailed[:5], 1):
         print(f"   {i}. {missing_detail}")
     if len(missing_files_detailed) > 5:
@@ -228,7 +228,7 @@ def create_enhanced_run_summary(start_time, end_time, stats, final_analysis, con
     duration = end_time - start_time
     
     summary = []
-    summary.append("🚀 SIMPLIFIED RAG INDEXER RUN SUMMARY (PART 2: CHUNKING & VECTORS)")
+    summary.append("[*] SIMPLIFIED RAG INDEXER RUN SUMMARY (PART 2: CHUNKING & VECTORS)")
     summary.append("=" * 70)
     summary.append(f"Start time: {datetime.fromtimestamp(start_time).strftime('%Y-%m-%d %H:%M:%S')}")
     summary.append(f"End time: {datetime.fromtimestamp(end_time).strftime('%Y-%m-%d %H:%M:%S')}")
@@ -244,7 +244,7 @@ def create_enhanced_run_summary(start_time, end_time, stats, final_analysis, con
     # Processing stages
     if stats.get('processing_stages'):
         summary.append("")
-        summary.append("🔄 PROCESSING STAGES COMPLETED:")
+        summary.append("[*] PROCESSING STAGES COMPLETED:")
         for i, stage in enumerate(stats['processing_stages'], 1):
             summary.append(f"   {i}. {stage.replace('_', ' ').title()}")
     
@@ -264,7 +264,7 @@ def create_enhanced_run_summary(start_time, end_time, stats, final_analysis, con
 def create_config_summary(config):
     """Create simplified configuration summary section"""
     summary = []
-    summary.append("🔧 CONFIGURATION:")
+    summary.append("[*] CONFIGURATION:")
     summary.append(f"   Input directory: {config.DOCUMENTS_DIR} (markdown files)")
     summary.append(f"   Embedding model: {config.EMBED_MODEL} ({config.EMBED_DIM}D)")
     summary.append(f"   Chunk size: {config.CHUNK_SIZE} (overlap: {config.CHUNK_OVERLAP})")
@@ -278,7 +278,7 @@ def create_config_summary(config):
 def create_stats_summary(stats):
     """Create main statistics summary section"""
     summary = []
-    summary.append("📊 PROCESSING STATISTICS:")
+    summary.append("[*] PROCESSING STATISTICS:")
     
     # Core statistics
     key_stats = [
@@ -303,7 +303,7 @@ def create_stats_summary(stats):
     if 'quality_analysis_results' in stats:
         quality_results = stats['quality_analysis_results']
         summary.append("")
-        summary.append("🎯 QUALITY METRICS:")
+        summary.append("[*] QUALITY METRICS:")
         summary.append(f"   Filter success rate: {quality_results.get('filter_success_rate', 0):.1f}%")
         summary.append(f"   Invalid chunks filtered: {quality_results.get('invalid_chunks', 0):,}")
         summary.append(f"   Average content length: {quality_results.get('avg_content_length', 0):.0f} chars")
@@ -315,7 +315,7 @@ def create_stats_summary(stats):
 def create_final_analysis_summary(final_analysis):
     """Create final analysis summary section"""
     summary = []
-    summary.append("🔍 END-TO-END ANALYSIS:")
+    summary.append("[*] END-TO-END ANALYSIS:")
     summary.append(f"   Total files in directory: {final_analysis['total_files_in_directory']:,}")
     summary.append(f"   Files successfully in database: {final_analysis['files_successfully_in_db']:,}")
     summary.append(f"   Files missing from database: {final_analysis['files_missing_from_db']:,}")
@@ -325,7 +325,7 @@ def create_final_analysis_summary(final_analysis):
     if 'performance_metrics' in final_analysis:
         metrics = final_analysis['performance_metrics']
         summary.append("")
-        summary.append("⚡ PERFORMANCE METRICS:")
+        summary.append("[*] PERFORMANCE METRICS:")
         for metric, value in metrics.items():
             summary.append(f"   {metric.replace('_', ' ').title()}: {value:.2f} items/sec")
     
@@ -336,16 +336,16 @@ def create_final_analysis_summary(final_analysis):
 def create_failed_files_summary(final_analysis):
     """Create failed files summary section"""
     summary = []
-    summary.append("❌ FAILED FILES SUMMARY:")
+    summary.append("[-] FAILED FILES SUMMARY:")
     summary.append("-" * 40)
     
     missing_files_detailed = final_analysis.get('missing_files_detailed', []) if final_analysis else []
     
     if not missing_files_detailed:
-        summary.append("✅ No failed files - perfect processing!")
+        summary.append("[+] No failed files - perfect processing!")
     else:
-        summary.append(f"❌ Total failed files: {len(missing_files_detailed)}")
-        summary.append(f"📋 Details saved to: /logs/failed_files_details.log")
+        summary.append(f"[-] Total failed files: {len(missing_files_detailed)}")
+        summary.append(f"[*] Details saved to: /logs/failed_files_details.log")
         
         # Show first 5 for quick reference
         if len(missing_files_detailed) <= 5:
@@ -377,7 +377,7 @@ def create_enhanced_status_report(status_reporter, stats, final_analysis, batch_
         end_time: Processing end time
     """
     # Final statistics
-    status_reporter.add_section("📊 Final Statistics", {
+    status_reporter.add_section("[*] Final Statistics", {
         "Total processing time": f"{end_time - start_time:.2f}s ({(end_time - start_time)/60:.1f}m)",
         "Documents loaded": f"{stats['documents_loaded']:,}",
         "Chunks created": f"{stats['chunks_created']:,}",
@@ -389,7 +389,7 @@ def create_enhanced_status_report(status_reporter, stats, final_analysis, batch_
     
     # End-to-end analysis
     if final_analysis:
-        status_reporter.add_section("🔍 End-to-End File Analysis", {
+        status_reporter.add_section("[*] End-to-End File Analysis", {
             "Total files in directory": f"{final_analysis['total_files_in_directory']:,}",
             "Files successfully in database": f"{final_analysis['files_successfully_in_db']:,}",
             "Files missing from database": f"{final_analysis['files_missing_from_db']:,}",
@@ -403,7 +403,7 @@ def create_enhanced_status_report(status_reporter, stats, final_analysis, batch_
     total_lost = total_attempted - total_saved
     loss_rate = (total_lost / total_attempted * 100) if total_attempted > 0 else 0
     
-    status_reporter.add_section("📉 Data Loss Analysis", {
+    status_reporter.add_section("[*] Data Loss Analysis", {
         "Total chunks attempted": f"{total_attempted:,}",
         "Chunks successfully saved": f"{total_saved:,}",
         "Chunks lost in pipeline": f"{total_lost:,}",
@@ -412,7 +412,7 @@ def create_enhanced_status_report(status_reporter, stats, final_analysis, batch_
     })
     
     # Quality metrics
-    status_reporter.add_section("🎯 Quality Metrics", {
+    status_reporter.add_section("[*] Quality Metrics", {
         "Processing pipeline errors": final_analysis.get('files_missing_from_db', 0) if final_analysis else 0,
         "Failed chunks": batch_results['total_failed_chunks'],
         "Failed batches": batch_results['failed_batches'],
@@ -431,11 +431,11 @@ def create_enhanced_status_report(status_reporter, stats, final_analysis, batch_
         for metric, value in metrics.items():
             performance_data[metric.replace('_', ' ').title()] = f"{value:.2f} items/sec"
     
-    status_reporter.add_section("⚡ Performance Analysis", performance_data)
+    status_reporter.add_section("[*] Performance Analysis", performance_data)
     
     # Gemini API statistics
     if 'gemini_api_calls' in stats:
-        status_reporter.add_section("🚀 Gemini API Statistics", {
+        status_reporter.add_section("[*] Gemini API Statistics", {
             "API calls made": f"{stats.get('gemini_api_calls', 0):,}",
             "Rate limit delays": f"{stats.get('rate_limit_delays', 0):,}",
             "Retry attempts used": f"{stats.get('retry_attempts_used', 0):,}"

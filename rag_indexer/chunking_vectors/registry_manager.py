@@ -17,7 +17,7 @@ class DocumentRegistryManager:
     
     def __init__(self, connection_string: str):
         self.connection_string = connection_string
-        logger.info("✅ Document Registry Manager initialized")
+        logger.info("[+] Document Registry Manager initialized")
     
     def get_or_create_registry_entry(
         self, 
@@ -75,7 +75,7 @@ class DocumentRegistryManager:
             
             conn.commit()
             
-            logger.info(f"✅ Created new registry entry: {registry_id} for {file_path}")
+            logger.info(f"[+] Created new registry entry: {registry_id} for {file_path}")
             
             cur.close()
             conn.close()
@@ -147,10 +147,10 @@ class DocumentRegistryManager:
             conn.close()
 
             if rows_updated > 0:
-                logger.debug(f"✅ Updated registry {registry_id} status to '{status}'")
+                logger.debug(f"[+] Updated registry {registry_id} status to '{status}'")
                 return True
             else:
-                logger.warning(f"⚠️ No registry found with id {registry_id}")
+                logger.warning(f"[!] No registry found with id {registry_id}")
                 return False
 
         except Exception as e:

@@ -3,7 +3,7 @@
 """
 Simplified RAG Document Indexer - Main Entry Point
 Part 2: Chunking & Vectors Only
-Loads markdown files from Docling (Part 1) → chunks → embeddings → vector storage
+Loads markdown files from Docling (Part 1) -> chunks -> embeddings -> vector storage
 UPDATED: Now integrated with document_registry for database schema compliance
 """
 
@@ -53,13 +53,13 @@ from chunking_vectors.chunk_helpers import (
 
 def print_simplified_info():
     """Print information about simplified system"""
-    print("\n🔧 Simplified RAG System - Part 2: Chunking & Vectors")
-    print("  📄 Input: Markdown files from Docling (Part 1)")
-    print("  🧩 Processing: Chunking with SentenceSplitter")
-    print("  🚀 Embeddings: Google Gemini API")
-    print("  💾 Storage: Supabase vector database")
-    print("  🔗 Registry: Document tracking enabled")
-    print("  ✅ No document conversion needed")
+    print("\n[*] Simplified RAG System - Part 2: Chunking & Vectors")
+    print("  [*] Input: Markdown files from Docling (Part 1)")
+    print("  [*] Processing: Chunking with SentenceSplitter")
+    print("  [*] Embeddings: Google Gemini API")
+    print("  [*] Storage: Supabase vector database")
+    print("  [*] Registry: Document tracking enabled")
+    print("  [+] No document conversion needed")
     print("=" * 50)
 
 
@@ -73,7 +73,7 @@ def initialize_components(config):
     Returns:
         dict: Initialized components
     """
-    print("🔧 Initializing LlamaIndex components...")
+    print("[*] Initializing LlamaIndex components...")
     
     # Vector store
     vector_store = SupabaseVectorStore(
@@ -103,7 +103,7 @@ def initialize_components(config):
         include_prev_next_rel=True
     )
     
-    print("✅ Components initialized successfully")
+    print("[+] Components initialized successfully")
     return {
         'vector_store': vector_store,
         'storage_context': storage_context,
@@ -113,7 +113,7 @@ def initialize_components(config):
 
 
 def main():
-    """Simplified main function - markdown → chunks → embeddings → vectors"""
+    """Simplified main function - markdown -> chunks -> embeddings -> vectors"""
     
     # Setup
     logging.basicConfig(stream=sys.stdout, level=logging.INFO)
@@ -161,7 +161,7 @@ def main():
             # 1. CONFIGURATION LOADING
             # ===============================================================
             
-            print("🔧 Loading configuration...")
+            print("[*] Loading configuration...")
             config = get_config()
             config.print_config()
             
@@ -177,18 +177,18 @@ def main():
             print_system_info()
             
             # Validate Gemini API configuration
-            print("🚀 Validating Gemini API configuration...")
+            print("[*] Validating Gemini API configuration...")
             from chunking_vectors.config import validate_gemini_environment
             
             gemini_validation = validate_gemini_environment()
             if not gemini_validation['ready']:
-                print("❌ Gemini API configuration issues detected:")
+                print("[-] Gemini API configuration issues detected:")
                 for issue in gemini_validation['configuration_issues']:
                     print(f"   - {issue}")
                 print("\nPlease fix configuration issues before proceeding.")
                 sys.exit(1)
             else:
-                print("✅ Gemini API configuration validated")
+                print("[+] Gemini API configuration validated")
                 print(f"   Model: {config.EMBED_MODEL}")
                 print(f"   Dimension: {config.EMBED_DIM}")
                 print(f"   Rate limit: {config.GEMINI_REQUEST_RATE_LIMIT} requests/sec")
@@ -196,7 +196,7 @@ def main():
             # Check processing requirements
             requirements_met, missing = check_processing_requirements(config)
             if not requirements_met:
-                print("\n❌ Cannot proceed - missing requirements")
+                print("\n[-] Cannot proceed - missing requirements")
                 sys.exit(1)
             
             # ===============================================================
@@ -213,10 +213,10 @@ def main():
             # 2.1 REGISTRY MANAGER INITIALIZATION (NEW!)
             # ===============================================================
             
-            print("\n🔗 Initializing registry manager...")
+            print("\n[*] Initializing registry manager...")
             registry_manager = create_registry_manager(config.CONNECTION_STRING)
             progress_tracker.add_checkpoint("Registry manager initialized")
-            print("✅ Registry manager ready - documents will be tracked in document_registry")
+            print("[+] Registry manager ready - documents will be tracked in document_registry")
             
             embedding_processor = create_embedding_processor(
                 components['embed_model'], 
@@ -242,7 +242,7 @@ def main():
             # ===============================================================
             
             print("\n" + "="*70)
-            print("📄 LOADING MARKDOWN DOCUMENTS WITH REGISTRY ENRICHMENT")
+            print("[*] LOADING MARKDOWN DOCUMENTS WITH REGISTRY ENRICHMENT")
             print("="*70)
             
             try:
@@ -256,7 +256,7 @@ def main():
                 )
                 
                 # Load documents WITH registry enrichment
-                print("🔗 Loading documents with registry_id enrichment...")
+                print("[*] Loading documents with registry_id enrichment...")
                 documents, loading_stats = loader.load_data(registry_manager=registry_manager)
                 
                 # Create processing summary
@@ -277,7 +277,7 @@ def main():
                 stats['processing_stages'].append('markdown_loading')
                 
             except Exception as e:
-                print(f"❌ Markdown loading failed: {e}")
+                print(f"[-] Markdown loading failed: {e}")
                 raise
             
             stats['documents_loaded'] = len(documents)
@@ -291,27 +291,27 @@ def main():
             registry_enrichments = processing_summary.get('registry_enrichments', 0)
             registry_failures = processing_summary.get('registry_failures', 0)
             
-            print(f"\n🔗 REGISTRY ENRICHMENT RESULTS:")
-            print(f"   ✅ Successful enrichments: {registry_enrichments}")
+            print(f"\n[*] REGISTRY ENRICHMENT RESULTS:")
+            print(f"   [+] Successful enrichments: {registry_enrichments}")
             if registry_failures > 0:
-                print(f"   ❌ Failed enrichments: {registry_failures}")
-                print(f"   ⚠️  WARNING: Some documents may not have registry_id!")
+                print(f"   [-] Failed enrichments: {registry_failures}")
+                print(f"   [!]  WARNING: Some documents may not have registry_id!")
             else:
-                print(f"   🎉 All documents successfully enriched with registry_id")
+                print(f"   [*] All documents successfully enriched with registry_id")
             
             # Get and print recommendations
             recommendations = get_loading_recommendations(processing_summary, config)
             print_loading_recommendations(recommendations)
             
             if not documents:
-                print("⚠️ No documents found in the markdown directory.")
-                print("💡 Ensure Docling (Part 1) has processed documents to markdown format.")
+                print("[!] No documents found in the markdown directory.")
+                print("[*] Ensure Docling (Part 1) has processed documents to markdown format.")
                 return
             
             # Verify registry_id presence
             docs_without_registry = sum(1 for doc in documents if not doc.metadata.get('registry_id'))
             if docs_without_registry > 0:
-                print(f"\n⚠️  CRITICAL WARNING: {docs_without_registry} documents missing registry_id!")
+                print(f"\n[!]  CRITICAL WARNING: {docs_without_registry} documents missing registry_id!")
                 print(f"   These documents will FAIL to index due to database constraints.")
                 print(f"   Check logs above for registry enrichment failures.")
                 
@@ -329,7 +329,7 @@ def main():
             # ===============================================================
             
             if incremental_mode:
-                print(f"\n🔄 Incremental mode enabled")
+                print(f"\n[*] Incremental mode enabled")
                 
                 # Import incremental indexer
                 from chunking_vectors.incremental_indexer import create_incremental_indexer
@@ -350,11 +350,11 @@ def main():
                 documents = new_docs + modified_docs
                 
                 if not documents:
-                    print("\n✅ No new or modified files to index")
+                    print("\n[+] No new or modified files to index")
                     print("All files are up to date!")
                     return True
                 
-                print(f"\n📊 Processing {len(documents)} files ({len(new_docs)} new, {len(modified_docs)} modified)")
+                print(f"\n[*] Processing {len(documents)} files ({len(new_docs)} new, {len(modified_docs)} modified)")
             
             # Check for interruption
             if interrupt_handler.check_interrupted():
@@ -366,7 +366,7 @@ def main():
             # ===============================================================
             
             print(f"\n{'='*70}")
-            print("🗑️ SAFE DELETION CHECK")
+            print("[*] SAFE DELETION CHECK")
             print(f"{'='*70}")
             
             # Get file identifiers
@@ -400,7 +400,7 @@ def main():
             print_document_validation_summary(documents_with_content, documents_without_content)
             
             if not documents_with_content:
-                print("❌ No documents with sufficient content found. Exiting.")
+                print("[-] No documents with sufficient content found. Exiting.")
                 return
             
             # ===============================================================
@@ -413,14 +413,14 @@ def main():
             )
             
             # Verify registry_id propagation to chunks
-            print(f"\n🔍 Verifying registry_id propagation to chunks...")
+            print(f"\n[*] Verifying registry_id propagation to chunks...")
             chunks_with_registry = sum(1 for node in valid_nodes if node.metadata.get('registry_id'))
             chunks_without_registry = len(valid_nodes) - chunks_with_registry
             
-            print(f"   ✅ Chunks with registry_id: {chunks_with_registry}/{len(valid_nodes)}")
+            print(f"   [+] Chunks with registry_id: {chunks_with_registry}/{len(valid_nodes)}")
             if chunks_without_registry > 0:
-                print(f"   ❌ Chunks WITHOUT registry_id: {chunks_without_registry}")
-                print(f"   ⚠️  WARNING: These chunks will FAIL to save to database!")
+                print(f"   [-] Chunks WITHOUT registry_id: {chunks_without_registry}")
+                print(f"   [!]  WARNING: These chunks will FAIL to save to database!")
                 
                 # Ask user if they want to continue
                 response = input("\nContinue anyway? (y/N): ").strip().lower()
@@ -442,7 +442,7 @@ def main():
             stats['processing_stages'].append('chunk_processing')
             
             if not valid_nodes:
-                print("❌ No valid chunks were generated. Exiting.")
+                print("[-] No valid chunks were generated. Exiting.")
                 return
             
             performance_monitor.checkpoint("Chunks processed", len(valid_nodes))
@@ -456,17 +456,17 @@ def main():
             # 7. BATCH PROCESSING WITH GEMINI API
             # ===============================================================
             
-            print(f"\n🚀 Starting batch processing with Gemini API...")
+            print(f"\n[*] Starting batch processing with Gemini API...")
             batch_settings = config.get_batch_settings()
             
-            print(f"🔧 Processing Configuration:")
+            print(f"[*] Processing Configuration:")
             print(f"   Processing batch size: {batch_settings['processing_batch_size']}")
             print(f"   Embedding batch size: {batch_settings['embedding_batch_size']}")
             print(f"   Database batch size: {batch_settings['db_batch_size']}")
             print(f"   Embedding model: {config.EMBED_MODEL} ({config.EMBED_DIM}D)")
             print(f"   Gemini rate limit: {config.GEMINI_REQUEST_RATE_LIMIT} requests/sec")
             print(f"   Gemini retry attempts: {config.GEMINI_RETRY_ATTEMPTS}")
-            print(f"   🔗 Registry tracking: ENABLED")
+            print(f"   [*] Registry tracking: ENABLED")
             
             # Process all batches
             batch_results = batch_processor.process_all_batches(
@@ -497,7 +497,7 @@ def main():
             # 7.1 UPDATE REGISTRY STATUS (NEW!)
             # ===============================================================
             
-            print(f"\n🔗 Updating document registry status...")
+            print(f"\n[*] Updating document registry status...")
             try:
                 # Get unique registry IDs from successfully saved chunks
                 registry_ids = set()
@@ -510,10 +510,10 @@ def main():
                 for registry_id in registry_ids:
                     registry_manager.update_registry_status(registry_id, 'processed')
                 
-                print(f"   ✅ Updated status for {len(registry_ids)} documents in registry")
+                print(f"   [+] Updated status for {len(registry_ids)} documents in registry")
                 
             except Exception as e:
-                print(f"   ⚠️  Warning: Could not update registry status: {e}")
+                print(f"   [!]  Warning: Could not update registry status: {e}")
             
             # ===============================================================
             # UPDATE INCREMENTAL STATE (if enabled)
@@ -557,7 +557,7 @@ def main():
             
             summary_file = f"{log_dir}/run_summary_{datetime.now().strftime('%Y%m%d_%H%M%S')}.txt"
             if safe_file_write(summary_file, enhanced_summary):
-                print(f"📊 Run summary saved to: {summary_file}")
+                print(f"[*] Run summary saved to: {summary_file}")
             
             # Print performance summary
             performance_monitor.print_performance_summary()
@@ -574,16 +574,16 @@ def main():
             # Final message with registry info
             print("\n" + "="*70)
             if success:
-                print("✅ SUCCESS: Simplified RAG indexing completed successfully!")
-                print("📊 Workflow: Markdown → Chunks → Embeddings → Vectors ✓")
-                print("🔗 Registry: All documents tracked in document_registry ✓")
+                print("[+] SUCCESS: Simplified RAG indexing completed successfully!")
+                print("[*] Workflow: Markdown -> Chunks -> Embeddings -> Vectors [+]")
+                print("[*] Registry: All documents tracked in document_registry [+]")
             else:
-                print("⚠️ WARNING: Indexing completed with some errors")
-                print("📊 Check logs for details")
+                print("[!] WARNING: Indexing completed with some errors")
+                print("[*] Check logs for details")
             print("="*70)
             
             # Print registry summary
-            print(f"\n🔗 REGISTRY SUMMARY:")
+            print(f"\n[*] REGISTRY SUMMARY:")
             print(f"   Documents enriched: {processing_summary.get('registry_enrichments', 0)}")
             print(f"   Registry failures: {processing_summary.get('registry_failures', 0)}")
             print(f"   Chunks with registry_id: {chunks_with_registry}/{len(valid_nodes)}")
@@ -591,15 +591,15 @@ def main():
             return success
     
     except KeyboardInterrupt:
-        print(f"\n\n⚠️ WARNING: Indexing interrupted by user.")
+        print(f"\n\n[!] WARNING: Indexing interrupted by user.")
         if 'stats' in locals():
-            print(f"📊 Partial results: {stats.get('records_saved', 0)} chunks saved")
-        print(f"✅ No data was corrupted - safe to restart.")
+            print(f"[*] Partial results: {stats.get('records_saved', 0)} chunks saved")
+        print(f"[+] No data was corrupted - safe to restart.")
         sys.exit(1)
     
     except Exception as e:
-        print(f"\n\n❌ FATAL ERROR: {e}")
-        print(f"🔧 Check your configuration and try again.")
+        print(f"\n\n[-] FATAL ERROR: {e}")
+        print(f"[*] Check your configuration and try again.")
         
         # Try to save error information
         if 'log_dir' in locals():
@@ -614,18 +614,18 @@ def main():
 
 if __name__ == "__main__":
     try:
-        print("🚀 Simplified RAG Document Indexer - Part 2: Chunking & Vectors")
+        print("[*] Simplified RAG Document Indexer - Part 2: Chunking & Vectors")
         print("=" * 70)
-        print("📄 Input: Markdown files from Docling (Part 1)")
-        print("🧩 Processing: Chunking → Gemini Embeddings → Supabase Vectors")
-        print("🔗 Registry: Document tracking with document_registry table")
+        print("[*] Input: Markdown files from Docling (Part 1)")
+        print("[*] Processing: Chunking -> Gemini Embeddings -> Supabase Vectors")
+        print("[*] Registry: Document tracking with document_registry table")
         print("=" * 70)
-        
+
         main()
     except KeyboardInterrupt:
-        print(f"\n\n⚠️ Indexing interrupted by user.")
-        print(f"✅ Safe to restart - no data corruption.")
+        print(f"\n\n[!] Indexing interrupted by user.")
+        print(f"[+] Safe to restart - no data corruption.")
         sys.exit(1)
     except Exception as e:
-        print(f"\n\n❌ FATAL ERROR: {e}")
+        print(f"\n\n[-] FATAL ERROR: {e}")
         sys.exit(1)

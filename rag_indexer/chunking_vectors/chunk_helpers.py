@@ -27,7 +27,7 @@ def create_and_filter_chunks_enhanced(documents, config, node_parser, progress_t
     Returns:
         tuple: (valid_nodes, invalid_nodes, enhanced_node_stats)
     """
-    print("\n🧩 Enhanced chunk creation and quality analysis...")
+    print("\n[*] Enhanced chunk creation and quality analysis...")
     chunk_start_time = time.time()
 
     # Check if hybrid chunking is enabled
@@ -38,61 +38,78 @@ def create_and_filter_chunks_enhanced(documents, config, node_parser, progress_t
         if use_hybrid:
             # Hybrid chunking path (Docling HybridChunker)
             print("   Using Hybrid Chunking (Docling HybridChunker)")
-            logger.info("🧩 Using Hybrid Chunking (Docling HybridChunker)")
+            logger.info("[*] Using Hybrid Chunking (Docling HybridChunker)")
 
             try:
                 from .hybrid_chunker import create_hybrid_chunker, is_hybrid_chunking_available
 
                 if not is_hybrid_chunking_available():
-                    print("   ❌ Hybrid chunking not available! Falling back to SentenceSplitter.")
+                    print("   [-] Hybrid chunking not available! Falling back to SentenceSplitter.")
                     print("      Install with: pip install 'docling-core[chunking]' transformers")
-                    logger.error("❌ Hybrid chunking requested but not available! Falling back to SentenceSplitter.")
+                    logger.error("[-] Hybrid chunking requested but not available! Falling back to SentenceSplitter.")
                     use_hybrid = False
                 else:
                     # Create hybrid chunker and chunk documents
                     chunker = create_hybrid_chunker(config)
                     all_nodes = chunker.chunk_documents(documents)
-                    print(f"   ✅ Hybrid chunking created {len(all_nodes)} chunks from {len(documents)} documents")
-                    logger.info(f"   ✅ Hybrid chunking created {len(all_nodes)} chunks from {len(documents)} documents")
+                    print(f"   [+] Hybrid chunking created {len(all_nodes)} chunks from {len(documents)} documents")
+                    logger.info(f"   [+] Hybrid chunking created {len(all_nodes)} chunks from {len(documents)} documents")
+
+                    # Check if some documents produced 0 chunks (e.g., OCR-enhanced docs with incomplete JSON)
+                    if chunker.stats.get('errors', 0) > 0:
+                        print(f"   [!] Warning: {chunker.stats['errors']} document(s) failed in hybrid chunking")
+                        print(f"      Using SentenceSplitter fallback for failed documents...")
+                        logger.warning(f"   {chunker.stats['errors']} document(s) failed in hybrid chunking, using fallback")
+
+                        # Identify which documents need fallback
+                        file_names_with_chunks = {node.metadata.get('file_name') for node in all_nodes}
+                        docs_needing_fallback = [doc for doc in documents if doc.metadata.get('file_name') not in file_names_with_chunks]
+
+                        if docs_needing_fallback:
+                            print(f"      Processing {len(docs_needing_fallback)} failed document(s) with SentenceSplitter...")
+                            fallback_nodes = node_parser.get_nodes_from_documents(docs_needing_fallback, show_progress=False)
+                            all_nodes.extend(fallback_nodes)
+                            print(f"      [+] Fallback created {len(fallback_nodes)} additional chunks")
+                            logger.info(f"      [+] SentenceSplitter fallback created {len(fallback_nodes)} chunks for {len(docs_needing_fallback)} documents")
 
             except Exception as e:
-                print(f"   ❌ Hybrid chunking failed: {e}")
+                print(f"   [-] Hybrid chunking failed: {e}")
                 print("      Falling back to SentenceSplitter")
-                logger.error(f"❌ Hybrid chunking failed: {e}")
+                logger.error(f"[-] Hybrid chunking failed: {e}")
                 logger.error("   Falling back to SentenceSplitter")
                 use_hybrid = False
 
         if not use_hybrid:
             # Legacy path: SentenceSplitter
             print("   Using Legacy Chunking (SentenceSplitter)")
-            logger.info("🧩 Using Legacy Chunking (SentenceSplitter)")
+            logger.info("[*] Using Legacy Chunking (SentenceSplitter)")
 
             # Create nodes with enhanced metadata
             all_nodes = node_parser.get_nodes_from_documents(documents, show_progress=True)
-            print(f"   ✅ SentenceSplitter created {len(all_nodes)} chunks from {len(documents)} documents")
-            logger.info(f"   ✅ SentenceSplitter created {len(all_nodes)} chunks from {len(documents)} documents")
+            print(f"   [+] SentenceSplitter created {len(all_nodes)} chunks from {len(documents)} documents")
+            logger.info(f"   [+] SentenceSplitter created {len(all_nodes)} chunks from {len(documents)} documents")
 
         progress_tracker.add_checkpoint("Enhanced chunks created", len(all_nodes))
 
     except Exception as e:
-        print(f"❌ Failed to parse documents into chunks: {e}")
+        print(f"[-] Failed to parse documents into chunks: {e}")
         logger.error(f"Failed to parse documents into chunks: {e}")
         raise
     
     chunk_time = time.time() - chunk_start_time
-    print(f"✅ Document chunking completed in {chunk_time:.2f}s")
+    print(f"[+] Document chunking completed in {chunk_time:.2f}s")
     
     # Enhanced node processing with quality analysis
     chunk_settings = config.get_chunk_settings()
     node_processor = create_node_processor(chunk_settings['min_chunk_length'])
     
-    print("🔍 Applying enhanced quality filters...")
+    print("[*] Applying enhanced quality filters...")
     filter_start_time = time.time()
     
     valid_nodes, invalid_nodes = node_processor.filter_and_enhance_nodes(all_nodes, show_progress=True)
     
     filter_time = time.time() - filter_start_time
-    print(f"✅ Quality filtering completed in {filter_time:.2f}s")
+    print(f"[+] Quality filtering completed in {filter_time:.2f}s")
     
     # Enhanced statistics
     enhanced_node_stats = node_processor.get_node_statistics(valid_nodes)
@@ -124,27 +141,27 @@ def print_enhanced_chunk_statistics(node_stats, invalid_nodes):
         node_stats: Enhanced node statistics
         invalid_nodes: List of invalid nodes with reasons
     """
-    print(f"\n📊 ENHANCED CHUNK STATISTICS:")
-    print(f"📝 Total chunks created: {node_stats.get('total_nodes_created', 0):,}")
-    print(f"✅ Valid chunks: {node_stats.get('valid_nodes', 0):,}")
-    print(f"❌ Invalid chunks filtered: {node_stats.get('invalid_nodes', 0):,}")
-    print(f"📈 Filter success rate: {node_stats.get('filter_success_rate', 0):.1f}%")
+    print(f"\n[*] ENHANCED CHUNK STATISTICS:")
+    print(f"[*] Total chunks created: {node_stats.get('total_nodes_created', 0):,}")
+    print(f"[+] Valid chunks: {node_stats.get('valid_nodes', 0):,}")
+    print(f"[-] Invalid chunks filtered: {node_stats.get('invalid_nodes', 0):,}")
+    print(f"[*] Filter success rate: {node_stats.get('filter_success_rate', 0):.1f}%")
 
     # Only print quality metrics if there are valid chunks
     if node_stats.get('valid_nodes', 0) > 0:
-        print(f"\n🎯 Quality Metrics:")
+        print(f"\n[*] Quality Metrics:")
         print(f"   Average content length: {node_stats.get('avg_content_length', 0):.0f} characters")
         print(f"   Length range: {node_stats.get('min_content_length', 0)}-{node_stats.get('max_content_length', 0)}")
         print(f"   Average words per chunk: {node_stats.get('avg_word_count', 0):.1f}")
         print(f"   Word count range: {node_stats.get('min_word_count', 0)}-{node_stats.get('max_word_count', 0)}")
 
-        print(f"\n📁 File Distribution:")
+        print(f"\n[*] File Distribution:")
         print(f"   Unique files processed: {node_stats.get('unique_files', 0):,}")
         print(f"   Average chunks per file: {node_stats.get('chunks_per_file', 0):.1f}")
     else:
-        print(f"\n⚠️ No valid chunks created - cannot compute quality metrics")
+        print(f"\n[!] No valid chunks created - cannot compute quality metrics")
 
-    print(f"\n⚡ Processing Performance:")
+    print(f"\n[*] Processing Performance:")
     print(f"   Chunk creation time: {node_stats.get('chunk_creation_time', 0):.2f}s")
     print(f"   Quality filtering time: {node_stats.get('filter_processing_time', 0):.2f}s")
     print(f"   Total processing time: {node_stats.get('total_processing_time', 0):.2f}s")
@@ -156,7 +173,7 @@ def print_enhanced_chunk_statistics(node_stats, invalid_nodes):
             reason = invalid_node.get('reason', 'unknown')
             invalid_reasons[reason] = invalid_reasons.get(reason, 0) + 1
         
-        print(f"\n🔍 Invalid Chunk Analysis (sample):")
+        print(f"\n[*] Invalid Chunk Analysis (sample):")
         for reason, count in sorted(invalid_reasons.items()):
             print(f"   {reason.replace('_', ' ').title()}: {count}")
 
@@ -425,11 +442,11 @@ def print_chunk_optimization_suggestions(optimization_results):
     Args:
         optimization_results: Results from optimize_chunk_processing_settings
     """
-    print(f"\n🔧 CHUNK PROCESSING OPTIMIZATION ANALYSIS:")
+    print(f"\n[*] CHUNK PROCESSING OPTIMIZATION ANALYSIS:")
     
     # Current performance
     perf = optimization_results['current_performance']
-    print(f"📊 Current Performance:")
+    print(f"[*] Current Performance:")
     print(f"   Chunk creation speed: {perf.get('chunk_creation_speed', 0):.1f} chunks/sec")
     print(f"   Filter success rate: {perf.get('filter_success_rate', 0):.1f}%")
     print(f"   Average chunk size: {perf.get('avg_chunk_size', 0):.0f} characters")
@@ -438,11 +455,11 @@ def print_chunk_optimization_suggestions(optimization_results):
     # Optimization suggestions
     suggestions = optimization_results['optimization_suggestions']
     if suggestions:
-        print(f"\n💡 Optimization Suggestions:")
+        print(f"\n[*] Optimization Suggestions:")
         for i, suggestion in enumerate(suggestions, 1):
             print(f"   {i}. {suggestion}")
     else:
-        print(f"\n✅ Current chunk processing settings appear optimal")
+        print(f"\n[+] Current chunk processing settings appear optimal")
     
     # Configuration recommendations
     recommendations = optimization_results['configuration_recommendations']
@@ -541,9 +558,9 @@ def save_chunk_processing_report(report, log_dir="./logs"):
         with open(report_file, 'w', encoding='utf-8') as f:
             json.dump(json_report, f, indent=2, ensure_ascii=False)
         
-        print(f"📋 Chunk processing report saved to: {report_file}")
+        print(f"[*] Chunk processing report saved to: {report_file}")
         return report_file
         
     except Exception as e:
-        print(f"⚠️ Could not save chunk processing report: {e}")
+        print(f"[!] Could not save chunk processing report: {e}")
         return None
