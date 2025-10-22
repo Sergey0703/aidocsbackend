@@ -1,5 +1,6 @@
 # retrieval/results_fusion.py
 # Advanced results fusion and ranking for hybrid multi-strategy retrieval
+# UPDATED: Added LLM re-ranking with Gemini API for semantic validation
 
 import logging
 import math
@@ -8,6 +9,8 @@ from typing import List, Dict, Optional, Tuple, Any, Set
 from dataclasses import dataclass
 from collections import defaultdict, Counter
 import re
+
+from .llm_reranker import GeminiReranker
 
 logger = logging.getLogger(__name__)
 
@@ -23,10 +26,37 @@ class FusionResult:
 
 class HybridResultsFusionEngine:
     """?? Advanced results fusion engine for hybrid retrieval with Vector + Database support"""
-    
+
+    @staticmethod
+    def _word_level_match(query: str, text: str) -> bool:
+        """
+        Check if query matches text at word level (not substring).
+        'river' will NOT match 'driver', but WILL match 'river bank'
+        """
+        if not query or not text:
+            return False
+
+        # Escape special regex characters in query
+        escaped_query = re.escape(query.lower())
+
+        # Create word boundary pattern: \b matches word boundaries
+        pattern = r'\b' + escaped_query + r'\b'
+
+        return bool(re.search(pattern, text.lower()))
+
     def __init__(self, config):
         self.config = config
-        
+
+        # Initialize LLM re-ranker for semantic validation
+        try:
+            self.reranker = GeminiReranker(config)
+            self.reranking_enabled = True
+            logger.info("[+] LLM re-ranking enabled")
+        except Exception as e:
+            logger.warning(f"[!] LLM re-ranking disabled: {e}")
+            self.reranker = None
+            self.reranking_enabled = False
+
         # ?? Hybrid fusion weights for different sources
         self.method_weights = {
             # Vector search methods
@@ -138,11 +168,26 @@ class HybridResultsFusionEngine:
         final_results = self._apply_hybrid_final_filters(
             fused_results, original_query, extracted_entity, required_terms, is_person_query
         )
-        
+
+        # [NEW] LLM RE-RANKING: Semantic validation to filter false matches
+        if self.reranking_enabled and final_results:
+            logger.info(f"[*] Applying LLM re-ranking to validate {len(final_results)} results...")
+            try:
+                # Re-rank using Gemini API for semantic relevance
+                final_results = self.reranker.rerank_sync(
+                    query=original_query,
+                    results=final_results,
+                    top_k=None  # Return all relevant results, not just top K
+                )
+                logger.info(f"[+] LLM re-ranking complete: kept {len(final_results)} relevant results")
+            except Exception as e:
+                logger.error(f"[!] LLM re-ranking failed: {e}")
+                # Continue with original results on error
+
         fusion_time = time.time() - start_time
-        
+
         logger.info(f"? Hybrid fusion completed: {fusion_method} | {original_count}?{len(final_results)} results in {fusion_time:.3f}s")
-        
+
         return FusionResult(
             fused_results=final_results,
             fusion_method=fusion_method,
@@ -153,7 +198,109 @@ class HybridResultsFusionEngine:
             ),
             fusion_time=fusion_time
         )
-    
+
+    async def fuse_results_async(self,
+                                 all_results: List[Any],
+                                 original_query: str,
+                                 extracted_entity: Optional[str] = None,
+                                 required_terms: List[str] = None) -> FusionResult:
+        """
+        ASYNC version of fuse_results() with full LLM re-ranking support.
+
+        Use this version when calling from async context (tests, async API endpoints).
+        Enables proper LLM re-ranking without event loop conflicts.
+        """
+        start_time = time.time()
+
+        if not all_results:
+            return FusionResult(
+                fused_results=[],
+                fusion_method="empty",
+                original_count=0,
+                final_count=0,
+                fusion_metadata={"reason": "no_results"},
+                fusion_time=time.time() - start_time
+            )
+
+        original_count = len(all_results)
+
+        # Analyze query characteristics for fusion strategy selection
+        is_person_query = self._is_person_query(original_query, extracted_entity)
+        query_complexity = self._analyze_query_complexity(original_query)
+
+        logger.info(f"[*] Hybrid fusion (async): {original_count} results | Person query: {is_person_query} | Complexity: {query_complexity}")
+
+        # Remove exact duplicates first
+        deduplicated = self._hybrid_deduplication(all_results)
+        logger.info(f"   After deduplication: {len(deduplicated)} results")
+
+        # Select fusion strategy based on query analysis
+        fusion_method = self._select_hybrid_fusion_strategy(
+            deduplicated, original_query, is_person_query, query_complexity
+        )
+
+        # Apply selected fusion method (all these are sync)
+        if fusion_method == "hybrid_person_priority":
+            fused_results = self._hybrid_person_priority_fusion(
+                deduplicated, original_query, extracted_entity, required_terms
+            )
+        elif fusion_method == "hybrid_weighted_fusion":
+            fused_results = self._hybrid_weighted_fusion(
+                deduplicated, original_query, extracted_entity, required_terms
+            )
+        elif fusion_method == "database_priority":
+            fused_results = self._database_priority_fusion(
+                deduplicated, original_query, extracted_entity, required_terms
+            )
+        elif fusion_method == "vector_priority":
+            fused_results = self._vector_priority_fusion(
+                deduplicated, original_query, extracted_entity, required_terms
+            )
+        elif fusion_method == "reciprocal_rank_fusion":
+            fused_results = self._reciprocal_rank_fusion(deduplicated, original_query)
+        else:
+            # Default: hybrid weighted fusion
+            fused_results = self._hybrid_weighted_fusion(
+                deduplicated, original_query, extracted_entity, required_terms
+            )
+
+        # Apply final filters and quality checks
+        final_results = self._apply_hybrid_final_filters(
+            fused_results, original_query, extracted_entity, required_terms, is_person_query
+        )
+
+        # [NEW] ASYNC LLM RE-RANKING: Full semantic validation
+        if self.reranking_enabled and final_results:
+            logger.info(f"[*] Applying ASYNC LLM re-ranking to validate {len(final_results)} results...")
+            try:
+                # Use async re-ranking (no event loop conflicts!)
+                final_results = await self.reranker.rerank_results(
+                    query=original_query,
+                    results=final_results,
+                    top_k=None  # Return all relevant results, not just top K
+                )
+                logger.info(f"[+] ASYNC LLM re-ranking complete: kept {len(final_results)} relevant results")
+            except Exception as e:
+                logger.error(f"[!] ASYNC LLM re-ranking failed: {e}")
+                import traceback
+                logger.error(traceback.format_exc())
+                # Continue with original results on error
+
+        fusion_time = time.time() - start_time
+
+        logger.info(f"[+] Hybrid fusion (async) completed: {fusion_method} | {original_count} -> {len(final_results)} results in {fusion_time:.3f}s")
+
+        return FusionResult(
+            fused_results=final_results,
+            fusion_method=fusion_method,
+            original_count=original_count,
+            final_count=len(final_results),
+            fusion_metadata=self._generate_hybrid_fusion_metadata(
+                all_results, final_results, fusion_method, is_person_query
+            ),
+            fusion_time=fusion_time
+        )
+
     def _select_hybrid_fusion_strategy(self, 
                                      results: List[Any], 
                                      query: str,
@@ -295,20 +442,20 @@ class HybridResultsFusionEngine:
                 match_type = result.metadata['match_type']
                 quality_multiplier *= self.strategy_boosts.get(match_type, 1.0)
             
-            # ?? Exact query match boost
-            if query_lower in content_lower:
+            # ?? Exact query match boost (word-level, not substring)
+            if self._word_level_match(query_lower, content_lower):
                 quality_multiplier *= self.quality_indicators["person_name_exact" if is_person_query else "exact_match"]
             
-            # ?? Entity match boost (for person queries)
-            if entity_lower and entity_lower in content_lower:
+            # ?? Entity match boost (for person queries, word-level)
+            if entity_lower and self._word_level_match(entity_lower, content_lower):
                 if is_person_query:
                     quality_multiplier *= self.quality_indicators["person_name_exact"]
                 else:
                     quality_multiplier *= 1.2
             
-            # ?? Required terms coverage
+            # ?? Required terms coverage (word-level)
             if required_terms_lower:
-                found_terms = sum(1 for term in required_terms_lower if term in content_lower)
+                found_terms = sum(1 for term in required_terms_lower if self._word_level_match(term, content_lower))
                 term_coverage = found_terms / len(required_terms_lower)
                 if term_coverage > 0.5:
                     quality_multiplier *= (1.0 + term_coverage * 0.3)
@@ -342,8 +489,8 @@ class HybridResultsFusionEngine:
                 "fusion_method": "hybrid_weighted",
                 "is_person_query": is_person_query,
                 "fusion_factors": {
-                    "exact_query_match": query_lower in content_lower,
-                    "entity_match": entity_lower in content_lower if entity_lower else False,
+                    "exact_query_match": self._word_level_match(query_lower, content_lower),
+                    "entity_match": self._word_level_match(entity_lower, content_lower) if entity_lower else False,
                     "term_coverage": found_terms / len(required_terms_lower) if required_terms_lower else 0,
                     "query_occurrences": result.metadata.get('query_occurrences', 0),
                     "content_length_optimal": 100 <= content_length <= 2000,
@@ -609,14 +756,16 @@ class HybridResultsFusionEngine:
         if not results:
             return results
         
-        # ?? Minimum score threshold (more permissive for hybrid)
-        min_score = max(0.1, results[0].similarity_score * 0.2)  # Very permissive
-        
-        # ?? For person queries with database results, be even more permissive
+        # ?? Minimum score threshold (UPDATED: More strict to reduce false matches)
+        # NOTE: This threshold is less critical now that we have LLM re-ranking
+        min_score = max(0.3, results[0].similarity_score * 0.5)  # Increased from 0.1 to 0.3
+
+        # ?? For person queries with database results, still be somewhat permissive
+        # but not as extreme as before (0.05 -> 0.25)
         if is_person_query:
             has_database_results = any("database" in r.source_method for r in results)
             if has_database_results:
-                min_score = 0.05  # Very low threshold for person queries with database results
+                min_score = 0.25  # Increased from 0.05 to 0.25 (5x stricter)
         
         filtered_results = []
         for result in results:
@@ -647,15 +796,15 @@ class HybridResultsFusionEngine:
         if not entity_lower:
             return base_quality
         
-        # Look for training/certification context (positive)
+        # Look for training/certification context (positive, word-level)
         training_keywords = ['training', 'certificate', 'certification', 'course', 'completed', 'achieved']
-        training_context = sum(1 for keyword in training_keywords if keyword in content_lower)
+        training_context = sum(1 for keyword in training_keywords if self._word_level_match(keyword, content_lower))
         if training_context > 0:
             base_quality *= self.quality_indicators["training_context"]
-        
-        # Look for signature-only context (negative)
+
+        # Look for signature-only context (negative, word-level)
         signature_keywords = ['signature', 'signed', 'form', 'date:', 'location:']
-        signature_context = sum(1 for keyword in signature_keywords if keyword in content_lower)
+        signature_context = sum(1 for keyword in signature_keywords if self._word_level_match(keyword, content_lower))
         if signature_context >= 2 and training_context == 0:
             base_quality *= self.quality_indicators["signature_context"]
         
@@ -701,13 +850,13 @@ class HybridResultsFusionEngine:
         # Start with base score
         priority_score = base_score
         
-        # Boost for exact entity matches
-        if entity_lower in content_lower:
+        # Boost for exact entity matches (word-level)
+        if entity_lower and self._word_level_match(entity_lower, content_lower):
             priority_score *= 1.4
-        
-        # Boost for training context
+
+        # Boost for training context (word-level)
         training_keywords = ['training', 'certificate', 'certification', 'course', 'completed']
-        training_matches = sum(1 for keyword in training_keywords if keyword in content_lower)
+        training_matches = sum(1 for keyword in training_keywords if self._word_level_match(keyword, content_lower))
         if training_matches > 0:
             priority_score *= (1.0 + training_matches * 0.1)
         

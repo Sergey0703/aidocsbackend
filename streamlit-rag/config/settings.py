@@ -44,7 +44,15 @@ class LLMConfig:
     rewrite_timeout: float = 20.0
     rewrite_temperature: float = 0.3
     rewrite_max_tokens: int = 150  # Увеличено со 100 до 150 для Gemini
-    
+
+    # Re-ranking LLM (semantic relevance validation)
+    rerank_model: str = "gemini-2.0-flash-exp"  # Fast experimental model for re-ranking
+    rerank_timeout: float = 15.0
+    rerank_temperature: float = 0.0  # Deterministic for consistency
+    rerank_max_tokens: int = 10  # Just need relevance score 0-10
+    rerank_batch_size: int = 10  # Process results in batches
+    rerank_min_score: float = 4.5  # Minimum relevance score to keep result (0-10 scale, balanced threshold)
+
     # Gemini API performance settings
     request_rate_limit: int = 10  # requests per second
     retry_attempts: int = 3

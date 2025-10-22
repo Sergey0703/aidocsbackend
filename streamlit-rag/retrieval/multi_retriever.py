@@ -372,21 +372,30 @@ class DatabaseRetriever(BaseRetriever):
     async def _exact_phrase_search(self, cur, query: str, limit: int) -> List[RetrievalResult]:
         """Exact phrase matching with high relevance scoring"""
         search_sql = f"""
-        SELECT 
+        SELECT
             id,
             metadata,
             (metadata->>'text') as text_content,
             (metadata->>'file_name') as file_name,
             (metadata->>'chunk_index') as chunk_index
         FROM {self.config.database.schema}.{self.config.database.table_name}
-        WHERE LOWER(metadata->>'text') LIKE LOWER(%s)
+        WHERE (
+            -- Word boundary matching: 'river' will NOT match 'driver'
+            LOWER(metadata->>'text') ~* %s
+            OR
+            -- Also try exact phrase matching for multi-word queries
+            LOWER(metadata->>'text') LIKE LOWER(%s)
+        )
         AND metadata->>'file_name' IS NOT NULL
         ORDER BY LENGTH(metadata->>'text') ASC
         LIMIT %s
         """
-        
-        search_term = f"%{query}%"
-        cur.execute(search_sql, (search_term, limit))
+
+        # Use word boundary regex: \m and \M are word boundaries in PostgreSQL
+        # \m matches beginning of word, \M matches end of word
+        word_boundary_pattern = r'\m' + re.escape(query.lower()) + r'\M'
+        phrase_pattern = f"%{query}%"
+        cur.execute(search_sql, (word_boundary_pattern, phrase_pattern, limit))
         rows = cur.fetchall()
         
         results = []
