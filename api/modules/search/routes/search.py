@@ -61,12 +61,13 @@ async def search(
         logger.info(f"  Time: {retrieval_time:.3f}s")
 
         # ====================================================================
-        # STAGE 2: Hybrid Results Fusion (Backend)
+        # STAGE 2: Hybrid Results Fusion + LLM Re-ranking (Backend)
         # ====================================================================
-        logger.info("STAGE 2: Hybrid Results Fusion")
+        logger.info("STAGE 2: Hybrid Results Fusion + LLM Re-ranking")
         fusion_start = time.time()
 
-        fusion_result = components["fusion_engine"].fuse_results(
+        # Use ASYNC version for full LLM re-ranking support
+        fusion_result = await components["fusion_engine"].fuse_results_async(
             all_results=multi_retrieval_result.results,
             original_query=request.query,
             extracted_entity=None,  # Backend will handle entity extraction if needed
