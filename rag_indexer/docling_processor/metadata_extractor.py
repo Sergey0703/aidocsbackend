@@ -209,7 +209,7 @@ class MetadataExtractor:
             return True
             
         except Exception as e:
-            print(f"   ⚠️ Could not save metadata: {e}")
+            print(f"   [!] Could not save metadata: {e}")
             return False
     
     def load_metadata(self, input_path):
@@ -234,7 +234,7 @@ class MetadataExtractor:
                 return json.load(f)
                 
         except Exception as e:
-            print(f"   ⚠️ Could not load metadata: {e}")
+            print(f"   [!] Could not load metadata: {e}")
             return None
     
     def create_conversion_log(self, all_metadata):
@@ -280,9 +280,9 @@ class MetadataExtractor:
             with open(log_path, 'w', encoding='utf-8') as f:
                 json.dump(conversion_log, f, indent=2, ensure_ascii=False)
             
-            print(f"📋 Conversion log saved: {log_path}")
+            print(f"[*] Conversion log saved: {log_path}")
             return log_path
             
         except Exception as e:
-            print(f"⚠️ Could not save conversion log: {e}")
+            print(f"[!] Could not save conversion log: {e}")
             return None

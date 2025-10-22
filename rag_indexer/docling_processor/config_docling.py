@@ -75,7 +75,7 @@ class DoclingConfig:
         
         # Check input directory exists
         if not os.path.exists(self.RAW_DOCUMENTS_DIR):
-            print(f"⚠️ WARNING: Input directory does not exist: {self.RAW_DOCUMENTS_DIR}")
+            print(f"[!] WARNING: Input directory does not exist: {self.RAW_DOCUMENTS_DIR}")
             print(f"Creating directory...")
             Path(self.RAW_DOCUMENTS_DIR).mkdir(parents=True, exist_ok=True)
         
@@ -98,20 +98,20 @@ class DoclingConfig:
     def print_config(self):
         """Print current configuration"""
         print("=" * 60)
-        print("🔧 DOCLING CONVERSION CONFIGURATION")
+        print("[*] DOCLING CONVERSION CONFIGURATION")
         print("=" * 60)
         print(f"Input directory: {self.RAW_DOCUMENTS_DIR}")
         print(f"Output directory: {self.MARKDOWN_OUTPUT_DIR}")
         print(f"Metadata directory: {self.METADATA_DIR}")
         print(f"Failed conversions: {self.FAILED_CONVERSIONS_DIR}")
         print(f"\nSupported formats: {', '.join(self.SUPPORTED_FORMATS)}")
-        print(f"Recursive scan: {'✓' if self.RECURSIVE_SCAN else '✗'}")
-        print(f"Mirror structure: {'✓' if self.MIRROR_DIRECTORY_STRUCTURE else '✗'}")
-        print(f"OCR enabled: {'✓' if self.ENABLE_OCR else '✗'}")
-        print(f"Extract tables: {'✓' if self.EXTRACT_TABLES else '✗'}")
+        print(f"Recursive scan: {'[+]' if self.RECURSIVE_SCAN else '[-]'}")
+        print(f"Mirror structure: {'[+]' if self.MIRROR_DIRECTORY_STRUCTURE else '[-]'}")
+        print(f"OCR enabled: {'[+]' if self.ENABLE_OCR else '[-]'}")
+        print(f"Extract tables: {'[+]' if self.EXTRACT_TABLES else '[-]'}")
         print(f"\nBatch size: {self.BATCH_SIZE}")
         print(f"Max file size: {self.MAX_FILE_SIZE_MB} MB")
-        print(f"GPU acceleration: {'✓' if self.USE_GPU else '✗'}")
+        print(f"GPU acceleration: {'[+]' if self.USE_GPU else '[-]'}")
         print("=" * 60)
     
     def is_supported_format(self, file_path):

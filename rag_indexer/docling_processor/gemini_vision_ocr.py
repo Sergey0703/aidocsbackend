@@ -47,7 +47,7 @@ class GeminiVisionOCR:
             self.client = genai.GenerativeModel(self.model_name)
             self._initialized = True
 
-            logger.info(f"✅ Gemini Vision OCR initialized (model: {self.model_name})")
+            logger.info(f"[+] Gemini Vision OCR initialized (model: {self.model_name})")
 
         except ImportError:
             logger.error("google-generativeai not installed. Run: pip install google-generativeai")
@@ -150,7 +150,7 @@ Output only the extracted text.
                 else:
                     confidence = 0.70
 
-                logger.info(f"✅ Gemini Vision extracted {len(extracted_text)} chars")
+                logger.info(f"[+] Gemini Vision extracted {len(extracted_text)} chars")
 
                 return {
                     'text': extracted_text,

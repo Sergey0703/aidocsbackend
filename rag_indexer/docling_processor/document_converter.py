@@ -159,15 +159,25 @@ class DocumentConverter:
 
             # OCR Enhancement: Replace <!-- image --> placeholders with OCR text
             # NOTE: Do OCR BEFORE saving JSON so JSON includes OCR text
-            if self.enable_ocr_enhancement and '<!-- image -->' in markdown_content:
+            if self.enable_ocr_enhancement and ('<!-- image -->' in markdown_content or result.document.pictures):
                 try:
                     print(f"   [*] Image placeholders detected - running OCR enhancement...")
                     enhancer = self._get_ocr_enhancer()
 
+                    # Enhance BOTH markdown AND DoclingDocument
                     enhanced_content, ocr_stats = enhancer.enhance_markdown(
                         markdown_content,
                         str(input_path)
                     )
+
+                    # Also enhance DoclingDocument (for JSON output with OCR)
+                    if result.document.pictures:
+                        enhanced_doc, doc_stats = enhancer.enhance_docling_document(
+                            result.document,
+                            str(input_path)
+                        )
+                        result.document = enhanced_doc  # Replace with enhanced version
+                        print(f"   [+] DoclingDocument enhanced with {doc_stats['ocr_chars_added']} chars of OCR text")
 
                     # Update markdown file with enhanced content
                     if ocr_stats['placeholders_replaced'] > 0:
@@ -195,6 +205,8 @@ class DocumentConverter:
                 except Exception as ocr_error:
                     print(f"   [!] OCR enhancement failed: {ocr_error}")
                     print(f"   Continuing with original Docling output...")
+                    import traceback
+                    traceback.print_exc()
                     # Not critical - continue with original markdown
 
             # Save JSON output for Hybrid Chunking (if enabled)
@@ -255,10 +267,10 @@ class DocumentConverter:
             dict: Conversion statistics
         """
         if not files_to_process:
-            print("⚠️ No files to convert in this batch.")
+            print("[!] No files to convert in this batch.")
             return self.get_conversion_stats()
         
-        print(f"\n🚀 Starting conversion of {len(files_to_process)} files...")
+        print(f"\n[*] Starting conversion of {len(files_to_process)} files...")
         batch_start_time = time.time()
         
         successful_in_batch = 0
@@ -333,7 +345,7 @@ class DocumentConverter:
             safe_write_file(error_log_path, error_info)
             
         except Exception as e:
-            print(f"   ⚠️ Could not save failed conversion log: {e}")
+            print(f"   [!] Could not save failed conversion log: {e}")
     
     def _print_progress(self, current, total, start_time):
         """
@@ -348,28 +360,28 @@ class DocumentConverter:
         rate = current / elapsed if elapsed > 0 else 0
         eta = (total - current) / rate if rate > 0 else 0
         
-        print(f"\n📊 Progress: {current}/{total} files")
-        print(f"   ✅ Successful: {self.stats['successful']}")
-        print(f"   ❌ Failed: {self.stats['failed']}")
-        print(f"   ⚡ Rate: {rate:.2f} files/sec")
-        print(f"   ⏱️ ETA: {format_time(eta)}")
+        print(f"\n[*] Progress: {current}/{total} files")
+        print(f"   [+] Successful: {self.stats['successful']}")
+        print(f"   [-] Failed: {self.stats['failed']}")
+        print(f"   [*] Rate: {rate:.2f} files/sec")
+        print(f"   [*] ETA: {format_time(eta)}")
     
     def _print_final_summary(self):
         """Print final conversion summary."""
         print(f"\n" + "=" * 60)
-        print(f"✅ BATCH CONVERSION COMPLETED")
+        print(f"[+] BATCH CONVERSION COMPLETED")
         print(f"=" * 60)
-        print(f"📊 Results for this batch:")
+        print(f"[*] Results for this batch:")
         print(f"   Total files attempted: {self.stats['total_files']}")
-        print(f"   ✅ Successful: {self.stats['successful']}")
-        print(f"   ❌ Failed: {self.stats['failed']}")
+        print(f"   [+] Successful: {self.stats['successful']}")
+        print(f"   [-] Failed: {self.stats['failed']}")
         
         if self.stats['total_files'] > 0:
             success_rate = (self.stats['successful'] / self.stats['total_files']) * 100
-            print(f"   📈 Success rate: {success_rate:.1f}%")
+            print(f"   [*] Success rate: {success_rate:.1f}%")
         
         if self.stats.get('total_batch_time'):
-            print(f"\n⏱️ Performance for this batch:")
+            print(f"\n[*] Performance for this batch:")
             print(f"   Total time: {format_time(self.stats['total_batch_time'])}")
             if self.stats['successful'] > 0:
                 avg_time = self.stats['total_time'] / self.stats['successful']
@@ -377,7 +389,7 @@ class DocumentConverter:
         
         # OCR Enhancement stats
         if self.enable_ocr_enhancement and self.stats.get('ocr_enhanced', 0) > 0:
-            print(f"\n🔍 OCR Enhancement:")
+            print(f"\n[*] OCR Enhancement:")
             print(f"   Strategy: {self.ocr_strategy}")
             print(f"   Documents enhanced: {self.stats['ocr_enhanced']}")
             print(f"   Image placeholders replaced: {self.stats['ocr_placeholders_replaced']}")
@@ -388,10 +400,10 @@ class DocumentConverter:
             if self.stats.get('gemini_used', 0) > 0:
                 print(f"   ✨ Gemini Vision used: {self.stats['gemini_used']} image(s)")
             if self.stats.get('fallback_triggered', 0) > 0:
-                print(f"   🔄 Fallback triggered: {self.stats['fallback_triggered']} time(s)")
+                print(f"   [*] Fallback triggered: {self.stats['fallback_triggered']} time(s)")
 
         if self.stats['failed_files']:
-            print(f"\n❌ Failed files (check logs in '{self.config.FAILED_CONVERSIONS_DIR}'):")
+            print(f"\n[-] Failed files (check logs in '{self.config.FAILED_CONVERSIONS_DIR}'):")
             for failed in self.stats['failed_files'][:5]:
                 print(f"   - {Path(failed['file']).name}: {failed['error'][:100]}...")
             if len(self.stats['failed_files']) > 5:

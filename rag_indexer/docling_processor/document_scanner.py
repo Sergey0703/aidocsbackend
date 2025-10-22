@@ -36,7 +36,7 @@ class DocumentScanner:
         Returns:
             list: List of file paths to process
         """
-        print(f"📂 Scanning directory: {self.config.RAW_DOCUMENTS_DIR}")
+        print(f"[*] Scanning directory: {self.config.RAW_DOCUMENTS_DIR}")
         print(f"   Recursive: {'Yes' if self.config.RECURSIVE_SCAN else 'No'}")
         print(f"   Supported formats: {', '.join(self.config.SUPPORTED_FORMATS)}")
         
@@ -78,7 +78,7 @@ class DocumentScanner:
         file_size_mb = file_path.stat().st_size / (1024 * 1024)
         if file_size_mb > self.config.MAX_FILE_SIZE_MB:
             self.scan_stats['oversized_files'] += 1
-            print(f"   ⚠️ Skipping oversized file: {file_path.name} ({file_size_mb:.1f} MB)")
+            print(f"   [!] Skipping oversized file: {file_path.name} ({file_size_mb:.1f} MB)")
             return
         
         # Count by format
@@ -91,13 +91,13 @@ class DocumentScanner:
     
     def _print_scan_summary(self):
         """Print scan summary"""
-        print(f"\n📊 Scan Summary:")
+        print(f"\n[*] Scan Summary:")
         print(f"   Total files found: {self.scan_stats['total_files']}")
-        print(f"   ✅ Supported files: {self.scan_stats['supported_files']}")
-        print(f"   ❌ Unsupported files: {self.scan_stats['unsupported_files']}")
+        print(f"   [+] Supported files: {self.scan_stats['supported_files']}")
+        print(f"   [-] Unsupported files: {self.scan_stats['unsupported_files']}")
         
         if self.scan_stats['oversized_files'] > 0:
-            print(f"   ⚠️ Oversized files (skipped): {self.scan_stats['oversized_files']}")
+            print(f"   [!] Oversized files (skipped): {self.scan_stats['oversized_files']}")
         
         if self.scan_stats['by_format']:
             print(f"\n   Files by format:")
@@ -146,7 +146,7 @@ class DocumentScanner:
         if not incremental:
             return files_to_process
         
-        print(f"\n🔍 Checking for already converted files...")
+        print(f"\n[*] Checking for already converted files...")
         
         new_files = []
         skipped_count = 0

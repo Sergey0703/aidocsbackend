@@ -60,7 +60,7 @@ class OCREnhancer:
             logger.info("Initializing EasyOCR...")
             self.easyocr_reader = easyocr.Reader(['en'], gpu=self.use_gpu)
             self._easyocr_initialized = True
-            logger.info("✅ EasyOCR initialized successfully")
+            logger.info("[+] EasyOCR initialized successfully")
         except ImportError:
             logger.error("EasyOCR not installed. Run: pip install easyocr")
             raise
@@ -78,7 +78,7 @@ class OCREnhancer:
             logger.info("Initializing Gemini Vision OCR...")
             self.gemini_ocr = create_gemini_vision_ocr()
             self._gemini_initialized = True
-            logger.info("✅ Gemini Vision OCR initialized successfully")
+            logger.info("[+] Gemini Vision OCR initialized successfully")
         except Exception as e:
             logger.error(f"Failed to initialize Gemini Vision: {e}")
             raise
@@ -228,18 +228,18 @@ class OCREnhancer:
 
             if easy_result['confidence'] >= self.fallback_threshold:
                 # EasyOCR confidence is good
-                logger.info(f"✅ EasyOCR succeeded (confidence: {easy_result['confidence']:.2%})")
+                logger.info(f"[+] EasyOCR succeeded (confidence: {easy_result['confidence']:.2%})")
                 return easy_result['text']
             else:
                 # Fallback to Gemini
-                logger.warning(f"⚠️  EasyOCR low confidence ({easy_result['confidence']:.2%}), trying Gemini Vision...")
+                logger.warning(f"[!]  EasyOCR low confidence ({easy_result['confidence']:.2%}), trying Gemini Vision...")
                 self.stats['fallback_triggered'] += 1
 
                 gemini_result = self._ocr_with_gemini(image_pix)
                 self.stats['gemini_used'] += 1
 
                 if gemini_result['confidence'] > easy_result['confidence']:
-                    logger.info(f"✅ Gemini Vision better (confidence: {gemini_result['confidence']:.2%})")
+                    logger.info(f"[+] Gemini Vision better (confidence: {gemini_result['confidence']:.2%})")
                     return gemini_result['text']
                 else:
                     logger.info(f"Using EasyOCR result despite low confidence")
@@ -319,9 +319,9 @@ class OCREnhancer:
                 )
                 stats['placeholders_replaced'] += 1
                 stats['ocr_chars_added'] += len(ocr_text)
-                logger.info(f"✅ Replaced placeholder with {len(ocr_text)} chars of OCR text")
+                logger.info(f"[+] Replaced placeholder with {len(ocr_text)} chars of OCR text")
             else:
-                logger.warning(f"⚠️ OCR returned no text for page {page_num + 1}")
+                logger.warning(f"[!] OCR returned no text for page {page_num + 1}")
 
         logger.info(f"Enhancement complete: {stats['placeholders_replaced']}/{stats['placeholders_found']} placeholders replaced")
 
@@ -331,6 +331,85 @@ class OCREnhancer:
         stats['fallback_triggered'] = self.stats.get('fallback_triggered', 0)
 
         return enhanced_text, stats
+
+    def enhance_docling_document(self, docling_doc, pdf_path: str) -> Tuple[Any, dict]:
+        """
+        Enhance DoclingDocument by adding OCR text to picture elements
+
+        Args:
+            docling_doc: DoclingDocument instance
+            pdf_path: Path to source PDF file
+
+        Returns:
+            Tuple of (enhanced_docling_doc, stats)
+        """
+        from docling_core.types.doc import TextItem, RefItem
+
+        stats = {
+            'placeholders_found': 0,
+            'placeholders_replaced': 0,
+            'ocr_chars_added': 0,
+            'pages_processed': 0,
+            'easyocr_used': 0,
+            'gemini_used': 0,
+            'fallback_triggered': 0
+        }
+
+        # Check if document has pictures
+        if not docling_doc.pictures:
+            logger.info("No pictures found - no OCR enhancement needed for DoclingDocument")
+            return docling_doc, stats
+
+        logger.info(f"Found {len(docling_doc.pictures)} picture(s) - starting OCR enhancement...")
+
+        # Extract images from PDF
+        images = self.extract_images_from_pdf(pdf_path)
+        if not images:
+            logger.warning("No images extracted from PDF")
+            return docling_doc, stats
+
+        stats['pages_processed'] = len(images)
+
+        # Process each image and add OCR text to document
+        for page_num, image_pix in images:
+            logger.info(f"Processing page {page_num + 1}/{len(images)}...")
+
+            # Perform OCR
+            ocr_text = self.ocr_image(image_pix)
+
+            if ocr_text:
+                # Create new text item with OCR content
+                # IMPORTANT: Add to body (not picture) so HybridChunker can see it
+                new_text_id = len(docling_doc.texts)
+                ocr_text_item = TextItem(
+                    self_ref=f"#/texts/{new_text_id}",
+                    parent=RefItem(cref="#/body"),  # Add to body, not picture!
+                    children=[],
+                    label="text",
+                    text=ocr_text,
+                    orig=ocr_text
+                )
+
+                # Add to document
+                docling_doc.texts.append(ocr_text_item)
+
+                # Add reference to body's children (so it's visible to HybridChunker)
+                docling_doc.body.children.append(RefItem(cref=f"#/texts/{new_text_id}"))
+
+                stats['placeholders_replaced'] += 1
+                stats['ocr_chars_added'] += len(ocr_text)
+                logger.info(f"[+] Added {len(ocr_text)} chars of OCR text to body (page {page_num + 1})")
+            else:
+                logger.warning(f"[!] OCR returned no text for page {page_num + 1}")
+
+        logger.info(f"Enhancement complete: Added OCR text to {stats['placeholders_replaced']} picture(s)")
+
+        # Add OCR engine usage stats
+        stats['easyocr_used'] = self.stats.get('easyocr_used', 0)
+        stats['gemini_used'] = self.stats.get('gemini_used', 0)
+        stats['fallback_triggered'] = self.stats.get('fallback_triggered', 0)
+
+        return docling_doc, stats
 
     def process_file(self, markdown_path: str, pdf_path: str, output_path: Optional[str] = None) -> bool:
         """
@@ -359,7 +438,7 @@ class OCREnhancer:
             with open(output_path, 'w', encoding='utf-8') as f:
                 f.write(enhanced_text)
 
-            logger.info(f"✅ Saved enhanced markdown to {output_path}")
+            logger.info(f"[+] Saved enhanced markdown to {output_path}")
             logger.info(f"   Stats: {stats}")
 
             return True
@@ -409,7 +488,7 @@ if __name__ == "__main__":
     success = enhancer.process_file(markdown_file, pdf_file)
 
     if success:
-        print("✅ Enhancement successful!")
+        print("[+] Enhancement successful!")
     else:
-        print("❌ Enhancement failed")
+        print("[-] Enhancement failed")
         sys.exit(1)

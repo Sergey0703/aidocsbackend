@@ -15,9 +15,9 @@ print("Test 1: Creating basic converter")
 print("=" * 60)
 try:
     converter = DocumentConverter()
-    print("✅ Basic converter created successfully\n")
+    print("[+] Basic converter created successfully\n")
 except Exception as e:
-    print(f"❌ Failed: {e}")
+    print(f"[-] Failed: {e}")
     traceback.print_exc()
     print()
 
@@ -29,9 +29,9 @@ try:
     converter = DocumentConverter(
         allowed_formats=[InputFormat.PDF]
     )
-    print("✅ Converter with formats created successfully\n")
+    print("[+] Converter with formats created successfully\n")
 except Exception as e:
-    print(f"❌ Failed: {e}")
+    print(f"[-] Failed: {e}")
     traceback.print_exc()
     print()
 
@@ -55,7 +55,7 @@ try:
                 print(f"  - {attr}: <property>")
     print()
 except Exception as e:
-    print(f"❌ Failed: {e}")
+    print(f"[-] Failed: {e}")
     traceback.print_exc()
     print()
 
@@ -70,9 +70,9 @@ try:
     # Check if file exists
     test_file = Path("./data/raw/Order1vert.pdf")
     if not test_file.exists():
-        print(f"❌ Test file not found: {test_file}")
+        print(f"[-] Test file not found: {test_file}")
     else:
-        print(f"📄 Test file: {test_file}")
+        print(f"[*] Test file: {test_file}")
         print(f"   Size: {test_file.stat().st_size} bytes")
         
         converter = DocumentConverter()
@@ -80,12 +80,12 @@ try:
         result = converter.convert(str(test_file))
         
         markdown = result.document.export_to_markdown()
-        print(f"✅ Conversion successful!")
+        print(f"[+] Conversion successful!")
         print(f"   Markdown length: {len(markdown)} chars")
         print(f"   First 200 chars: {markdown[:200]}")
         
 except Exception as e:
-    print(f"❌ Conversion failed: {e}")
+    print(f"[-] Conversion failed: {e}")
     traceback.print_exc()
     print()
 
