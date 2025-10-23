@@ -155,14 +155,34 @@ async def search(
                 **result.metadata
             }
 
+            # IMPROVED SCORE CALCULATION:
+            # Prioritize LLM relevance score (0-10 scale) over base similarity_score
+            # Convert to 0-1 scale for consistency
+            display_score = result.similarity_score  # Default fallback
+
+            if 'llm_relevance_score' in result.metadata:
+                # LLM score is 0-10, convert to 0-1
+                llm_score = result.metadata['llm_relevance_score']
+                display_score = llm_score / 10.0
+                logger.debug(f"[*] Using LLM score for {result.filename}: {llm_score}/10 = {display_score:.3f}")
+            elif result.metadata.get("match_type") == "exact_match":
+                # Exact matches should show high confidence
+                display_score = 0.95
+            elif result.metadata.get("match_type") == "strong_match":
+                # Strong matches show high confidence
+                display_score = 0.85
+
+            # Ensure score is in valid range
+            display_score = max(0.0, min(1.0, display_score))
+
             search_results.append(SearchResult(
                 content=result.content,
                 file_name=result.filename,
-                score=result.similarity_score,
+                score=display_score,
                 # Frontend compatibility fields (top-level)
                 source_method=result.source_method,
                 filename=result.filename,
-                similarity_score=result.similarity_score,
+                similarity_score=display_score,
                 chunk_index=result.chunk_index if hasattr(result, 'chunk_index') else 0,
                 # Additional metadata
                 metadata=metadata_dict
