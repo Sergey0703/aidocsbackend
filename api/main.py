@@ -20,11 +20,18 @@ sys.path.insert(0, str(backend_path))
 from api.modules import search, indexing, vehicles, document_inbox  # 🆕 Added document_inbox
 from api.core.dependencies import initialize_system_components
 
-# Setup logging
+# Setup logging - Configure root logger to capture all backend logs
 logging.basicConfig(
     level=logging.INFO,
-    format='%(asctime)s - %(levelname)s - %(name)s - %(message)s'
+    format='%(asctime)s - %(levelname)s - %(name)s - %(message)s',
+    force=True  # Force reconfiguration to ensure all loggers use this config
 )
+
+# Set log level for backend modules
+logging.getLogger('retrieval').setLevel(logging.INFO)
+logging.getLogger('query_processing').setLevel(logging.INFO)
+logging.getLogger('api').setLevel(logging.INFO)
+
 logger = logging.getLogger(__name__)
 
 
