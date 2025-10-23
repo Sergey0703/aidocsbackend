@@ -1,5 +1,6 @@
 # api/modules/search/routes/search.py
 # Simplified search endpoint - delegates all logic to backend services
+# UPDATED: Added query preprocessing to filter stop words
 
 import logging
 import time
@@ -8,10 +9,14 @@ from typing import Dict, List
 
 from api.modules.search.models.schemas import SearchRequest, SearchResponse, SearchResult, ErrorResponse
 from api.core.dependencies import get_system_components, SystemComponents
+from query_processing.query_preprocessor import QueryPreprocessor
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
+
+# Initialize query preprocessor (will be created per request with config)
+_query_preprocessor = None
 
 
 @router.post("/", response_model=SearchResponse)
@@ -41,16 +46,64 @@ async def search(
         logger.info(f"SEARCH REQUEST: {request.query}")
         logger.info("=" * 80)
 
+        components = system_components.get_components()
+
+        # ====================================================================
+        # STAGE 0: Query Preprocessing (NEW!)
+        # ====================================================================
+        logger.info("STAGE 0: Query Preprocessing")
+        preprocess_start = time.time()
+
+        # Initialize preprocessor with config
+        global _query_preprocessor
+        if _query_preprocessor is None:
+            _query_preprocessor = QueryPreprocessor(
+                components["config"],
+                enable_ai_enhancement=True  # Enable AI for complex queries
+            )
+
+        # Preprocess query
+        preprocessing_result = _query_preprocessor.preprocess(request.query)
+
+        preprocess_time = time.time() - preprocess_start
+
+        # Check if query was rejected
+        if not preprocessing_result.is_valid:
+            logger.warning(f"[!] Query rejected: {preprocessing_result.rejection_reason}")
+            logger.info(f"  Removed stop words: {preprocessing_result.removed_stop_words}")
+            logger.info(f"  Time: {preprocess_time:.3f}s")
+
+            # Return user-friendly error message as string for frontend compatibility
+            error_message = preprocessing_result.rejection_reason
+            if preprocessing_result.removed_stop_words:
+                removed = ", ".join(preprocessing_result.removed_stop_words)
+                error_message += f" (removed: {removed})"
+
+            raise HTTPException(
+                status_code=400,
+                detail=error_message
+            )
+
+        # Log preprocessing result
+        logger.info(f"[+] Query preprocessed: '{request.query}' -> '{preprocessing_result.query}'")
+        logger.info(f"  Method: {preprocessing_result.method}")
+        if preprocessing_result.removed_stop_words:
+            logger.info(f"  Removed stop words: {preprocessing_result.removed_stop_words}")
+        if preprocessing_result.ai_enhancement:
+            logger.info(f"  AI enhancement: {preprocessing_result.ai_enhancement}")
+        logger.info(f"  Time: {preprocess_time:.3f}s")
+
+        # Use preprocessed query for search
+        search_query = preprocessing_result.query
+
         # ====================================================================
         # STAGE 1: Multi-Strategy Retrieval (Backend)
         # ====================================================================
         logger.info("STAGE 1: Multi-Strategy Retrieval")
         retrieval_start = time.time()
 
-        components = system_components.get_components()
-
         multi_retrieval_result = await components["retriever"].multi_retrieve(
-            queries=[request.query],
+            queries=[search_query],  # Use preprocessed query!
             extracted_entity=None,
             required_terms=None
         )
@@ -69,7 +122,7 @@ async def search(
         # Use ASYNC version for full LLM re-ranking support
         fusion_result = await components["fusion_engine"].fuse_results_async(
             all_results=multi_retrieval_result.results,
-            original_query=request.query,
+            original_query=search_query,  # Use preprocessed query!
             extracted_entity=None,  # Backend will handle entity extraction if needed
             required_terms=None
         )
@@ -139,6 +192,9 @@ async def search(
             }
         )
 
+    except HTTPException:
+        # Re-raise HTTPException (e.g., from query validation)
+        raise
     except Exception as e:
         logger.error(f"Search failed: {e}", exc_info=True)
         raise HTTPException(
