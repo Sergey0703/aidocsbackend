@@ -43,7 +43,7 @@ async def search(
 
     try:
         logger.info("=" * 80)
-        logger.info(f"SEARCH REQUEST: query='{request.query}', top_k={request.top_k or 10}")
+        logger.info(f"SEARCH REQUEST: {request.query}")
         logger.info("=" * 80)
 
         components = system_components.get_components()
@@ -51,9 +51,7 @@ async def search(
         # ====================================================================
         # STAGE 0: Query Preprocessing (NEW!)
         # ====================================================================
-        logger.info("")
         logger.info("STAGE 0: Query Preprocessing")
-        logger.info("-" * 40)
         preprocess_start = time.time()
 
         # Initialize preprocessor with config
@@ -88,12 +86,12 @@ async def search(
 
         # Log preprocessing result
         logger.info(f"[+] Query preprocessed: '{request.query}' -> '{preprocessing_result.query}'")
-        logger.info(f"    Method: {preprocessing_result.method}")
+        logger.info(f"  Method: {preprocessing_result.method}")
         if preprocessing_result.removed_stop_words:
-            logger.info(f"    Removed stop words: {preprocessing_result.removed_stop_words}")
+            logger.info(f"  Removed stop words: {preprocessing_result.removed_stop_words}")
         if preprocessing_result.ai_enhancement:
-            logger.info(f"    AI enhancement: {preprocessing_result.ai_enhancement}")
-        logger.info(f"    Time: {preprocess_time:.3f}s")
+            logger.info(f"  AI enhancement: {preprocessing_result.ai_enhancement}")
+        logger.info(f"  Time: {preprocess_time:.3f}s")
 
         # Use preprocessed query for search
         search_query = preprocessing_result.query
@@ -101,9 +99,7 @@ async def search(
         # ====================================================================
         # STAGE 1: Multi-Strategy Retrieval (Backend)
         # ====================================================================
-        logger.info("")
         logger.info("STAGE 1: Multi-Strategy Retrieval")
-        logger.info("-" * 40)
         retrieval_start = time.time()
 
         multi_retrieval_result = await components["retriever"].multi_retrieve(
@@ -113,24 +109,14 @@ async def search(
         )
 
         retrieval_time = time.time() - retrieval_start
-        logger.info(f"[+] Retrieved {len(multi_retrieval_result.results)} candidates")
-        logger.info(f"    Methods: {', '.join(multi_retrieval_result.methods_used)}")
-        logger.info(f"    Time: {retrieval_time:.3f}s")
-
-        # Log details about retrieved results
-        if multi_retrieval_result.results:
-            logger.info(f"    Result sources breakdown:")
-            from collections import Counter
-            sources = Counter(r.source_method for r in multi_retrieval_result.results)
-            for source, count in sources.items():
-                logger.info(f"      - {source}: {count} results")
+        logger.info(f"✓ Retrieved {len(multi_retrieval_result.results)} candidates")
+        logger.info(f"  Methods: {', '.join(multi_retrieval_result.methods_used)}")
+        logger.info(f"  Time: {retrieval_time:.3f}s")
 
         # ====================================================================
         # STAGE 2: Hybrid Results Fusion + LLM Re-ranking (Backend)
         # ====================================================================
-        logger.info("")
         logger.info("STAGE 2: Hybrid Results Fusion + LLM Re-ranking")
-        logger.info("-" * 40)
         fusion_start = time.time()
 
         # Use ASYNC version for full LLM re-ranking support
@@ -142,26 +128,18 @@ async def search(
         )
 
         fusion_time = time.time() - fusion_start
-        logger.info(f"[+] Fused to {fusion_result.final_count} documents")
-        logger.info(f"    Fusion method: {fusion_result.fusion_method}")
-        logger.info(f"    Time: {fusion_time:.3f}s")
+        logger.info(f"✓ Fused to {fusion_result.final_count} documents")
+        logger.info(f"  Fusion method: {fusion_result.fusion_method}")
+        logger.info(f"  Time: {fusion_time:.3f}s")
 
         if fusion_result.fused_results:
-            # Show top 3 results with details
-            logger.info(f"    Top {min(3, len(fusion_result.fused_results))} results:")
-            for i, doc in enumerate(fusion_result.fused_results[:3], 1):
-                score = doc.similarity_score
-                llm_score = doc.metadata.get('llm_relevance_score', 'N/A')
-                match_type = doc.metadata.get('match_type', 'unknown')
-                logger.info(f"      [{i}] {doc.filename}")
-                logger.info(f"          Base score: {score:.3f}, LLM: {llm_score}, Match: {match_type}")
+            top_scores = [f"{doc.similarity_score:.3f}" for doc in fusion_result.fused_results[:3]]
+            logger.info(f"  Top scores: {top_scores}")
 
         # ====================================================================
         # STAGE 3: Format Response
         # ====================================================================
-        logger.info("")
         logger.info("STAGE 3: Format Response")
-        logger.info("-" * 40)
 
         # Convert backend results to API response format
         # Apply top_k limit (default 10 if not specified)
@@ -212,23 +190,10 @@ async def search(
 
         total_time = time.time() - start_time
 
-        logger.info("")
         logger.info("=" * 80)
         logger.info("SEARCH COMPLETED")
-        logger.info("=" * 80)
-        logger.info(f"Total Time: {total_time:.3f}s")
-        logger.info(f"Results returned: {len(search_results)}")
-        logger.info(f"Time breakdown:")
-        logger.info(f"  - Preprocessing: {preprocess_time:.3f}s")
-        logger.info(f"  - Retrieval: {retrieval_time:.3f}s")
-        logger.info(f"  - Fusion: {fusion_time:.3f}s")
-
-        # Show final scores being returned to user
-        if search_results:
-            logger.info(f"Final scores (what user sees):")
-            for i, res in enumerate(search_results[:3], 1):
-                logger.info(f"  [{i}] {res.filename}: {res.score * 100:.1f}%")
-
+        logger.info(f"Total Time: {total_time:.3f}s | Results: {len(search_results)}")
+        logger.info(f"Breakdown: Retrieval={retrieval_time:.3f}s | Fusion={fusion_time:.3f}s")
         logger.info("=" * 80)
 
         return SearchResponse(
