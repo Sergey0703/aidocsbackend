@@ -12,10 +12,12 @@ from dotenv import load_dotenv
 
 class DoclingConfig:
     """Configuration for Docling document conversion"""
-    
+
     def __init__(self):
         """Initialize configuration by loading environment variables"""
-        load_dotenv()
+        # Load .env from rag_indexer directory (not from current working directory)
+        env_path = Path(__file__).resolve().parent.parent / '.env'
+        load_dotenv(dotenv_path=env_path)
         self._load_settings()
         self._validate_settings()
     

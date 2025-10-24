@@ -111,10 +111,11 @@ class SupabaseStorageManager:
                 file_content = file.read()
                 file_size = len(file_content)
 
-            # Generate unique filename
-            file_uuid = uuid.uuid4()
-            file_extension = Path(original_filename).suffix
-            unique_filename = f"{file_uuid}{file_extension}"
+            # Use original filename with timestamp prefix to avoid conflicts
+            import time
+            timestamp = int(time.time())
+            safe_filename = original_filename.replace(' ', '_')  # Replace spaces
+            unique_filename = f"{timestamp}_{safe_filename}"
 
             # Build storage path
             storage_path = f"{target_folder}/{unique_filename}"
@@ -183,23 +184,30 @@ class SupabaseStorageManager:
             logger.error(f"Failed to download {storage_path}: {e}")
             raise
 
-    def move_document(self, old_path: str, new_path: str) -> bool:
+    def move_document(self, old_path: str, new_folder: str) -> str:
         """
-        Move a document within the Storage bucket.
+        Move a document to a new folder within the Storage bucket.
 
         This is useful for moving documents from pending → processed/failed.
 
         Args:
-            old_path: Current path in bucket
-            new_path: New path in bucket
+            old_path: Current path in bucket (e.g., 'raw/pending/file.pdf')
+            new_folder: Destination folder (e.g., 'raw/processed')
 
         Returns:
-            bool: True if successful
+            str: New full path of the moved file
 
         Raises:
             Exception: If move fails
         """
         try:
+            # Extract filename from old path
+            from pathlib import Path
+            filename = Path(old_path).name
+
+            # Build complete destination path with filename
+            new_path = f"{new_folder}/{filename}"
+
             logger.info(f"Moving {old_path} → {new_path}")
 
             # Supabase Storage doesn't have native move, so we copy + delete
@@ -208,11 +216,11 @@ class SupabaseStorageManager:
                 to_path=new_path
             )
 
-            logger.info(f"Successfully moved document")
-            return True
+            logger.info(f"Successfully moved document to {new_path}")
+            return new_path
 
         except Exception as e:
-            logger.error(f"Failed to move {old_path} → {new_path}: {e}")
+            logger.error(f"Failed to move {old_path} → {new_folder}/{filename}: {e}")
             raise
 
     def delete_document(self, storage_path: str) -> bool:
