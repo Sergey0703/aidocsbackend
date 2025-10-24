@@ -228,12 +228,12 @@ class VRNExtractionService:
     # DOCUMENT TEXT RETRIEVAL
     # ========================================================================
 
-    async def _get_document_text(self, filename: str) -> Optional[str]:
+    async def _get_document_text(self, registry_id: str) -> Optional[str]:
         """
-        Retrieves the full text of a document from the vecs.documents table.
+        Retrieves the full text of a document from the vecs.documents table by registry_id.
 
         Args:
-            filename: The document filename (can be a full path or base name).
+            registry_id: The document registry UUID.
 
         Returns:
             The combined text from all document chunks or None if not found.
@@ -244,35 +244,31 @@ class VRNExtractionService:
             config = self._get_config()
             conn = psycopg2.connect(config.CONNECTION_STRING)
 
-            base_filename = Path(filename).name
-            name_without_ext = Path(base_filename).stem
-
+            # Search by registry_id (works for both Storage and Filesystem modes)
             query = """
                 SELECT
                     metadata->>'text' as text
                 FROM vecs.documents
-                WHERE metadata->>'file_name' = %s
-                   OR metadata->>'file_name' = %s
-                   OR metadata->>'file_name' LIKE %s
-                ORDER BY (metadata->>'chunk_index')::int
+                WHERE registry_id = %s
+                ORDER BY id
             """
 
             with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
-                cur.execute(query, (filename, base_filename, f"{name_without_ext}.%"))
+                cur.execute(query, (registry_id,))
                 chunks = cur.fetchall()
 
             conn.close()
 
             if not chunks:
-                logger.warning(f"No text chunks found for document: {filename}")
+                logger.warning(f"No text chunks found for registry_id: {registry_id}")
                 return None
 
             full_text = ' '.join([chunk['text'] for chunk in chunks if chunk['text']])
-            logger.debug(f"📄 Retrieved {len(chunks)} chunks for {base_filename}, total length: {len(full_text)} chars")
+            logger.debug(f"📄 Retrieved {len(chunks)} chunks for registry {registry_id}, total length: {len(full_text)} chars")
             return full_text
 
         except Exception as e:
-            logger.error(f"Failed to get document text for {filename}: {e}", exc_info=True)
+            logger.error(f"Failed to get document text for registry_id {registry_id}: {e}", exc_info=True)
             return None
 
     # ========================================================================
@@ -355,7 +351,7 @@ class VRNExtractionService:
     async def process_document(
         self,
         registry_id: str,
-        filename: str,
+        original_filename: Optional[str] = None,
         use_ai: bool = True
     ) -> Tuple[bool, Optional[str], str]:
         """
@@ -363,22 +359,23 @@ class VRNExtractionService:
 
         Args:
             registry_id: The document registry UUID.
-            filename: The document filename.
+            original_filename: Optional filename for filename-based extraction (Storage mode).
             use_ai: Flag to enable AI extraction as a fallback.
 
         Returns:
             A tuple containing (success_status, extracted_vrn, extraction_method).
         """
-        logger.debug(f"🔍 Processing document: {filename}")
+        logger.debug(f"🔍 Processing document: registry_id={registry_id}, filename={original_filename}")
 
-        # Step 1: Extract from filename
-        vrn = self.extract_vrn_from_filename(filename)
-        if vrn:
-            await self._update_registry_with_vrn(registry_id, vrn, extraction_method='filename')
-            return True, vrn, 'filename'
+        # Step 1: Extract from filename (if available)
+        if original_filename:
+            vrn = self.extract_vrn_from_filename(original_filename)
+            if vrn:
+                await self._update_registry_with_vrn(registry_id, vrn, extraction_method='filename')
+                return True, vrn, 'filename'
 
-        # Step 2: Get document text for content-based extraction
-        text = await self._get_document_text(filename)
+        # Step 2: Get document text from chunks (by registry_id)
+        text = await self._get_document_text(registry_id)
         if not text:
             await self._update_registry_with_vrn(registry_id, None, extraction_method='no_text')
             return True, None, 'no_text'
@@ -436,10 +433,11 @@ class VRNExtractionService:
             with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
                 if document_ids:
                     placeholders = ','.join(['%s'] * len(document_ids))
-                    query = f"SELECT id, raw_file_path FROM vecs.document_registry WHERE id IN ({placeholders})"
+                    # Get both original_filename (Storage) and raw_file_path (Filesystem) for compatibility
+                    query = f"SELECT id, original_filename, raw_file_path FROM vecs.document_registry WHERE id IN ({placeholders})"
                     cur.execute(query, document_ids)
                 else:
-                    query = "SELECT id, raw_file_path FROM vecs.document_registry WHERE status = 'processed' ORDER BY uploaded_at DESC"
+                    query = "SELECT id, original_filename, raw_file_path FROM vecs.document_registry WHERE status = 'processed' ORDER BY uploaded_at DESC"
                     cur.execute(query)
                 documents = cur.fetchall()
 
@@ -449,24 +447,30 @@ class VRNExtractionService:
 
             for doc in documents:
                 try:
+                    # Use original_filename (Storage mode) or raw_file_path (Filesystem mode)
+                    filename = doc.get('original_filename') or doc.get('raw_file_path')
+                    doc_display = filename or str(doc['id'])[:8]
+
                     success, vrn, method = await self.process_document(
-                        str(doc['id']), doc['raw_file_path'], use_ai=use_ai
+                        str(doc['id']),
+                        original_filename=filename,
+                        use_ai=use_ai
                     )
                     stats['total_processed'] += 1
                     if success:
                         if vrn:
                             stats['vrn_found'] += 1
-                            logger.info(f"  ✅ {doc['raw_file_path']}: VRN={vrn} (method={method})")
+                            logger.info(f"  ✅ {doc_display}: VRN={vrn} (method={method})")
                         else:
                             stats['vrn_not_found'] += 1
-                            logger.info(f"  ⚠️ {doc['raw_file_path']}: No VRN found")
+                            logger.info(f"  ⚠️ {doc_display}: No VRN found")
                         stats['extraction_methods'][method] += 1
                     else:
                         stats['failed'] += 1
-                        logger.error(f"  ❌ {doc['raw_file_path']}: Processing failed")
+                        logger.error(f"  ❌ {doc_display}: Processing failed")
                 except Exception as e:
                     stats['failed'] += 1
-                    logger.error(f"  ❌ Unhandled exception for {doc['raw_file_path']}: {e}", exc_info=True)
+                    logger.error(f"  ❌ Unhandled exception for {doc.get('id')}: {e}", exc_info=True)
 
 
             logger.info(

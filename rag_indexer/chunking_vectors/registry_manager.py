@@ -40,13 +40,16 @@ class DocumentRegistryManager:
         try:
             conn = psycopg2.connect(self.connection_string)
             cur = conn.cursor()
-            
-            # 🆕 SEARCH BY MARKDOWN_FILE_PATH (not file_path!)
+
+            # Normalize path for case-insensitive comparison (Windows compatibility)
+            normalized_path = file_path.lower().replace('\\', '/')
+
+            # 🆕 SEARCH BY MARKDOWN_FILE_PATH (case-insensitive)
             cur.execute("""
-                SELECT id FROM vecs.document_registry 
-                WHERE markdown_file_path = %s
-            """, (file_path,))
-            
+                SELECT id FROM vecs.document_registry
+                WHERE LOWER(REPLACE(markdown_file_path, '\\', '/')) = %s
+            """, (normalized_path,))
+
             result = cur.fetchone()
             
             if result:

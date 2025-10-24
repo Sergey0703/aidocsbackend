@@ -54,10 +54,17 @@ const ProcessedDocuments = ({ documents, onFindVRN, isProcessing }) => {
     });
   };
 
-  // Get file name from path
-  const getFileName = (path) => {
-    if (!path) return 'Unknown';
-    return path.split('/').pop() || path;
+  // Get file name from document (supports both Storage and filesystem modes)
+  const getFileName = (doc) => {
+    // Storage mode: use original_filename
+    if (doc.original_filename) {
+      return doc.original_filename;
+    }
+    // Filesystem mode: extract from raw_file_path
+    if (doc.raw_file_path) {
+      return doc.raw_file_path.split('/').pop() || doc.raw_file_path;
+    }
+    return 'Unknown';
   };
 
   if (documents.length === 0) {
@@ -131,7 +138,7 @@ const ProcessedDocuments = ({ documents, onFindVRN, isProcessing }) => {
 
             <div className="processed-info">
               <div className="processed-filename">
-                {getFileName(doc.raw_file_path)}
+                {getFileName(doc)}
               </div>
               <div className="processed-meta">
                 <span className="processed-date">

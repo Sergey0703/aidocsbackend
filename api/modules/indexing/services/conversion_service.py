@@ -406,8 +406,15 @@ class ConversionService:
                         )
                         logger.info(f"   📦 Moved in Storage to: {new_path}")
 
-                        # Update status to 'processed'
-                        registry_manager.update_storage_status(registry_id, 'processed')
+                        # Update storage_status to 'processed' AND update storage_path
+                        registry_manager.update_storage_status(
+                            registry_id,
+                            'processed',
+                            new_storage_path=new_path
+                        )
+
+                        # Update main status to 'processed' (for Document Manager)
+                        registry_manager.update_registry_status(registry_id, 'processed')
 
                         task.converted_files += 1
                     else:
