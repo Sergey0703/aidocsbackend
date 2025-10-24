@@ -170,9 +170,14 @@ class MarkdownLoader:
                     json_path = json_dir / rel_path.parent / f"{md_file_path.stem}.json"
                     if json_path.exists():
                         base_metadata['json_path'] = str(json_path.resolve())
-                        logger.debug(f"Found JSON for hybrid chunking: {json_path.name}")
+                        logger.info(f"✓ Found JSON for {md_file_path.name}: {json_path.name}")
+                    else:
+                        logger.warning(f"✗ No JSON file for {md_file_path.name} (expected: {json_path.name})")
+                        logger.warning(f"  → Will use markdown fallback (structure may be lost)")
                 except Exception as e:
-                    logger.debug(f"Could not locate JSON file for {md_file_path.name}: {e}")
+                    logger.warning(f"✗ Could not locate JSON file for {md_file_path.name}: {e}")
+            else:
+                logger.warning(f"✗ JSON directory not found: {json_dir}")
 
             final_metadata = {**base_metadata, **json_metadata}
             cleaned_metadata = clean_metadata_recursive(final_metadata)

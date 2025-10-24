@@ -253,6 +253,7 @@ class HybridChunkerWrapper:
 
                 # Preserve original metadata
                 source_metadata = doc.metadata if hasattr(doc, 'metadata') else {}
+                file_name = source_metadata.get('file_name', 'unknown')
 
                 # Try to load DoclingDocument from JSON (if available)
                 docling_doc = None
@@ -262,21 +263,31 @@ class HybridChunkerWrapper:
                     try:
                         # Load from JSON (preferred for Hybrid Chunking)
                         docling_doc = DoclingDocument.load_from_json(json_path)
-                        logger.debug(f"   Loaded DoclingDocument from JSON: {json_path}")
+                        logger.info(f"   ✓ {file_name}: Using JSON for hybrid chunking (DoclingDocument)")
+                        print(f"      ✓ {file_name}: Using JSON for structure-aware chunking")
                     except Exception as e:
-                        logger.warning(f"   Failed to load JSON {json_path}: {e}")
-                        logger.warning(f"   Falling back to markdown conversion...")
+                        logger.warning(f"   ✗ {file_name}: Failed to load JSON {json_path}: {e}")
+                        logger.warning(f"   → {file_name}: Falling back to markdown conversion...")
+                        print(f"      ✗ {file_name}: JSON load failed, using markdown fallback")
+                elif json_path:
+                    logger.warning(f"   ✗ {file_name}: JSON path provided but file not found: {json_path}")
+                    print(f"      ✗ {file_name}: JSON file not found at {Path(json_path).name}")
+                else:
+                    logger.info(f"   → {file_name}: No JSON path in metadata, using markdown conversion")
+                    print(f"      → {file_name}: No JSON available, using markdown conversion")
 
                 if docling_doc is None:
                     # Fallback: Convert markdown to DoclingDocument (less accurate)
                     markdown_content = doc.text if hasattr(doc, 'text') else str(doc)
                     docling_doc = self._markdown_to_docling_document(markdown_content, source_metadata)
+                    logger.warning(f"   ⚠ {file_name}: Using simplified markdown->DoclingDocument conversion (may lose structure)")
 
                 # Chunk using HybridChunker
                 chunk_iter = self.chunker.chunk(dl_doc=docling_doc)
                 chunks = list(chunk_iter)
 
-                logger.debug(f"   Created {len(chunks)} chunks from {source_metadata.get('file_name', 'unknown')}")
+                logger.info(f"   → {file_name}: Created {len(chunks)} chunks")
+                print(f"      → {file_name}: {len(chunks)} chunks created")
 
                 # If JSON produced no chunks, try markdown fallback
                 if len(chunks) == 0 and json_path:

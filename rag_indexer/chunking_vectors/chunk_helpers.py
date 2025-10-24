@@ -37,7 +37,11 @@ def create_and_filter_chunks_enhanced(documents, config, node_parser, progress_t
     try:
         if use_hybrid:
             # Hybrid chunking path (Docling HybridChunker)
-            print("   Using Hybrid Chunking (Docling HybridChunker)")
+            print("\n" + "="*70)
+            print("   CHUNKING METHOD: Hybrid Chunking (Docling HybridChunker)")
+            print("   - Structure-aware chunking preserving tables and document layout")
+            print("   - Using DoclingDocument JSON files for best results")
+            print("="*70)
             logger.info("[*] Using Hybrid Chunking (Docling HybridChunker)")
 
             try:
@@ -81,7 +85,11 @@ def create_and_filter_chunks_enhanced(documents, config, node_parser, progress_t
 
         if not use_hybrid:
             # Legacy path: SentenceSplitter
-            print("   Using Legacy Chunking (SentenceSplitter)")
+            print("\n" + "="*70)
+            print("   CHUNKING METHOD: Legacy Chunking (SentenceSplitter)")
+            print("   - Simple text-based chunking without structure awareness")
+            print("   - May split tables and lose document structure")
+            print("="*70)
             logger.info("[*] Using Legacy Chunking (SentenceSplitter)")
 
             # Create nodes with enhanced metadata

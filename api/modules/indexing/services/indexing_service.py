@@ -337,9 +337,25 @@ class IndexingService:
             task.current_stage = ProcessingStage.CHUNKING
             task.current_stage_name = "Chunking Documents"
             logger.info(f"✂️ Chunking {len(documents_to_process)} documents...")
-            
+
+            # 🔄 USE UNIFIED CHUNKING from rag_indexer (supports Hybrid + SentenceSplitter)
+            from chunking_vectors.chunk_helpers import create_and_filter_chunks_enhanced
+            from chunking_vectors.batch_processor import create_progress_tracker
+
+            # Create dummy node_parser for fallback (if hybrid chunking fails)
             node_parser = SentenceSplitter(chunk_size=config.CHUNK_SIZE, chunk_overlap=config.CHUNK_OVERLAP)
-            all_nodes = node_parser.get_nodes_from_documents(documents_to_process, show_progress=False)
+
+            # Create progress tracker
+            progress_tracker = create_progress_tracker()
+
+            # Use unified chunking (will use HybridChunker if enabled, else SentenceSplitter)
+            all_nodes, invalid_nodes, chunk_stats = create_and_filter_chunks_enhanced(
+                documents_to_process,
+                config,
+                node_parser,
+                progress_tracker
+            )
+
             task.total_chunks = len(all_nodes)
             
             if not all_nodes:
