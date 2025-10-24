@@ -3,11 +3,18 @@
 """
 Document converter module using Docling 2.55.1
 Tested and working with basic DocumentConverter initialization
+Supports both local filesystem and Supabase Storage workflows
 """
 
+import os
+import sys
 import time
 from pathlib import Path
 from datetime import datetime
+from typing import Dict, Optional
+
+# Add parent directory to path for imports
+sys.path.insert(0, str(Path(__file__).parent.parent))
 
 # Docling 2.x imports
 from docling.document_converter import DocumentConverter as DoclingConverter
@@ -26,7 +33,9 @@ class DocumentConverter:
         config,
         enable_ocr_enhancement=True,
         ocr_strategy='fallback',
-        ocr_fallback_threshold=0.70
+        ocr_fallback_threshold=0.70,
+        storage_manager=None,
+        registry_manager=None
     ):
         """
         Initialize document converter.
@@ -36,6 +45,8 @@ class DocumentConverter:
             enable_ocr_enhancement: Whether to enhance Docling output with OCR (default: True)
             ocr_strategy: OCR strategy ('easyocr', 'gemini', 'fallback', 'ensemble')
             ocr_fallback_threshold: Confidence threshold for Gemini fallback
+            storage_manager: Optional SupabaseStorageManager for Storage mode
+            registry_manager: Optional DocumentRegistryManager for Storage mode
         """
         self.config = config
         self.metadata_extractor = MetadataExtractor(config)
@@ -44,6 +55,8 @@ class DocumentConverter:
         self.ocr_strategy = ocr_strategy
         self.ocr_fallback_threshold = ocr_fallback_threshold
         self.ocr_enhancer = None  # Lazy initialization
+        self.storage_manager = storage_manager
+        self.registry_manager = registry_manager
         self.stats = {
             'total_files': 0, 'successful': 0, 'failed': 0, 'total_time': 0,
             'failed_files': [], 'total_batch_time': 0,
@@ -62,6 +75,12 @@ class DocumentConverter:
                 print(f"   Fallback threshold: {ocr_fallback_threshold:.0%}")
         else:
             print("[!] OCR Enhancement: DISABLED")
+
+        # Print Storage mode status
+        if self.storage_manager and self.registry_manager:
+            print(f"[*] Storage Mode: ENABLED (Supabase Storage)")
+        else:
+            print(f"[*] Storage Mode: DISABLED (Local filesystem)")
     
     def _print_docling_info(self):
         """Print Docling version and configuration info"""
@@ -410,11 +429,168 @@ class DocumentConverter:
                 print(f"   ... and {len(self.stats['failed_files']) - 5} more.")
 
         print(f"=" * 60)
-    
+
+    # ================================================
+    # NEW METHODS FOR SUPABASE STORAGE INTEGRATION
+    # ================================================
+
+    def convert_from_storage(self, document_record: Dict) -> tuple[bool, Optional[Path], Optional[str]]:
+        """
+        Convert a document from Supabase Storage.
+
+        Downloads the file from Storage, converts it, then moves it to processed/failed folder.
+
+        Args:
+            document_record: Document record from document_registry with keys:
+                - id: registry UUID
+                - storage_path: path in Storage
+                - original_filename: original filename
+                - storage_bucket: bucket name
+
+        Returns:
+            tuple: (success: bool, output_path: Path, error_msg: str)
+        """
+        if not self.storage_manager or not self.registry_manager:
+            raise ValueError("storage_manager and registry_manager required for Storage mode")
+
+        registry_id = document_record['id']
+        storage_path = document_record['storage_path']
+        original_filename = document_record['original_filename']
+
+        print(f"\n[*] Converting from Storage: {original_filename}")
+        print(f"   Storage path: {storage_path}")
+
+        temp_file_path = None
+
+        try:
+            # Update status to 'processing'
+            self.registry_manager.update_storage_status(registry_id, 'processing')
+
+            # Download file from Storage to temp location
+            temp_file_path = self.storage_manager.download_to_temp(storage_path)
+
+            # Convert the downloaded file
+            success, output_path, error_msg = self.convert_file(temp_file_path)
+
+            if success:
+                # Move file to processed folder in Storage
+                year = datetime.now().strftime('%Y')
+                month = datetime.now().strftime('%m')
+                filename = Path(storage_path).name
+                new_storage_path = f"raw/processed/{year}/{month}/{filename}"
+
+                self.storage_manager.move_document(storage_path, new_storage_path)
+
+                # Update registry with new storage path and markdown path
+                self.registry_manager.update_storage_status(
+                    registry_id,
+                    'processed',
+                    new_storage_path
+                )
+                self.registry_manager.update_markdown_path(registry_id, str(output_path))
+
+                print(f"   [+] Moved to: {new_storage_path}")
+
+                return True, output_path, None
+
+            else:
+                # Move file to failed folder in Storage
+                filename = Path(storage_path).name
+                failed_storage_path = f"raw/failed/{filename}"
+
+                self.storage_manager.move_document(storage_path, failed_storage_path)
+
+                # Update registry
+                self.registry_manager.update_storage_status(
+                    registry_id,
+                    'failed',
+                    failed_storage_path
+                )
+
+                print(f"   [-] Moved to failed folder: {failed_storage_path}")
+
+                return False, None, error_msg
+
+        except Exception as e:
+            error_msg = str(e)
+            print(f"   [-] Storage conversion error: {error_msg}")
+
+            # Try to move to failed folder
+            try:
+                filename = Path(storage_path).name
+                failed_storage_path = f"raw/failed/{filename}"
+                self.storage_manager.move_document(storage_path, failed_storage_path)
+                self.registry_manager.update_storage_status(registry_id, 'failed', failed_storage_path)
+            except Exception as move_error:
+                print(f"   [!] Could not move to failed folder: {move_error}")
+
+            return False, None, error_msg
+
+        finally:
+            # Always cleanup temp file
+            if temp_file_path and os.path.exists(temp_file_path):
+                self.storage_manager.cleanup_temp_file(temp_file_path)
+
+    def convert_batch_from_storage(self, document_records: list[Dict]) -> dict:
+        """
+        Convert a batch of documents from Supabase Storage.
+
+        Args:
+            document_records: List of document records from document_registry
+
+        Returns:
+            dict: Conversion statistics
+        """
+        if not document_records:
+            print("[!] No documents to convert in this batch.")
+            return self.get_conversion_stats()
+
+        print(f"\n[*] Starting conversion of {len(document_records)} documents from Storage...")
+        batch_start_time = time.time()
+
+        successful_in_batch = 0
+        failed_in_batch = 0
+        total_time_in_batch = 0
+
+        for i, doc_record in enumerate(document_records, 1):
+            self.stats['total_files'] += 1
+            print(f"\n[{i}/{len(document_records)}]", end=" ")
+
+            file_start_time = time.time()
+            success, _, error_msg = self.convert_from_storage(doc_record)
+            file_conversion_time = time.time() - file_start_time
+
+            if success:
+                successful_in_batch += 1
+                total_time_in_batch += file_conversion_time
+            else:
+                failed_in_batch += 1
+                self.stats['failed_files'].append({
+                    'file': doc_record['original_filename'],
+                    'registry_id': doc_record['id'],
+                    'error': error_msg,
+                    'timestamp': datetime.now().isoformat()
+                })
+
+            # Print progress every 5 files
+            if i % 5 == 0:
+                self._print_progress(i, len(document_records), batch_start_time)
+
+        # Update cumulative stats
+        self.stats['successful'] += successful_in_batch
+        self.stats['failed'] += failed_in_batch
+        self.stats['total_time'] += total_time_in_batch
+        self.stats['total_batch_time'] = time.time() - batch_start_time
+
+        # Print final summary
+        self._print_final_summary()
+
+        return self.get_conversion_stats()
+
     def get_conversion_stats(self):
         """
         Get current conversion statistics.
-        
+
         Returns:
             dict: Copy of statistics dictionary
         """

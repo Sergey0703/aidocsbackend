@@ -2,6 +2,7 @@
 -- PRODUCTION RAG SYSTEM - DATABASE SCHEMA
 -- Vehicle Management + Document Registry + Vector Search
 -- UPDATED: documents.id changed from UUID to TEXT
+-- UPDATED: Added Supabase Storage support to document_registry
 -- ============================================================================
 
 -- ШАГ 1: Создание или обновление универсальной функции для `updated_at`
@@ -58,14 +59,28 @@ CREATE TRIGGER update_vehicles_updated_at
 
 CREATE TABLE IF NOT EXISTS vecs.document_registry (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    
+
     -- Связь с транспортным средством (опционально)
     vehicle_id UUID REFERENCES vecs.vehicles(id) ON DELETE SET NULL,
-    
-    -- Пути к файлам
-    raw_file_path TEXT UNIQUE,
-    markdown_file_path TEXT UNIQUE,
-    
+
+    -- 🆕 Supabase Storage fields (for Storage mode)
+    storage_bucket TEXT DEFAULT 'vehicle-documents',
+    storage_path TEXT,
+    original_filename TEXT,
+    file_size_bytes BIGINT,
+    content_type TEXT,
+    storage_status TEXT DEFAULT 'pending' CHECK (storage_status IN (
+        'pending',
+        'processing',
+        'processed',
+        'failed',
+        'indexed'
+    )),
+
+    -- Пути к файлам (legacy/filesystem mode - now optional)
+    raw_file_path TEXT,
+    markdown_file_path TEXT,
+
     -- Метаданные документа
     document_type TEXT CHECK (document_type IN (
         'insurance',
@@ -77,10 +92,11 @@ CREATE TABLE IF NOT EXISTS vecs.document_registry (
         'drivers_manual',
         'other'
     )),
-    
+
     -- Статус обработки документа
-    status TEXT DEFAULT 'unassigned' CHECK (status IN (
+    status TEXT DEFAULT 'pending_processing' CHECK (status IN (
         'pending_assignment',
+        'pending_processing',
         'unassigned',
         'assigned',
         'pending_ocr',
@@ -89,22 +105,84 @@ CREATE TABLE IF NOT EXISTS vecs.document_registry (
         'archived',
         'failed'
     )),
-    
+
     -- Извлечённые данные
     extracted_data JSONB DEFAULT '{}'::jsonb,
-    
+
     -- Метаданные
     uploaded_at TIMESTAMPTZ DEFAULT now(),
     updated_at TIMESTAMPTZ DEFAULT now()
 );
 
--- Индексы
+-- Индексы (базовые - для колонок, которые всегда существуют)
 CREATE INDEX IF NOT EXISTS idx_document_registry_vehicle ON vecs.document_registry(vehicle_id);
 CREATE INDEX IF NOT EXISTS idx_document_registry_status ON vecs.document_registry(status);
 CREATE INDEX IF NOT EXISTS idx_document_registry_type ON vecs.document_registry(document_type);
 CREATE INDEX IF NOT EXISTS idx_document_registry_raw_path ON vecs.document_registry(raw_file_path);
 CREATE INDEX IF NOT EXISTS idx_document_registry_md_path ON vecs.document_registry(markdown_file_path);
 CREATE INDEX IF NOT EXISTS idx_document_registry_extracted_data ON vecs.document_registry USING gin(extracted_data);
+
+-- 🆕 ALTER TABLE для добавления Storage колонок (если таблица уже существует)
+DO $$
+BEGIN
+    -- Add storage_bucket column if it doesn't exist
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns
+                   WHERE table_schema = 'vecs'
+                   AND table_name = 'document_registry'
+                   AND column_name = 'storage_bucket') THEN
+        ALTER TABLE vecs.document_registry ADD COLUMN storage_bucket TEXT DEFAULT 'vehicle-documents';
+    END IF;
+
+    -- Add storage_path column if it doesn't exist
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns
+                   WHERE table_schema = 'vecs'
+                   AND table_name = 'document_registry'
+                   AND column_name = 'storage_path') THEN
+        ALTER TABLE vecs.document_registry ADD COLUMN storage_path TEXT;
+    END IF;
+
+    -- Add original_filename column if it doesn't exist
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns
+                   WHERE table_schema = 'vecs'
+                   AND table_name = 'document_registry'
+                   AND column_name = 'original_filename') THEN
+        ALTER TABLE vecs.document_registry ADD COLUMN original_filename TEXT;
+    END IF;
+
+    -- Add file_size_bytes column if it doesn't exist
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns
+                   WHERE table_schema = 'vecs'
+                   AND table_name = 'document_registry'
+                   AND column_name = 'file_size_bytes') THEN
+        ALTER TABLE vecs.document_registry ADD COLUMN file_size_bytes BIGINT;
+    END IF;
+
+    -- Add content_type column if it doesn't exist
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns
+                   WHERE table_schema = 'vecs'
+                   AND table_name = 'document_registry'
+                   AND column_name = 'content_type') THEN
+        ALTER TABLE vecs.document_registry ADD COLUMN content_type TEXT;
+    END IF;
+
+    -- Add storage_status column if it doesn't exist
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns
+                   WHERE table_schema = 'vecs'
+                   AND table_name = 'document_registry'
+                   AND column_name = 'storage_status') THEN
+        ALTER TABLE vecs.document_registry ADD COLUMN storage_status TEXT DEFAULT 'pending';
+        ALTER TABLE vecs.document_registry ADD CONSTRAINT check_storage_status
+            CHECK (storage_status IN ('pending', 'processing', 'processed', 'failed', 'indexed'));
+    END IF;
+END $$;
+
+-- 🆕 Storage mode indexes (создаются ПОСЛЕ добавления колонок)
+CREATE INDEX IF NOT EXISTS idx_document_registry_storage_path ON vecs.document_registry(storage_path);
+CREATE INDEX IF NOT EXISTS idx_document_registry_storage_status ON vecs.document_registry(storage_status);
+CREATE INDEX IF NOT EXISTS idx_document_registry_uploaded_at ON vecs.document_registry(uploaded_at DESC);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_document_registry_storage_path_unique
+    ON vecs.document_registry(storage_bucket, storage_path)
+    WHERE storage_path IS NOT NULL;
 
 -- Триггер
 DROP TRIGGER IF EXISTS update_document_registry_updated_at ON vecs.document_registry;
@@ -135,8 +213,69 @@ CREATE TABLE IF NOT EXISTS vecs.documents (
 CREATE INDEX IF NOT EXISTS idx_documents_registry_id ON vecs.documents(registry_id);
 
 -- HNSW индекс для векторного поиска
-CREATE INDEX IF NOT EXISTS idx_documents_vec_hnsw ON vecs.documents 
+CREATE INDEX IF NOT EXISTS idx_documents_vec_hnsw ON vecs.documents
 USING hnsw (vec vector_cosine_ops);
+
+-- ============================================================================
+-- 🆕 SUPABASE STORAGE POLICIES (для bucket 'vehicle-documents')
+-- ============================================================================
+-- ВАЖНО: Bucket 'vehicle-documents' должен быть создан в Supabase Dashboard
+--        Settings: private=true, file_size_limit=52428800 (50MB)
+
+-- Drop existing policies first (для идемпотентного выполнения)
+DROP POLICY IF EXISTS "Service role can read all objects" ON storage.objects;
+DROP POLICY IF EXISTS "Service role can insert objects" ON storage.objects;
+DROP POLICY IF EXISTS "Service role can update objects" ON storage.objects;
+DROP POLICY IF EXISTS "Service role can delete objects" ON storage.objects;
+DROP POLICY IF EXISTS "Authenticated users can read objects" ON storage.objects;
+DROP POLICY IF EXISTS "Authenticated users can upload objects" ON storage.objects;
+
+-- Policy 1: Service role может читать все объекты
+CREATE POLICY "Service role can read all objects"
+ON storage.objects
+FOR SELECT
+TO service_role
+USING (bucket_id = 'vehicle-documents');
+
+-- Policy 2: Service role может загружать объекты
+CREATE POLICY "Service role can insert objects"
+ON storage.objects
+FOR INSERT
+TO service_role
+WITH CHECK (bucket_id = 'vehicle-documents');
+
+-- Policy 3: Service role может обновлять объекты
+CREATE POLICY "Service role can update objects"
+ON storage.objects
+FOR UPDATE
+TO service_role
+USING (bucket_id = 'vehicle-documents')
+WITH CHECK (bucket_id = 'vehicle-documents');
+
+-- Policy 4: Service role может удалять объекты
+CREATE POLICY "Service role can delete objects"
+ON storage.objects
+FOR DELETE
+TO service_role
+USING (bucket_id = 'vehicle-documents');
+
+-- Policy 5: Authenticated пользователи могут читать объекты
+CREATE POLICY "Authenticated users can read objects"
+ON storage.objects
+FOR SELECT
+TO authenticated
+USING (bucket_id = 'vehicle-documents');
+
+-- Policy 6: Authenticated пользователи могут загружать в raw/pending/
+CREATE POLICY "Authenticated users can upload objects"
+ON storage.objects
+FOR INSERT
+TO authenticated
+WITH CHECK (
+    bucket_id = 'vehicle-documents'
+    AND (storage.foldername(name))[1] = 'raw'
+    AND (storage.foldername(name))[2] = 'pending'
+);
 
 -- ============================================================================
 -- КОММЕНТАРИИ
@@ -147,7 +286,13 @@ COMMENT ON TABLE vecs.document_registry IS 'Мастер-таблица всех
 COMMENT ON TABLE vecs.documents IS 'Таблица чанков для векторного поиска (RAG). id изменён на TEXT для совместимости с vecs';
 
 COMMENT ON COLUMN vecs.documents.id IS '🔥 TEXT ID вместо UUID для совместимости с vecs библиотекой';
-COMMENT ON COLUMN vecs.document_registry.raw_file_path IS 'Путь к оригинальному файлу в data/raw/';
+COMMENT ON COLUMN vecs.document_registry.storage_bucket IS '🆕 Supabase Storage bucket name (default: vehicle-documents)';
+COMMENT ON COLUMN vecs.document_registry.storage_path IS '🆕 Full path in Storage bucket (e.g., raw/pending/uuid_file.pdf)';
+COMMENT ON COLUMN vecs.document_registry.original_filename IS '🆕 Original filename as uploaded by user';
+COMMENT ON COLUMN vecs.document_registry.file_size_bytes IS '🆕 File size in bytes';
+COMMENT ON COLUMN vecs.document_registry.content_type IS '🆕 MIME type (e.g., application/pdf)';
+COMMENT ON COLUMN vecs.document_registry.storage_status IS '🆕 Storage processing status: pending, processing, processed, failed, indexed';
+COMMENT ON COLUMN vecs.document_registry.raw_file_path IS 'Legacy: Путь к оригинальному файлу в data/raw/ (опционально для Storage mode)';
 COMMENT ON COLUMN vecs.document_registry.markdown_file_path IS 'Путь к конвертированному markdown в data/markdown/';
 COMMENT ON COLUMN vecs.document_registry.extracted_data IS 'JSON с извлечёнными данными: VRN, даты, OCR confidence';
 
@@ -180,9 +325,65 @@ COMMENT ON COLUMN vecs.document_registry.extracted_data IS 'JSON с извлеч
 -- SELECT * FROM vecs.document_registry
 -- WHERE extracted_data->>'vrn' = '191-D-12345';
 
+-- ============================================================================
+-- 🆕 STORAGE MODE QUERIES
+-- ============================================================================
+
+-- Получить все документы в очереди на обработку (Storage mode)
+-- SELECT id, original_filename, storage_path, uploaded_at
+-- FROM vecs.document_registry
+-- WHERE storage_status = 'pending'
+-- ORDER BY uploaded_at ASC;
+
+-- Подсчитать документы по статусам (Storage mode)
+-- SELECT storage_status, COUNT(*) as count
+-- FROM vecs.document_registry
+-- WHERE storage_path IS NOT NULL
+-- GROUP BY storage_status
+-- ORDER BY count DESC;
+
+-- Найти документ по storage_path
+-- SELECT * FROM vecs.document_registry
+-- WHERE storage_path = 'raw/pending/abc123_insurance.pdf';
+
+-- Получить все обработанные документы за последние 7 дней
+-- SELECT original_filename, storage_status, uploaded_at, markdown_file_path
+-- FROM vecs.document_registry
+-- WHERE storage_status = 'processed'
+--   AND uploaded_at > NOW() - INTERVAL '7 days'
+-- ORDER BY uploaded_at DESC;
+
+-- Найти документы, которые не удалось обработать
+-- SELECT id, original_filename, storage_path, status
+-- FROM vecs.document_registry
+-- WHERE storage_status = 'failed'
+-- ORDER BY updated_at DESC;
+
+-- ============================================================================
+-- 🆕 QUICK START WITH STORAGE MODE
+-- ============================================================================
+-- The schema above now supports BOTH:
+--   1. Legacy filesystem mode (backward compatible)
+--   2. NEW: Supabase Storage mode (recommended for production)
+--
+-- To use Storage mode after running this schema:
+--   1. Create bucket 'vehicle-documents' in Supabase Dashboard
+--   2. Configure .env (see rag_indexer/.env.storage.example)
+--   3. Upload: python rag_indexer/scripts/upload_documents.py --dir /path/to/docs
+--   4. Process: python rag_indexer/process_documents_storage.py
+--   5. Index: python rag_indexer/indexer.py
+--
+-- Documentation:
+--   - Quick Start: rag_indexer/QUICKSTART_STORAGE.md
+--   - Full Guide: rag_indexer/STORAGE_MIGRATION_GUIDE.md
+--   - Schema Changes: rag_indexer/SCHEMA_UPDATES.md
+-- ============================================================================
+
 This project is a sophisticated, production-ready RAG (Retrieval-Augmented Generation) system designed to answer questions based on a private collection of documents. It specializes in extracting information about people, leveraging a powerful hybrid search mechanism that combines vector-based semantic search with direct database keyword search.
 
 The backend is built with Python and designed as an API, making it easy to integrate with any custom frontend. The system uses Google Gemini for LLM tasks and Supabase (PostgreSQL with pgvector) for data storage and retrieval.
+
+**NEW**: The system now supports Supabase Storage for centralized document management. See `rag_indexer/QUICKSTART_STORAGE.md` for setup instructions.
 
 ================================
 I have described the complete lifecycle of a document's status from its initial state to the final processed state.

@@ -81,22 +81,60 @@ async def start_conversion(
         
         # Create conversion task
         task_id = await service.create_task()
-        
-        logger.info(f"Created conversion task: {task_id}")
-        
-        # Start conversion in background
-        background_tasks.add_task(
-            service.start_conversion,
-            task_id=task_id,
-            input_dir=request.input_dir,
-            output_dir=request.output_dir,
-            incremental=request.incremental,
-            formats=request.formats,
-            enable_ocr=request.enable_ocr,
-            max_file_size_mb=request.max_file_size_mb,
-        )
-        
-        logger.info(f"Started conversion task in background: {task_id}")
+
+        logger.info(f"📝 Created conversion task: {task_id}")
+
+        # 🆕 AUTO-DETECT MODE: Check if we have pending Storage documents
+        import os
+        import sys
+        from pathlib import Path
+
+        # Setup path for imports
+        current_file = Path(__file__).resolve()
+        project_root = current_file.parents[4]
+        rag_indexer_path = project_root / "rag_indexer"
+        if str(rag_indexer_path) not in sys.path:
+            sys.path.insert(0, str(rag_indexer_path))
+
+        use_storage_mode = False
+        try:
+            from chunking_vectors.registry_manager import DocumentRegistryManager
+            connection_string = os.getenv('SUPABASE_CONNECTION_STRING')
+            if connection_string:
+                registry_manager = DocumentRegistryManager(connection_string=connection_string)
+                pending_storage_docs = registry_manager.get_pending_documents(limit=1)
+                if pending_storage_docs:
+                    use_storage_mode = True
+                    logger.info("🗄️ Detected pending Storage documents → Using Storage mode")
+                else:
+                    logger.info("📁 No pending Storage documents → Using Filesystem mode")
+        except Exception as e:
+            logger.warning(f"⚠️ Failed to check Storage mode, using Filesystem: {e}")
+            use_storage_mode = False
+
+        # Start conversion in appropriate mode
+        if use_storage_mode:
+            # Storage mode: Process from Supabase Storage
+            background_tasks.add_task(
+                service.start_storage_conversion,
+                task_id=task_id,
+                limit=None,  # Process all pending
+                enable_ocr=request.enable_ocr,
+            )
+            logger.info(f"🚀 Started STORAGE conversion task in background: {task_id}")
+        else:
+            # Filesystem mode: Process from local directory
+            background_tasks.add_task(
+                service.start_conversion,
+                task_id=task_id,
+                input_dir=request.input_dir,
+                output_dir=request.output_dir,
+                incremental=request.incremental,
+                formats=request.formats,
+                enable_ocr=request.enable_ocr,
+                max_file_size_mb=request.max_file_size_mb,
+            )
+            logger.info(f"🚀 Started FILESYSTEM conversion task in background: {task_id}")
         
         # Get supported formats
         formats_info = await service.get_supported_formats()

@@ -134,6 +134,35 @@ class ConversionService:
         logger.info(f"🚀 Started background conversion for task: {task_id}")
         return True
 
+    async def start_storage_conversion(
+        self,
+        task_id: str,
+        limit: Optional[int] = None,
+        enable_ocr: Optional[bool] = None,
+    ) -> bool:
+        """
+        Start Storage conversion process in a background task.
+
+        Processes documents from Supabase Storage instead of filesystem.
+        """
+        task = await self.get_task(task_id)
+        if not task:
+            logger.error(f"❌ Task not found, cannot start Storage conversion: {task_id}")
+            return False
+
+        task.status = ConversionStatus.CONVERTING
+        task.start_time = datetime.now()
+
+        asyncio.create_task(
+            self._run_storage_conversion_pipeline(
+                task=task,
+                limit=limit,
+                enable_ocr=enable_ocr,
+            )
+        )
+        logger.info(f"🚀 Started background Storage conversion for task: {task_id}")
+        return True
+
     async def _run_real_conversion(
         self,
         task: ConversionTaskState,
@@ -270,8 +299,175 @@ class ConversionService:
             task.errors.append(f"Fatal conversion error: {str(e)}")
         finally:
             task.end_time = datetime.now()
-            task.current_file = None 
-          
+            task.current_file = None
+
+    async def _run_storage_conversion_pipeline(
+        self,
+        task: ConversionTaskState,
+        limit: Optional[int],
+        enable_ocr: Optional[bool],
+    ):
+        """
+        Storage mode: Process documents from Supabase Storage.
+
+        Scans document_registry for pending files, downloads from Storage,
+        converts them, and updates their status.
+        """
+        try:
+            logger.info(f"📄 Starting STORAGE conversion pipeline for task: {task.task_id}")
+            self._setup_backend_path()
+
+            import os
+            from storage.storage_manager import SupabaseStorageManager
+            from chunking_vectors.registry_manager import DocumentRegistryManager
+            from docling_processor import get_docling_config, create_document_converter
+
+            # Initialize managers
+            connection_string = os.getenv('SUPABASE_CONNECTION_STRING')
+            if not connection_string:
+                raise ValueError("SUPABASE_CONNECTION_STRING not configured")
+
+            storage_manager = SupabaseStorageManager()
+            registry_manager = DocumentRegistryManager(connection_string=connection_string)
+
+            # Get pending documents from registry
+            logger.info(f"📋 Scanning document_registry for pending Storage files...")
+            pending_docs = registry_manager.get_pending_documents(limit=limit)
+
+            if not pending_docs:
+                logger.info("✅ No pending Storage files to convert.")
+                task.status = ConversionStatus.COMPLETED
+                return
+
+            task.total_files = len(pending_docs)
+            logger.info(f"   Found {task.total_files} pending Storage files to process.")
+
+            # Initialize Docling converter
+            config = get_docling_config()
+            if enable_ocr is not None:
+                config.ENABLE_OCR = enable_ocr
+            converter = create_document_converter(config)
+
+            # Process each document
+            for doc_record in pending_docs:
+                if task.cancelled:
+                    raise asyncio.CancelledError("Task was cancelled by user.")
+
+                original_filename = doc_record.get('original_filename', 'unknown')
+                storage_path = doc_record.get('storage_path')
+                registry_id = doc_record.get('id')
+
+                task.current_file = original_filename
+                logger.info(f"📄 Processing: {original_filename}")
+
+                success = False
+                error_msg = None
+                start_time = time.time()
+
+                try:
+                    # Update status to 'processing'
+                    registry_manager.update_storage_status(registry_id, 'processing')
+
+                    # Download from Storage
+                    logger.info(f"   ⬇️ Downloading from Storage: {storage_path}")
+                    temp_file_path = await asyncio.to_thread(
+                        storage_manager.download_to_temp,
+                        storage_path
+                    )
+
+                    if not temp_file_path:
+                        raise Exception("Failed to download file from Storage")
+
+                    logger.info(f"   ✅ Downloaded to: {temp_file_path}")
+
+                    # Convert document
+                    logger.info(f"   🔄 Converting with Docling...")
+                    conversion_result = await asyncio.wait_for(
+                        asyncio.to_thread(converter.convert_file, Path(temp_file_path)),
+                        timeout=FILE_CONVERSION_TIMEOUT
+                    )
+
+                    success, output_path, error_msg = conversion_result
+
+                    if success and output_path:
+                        logger.info(f"   ✅ Converted to: {output_path}")
+
+                        # Update registry with markdown path
+                        registry_manager.update_markdown_path(
+                            registry_id=registry_id,
+                            markdown_path=str(output_path)
+                        )
+
+                        # Move file in Storage to processed/
+                        new_path = await asyncio.to_thread(
+                            storage_manager.move_document,
+                            storage_path,
+                            'raw/processed'
+                        )
+                        logger.info(f"   📦 Moved in Storage to: {new_path}")
+
+                        # Update status to 'processed'
+                        registry_manager.update_storage_status(registry_id, 'processed')
+
+                        task.converted_files += 1
+                    else:
+                        raise Exception(error_msg or "Conversion failed")
+
+                except asyncio.TimeoutError:
+                    error_msg = f"Conversion timed out after {FILE_CONVERSION_TIMEOUT} seconds"
+                    logger.error(f"   ❌ {error_msg}")
+                    success = False
+                except Exception as e:
+                    error_msg = str(e)
+                    logger.error(f"   ❌ Error: {error_msg}", exc_info=True)
+                    success = False
+
+                if not success:
+                    # Move to failed/ in Storage
+                    try:
+                        new_path = await asyncio.to_thread(
+                            storage_manager.move_document,
+                            storage_path,
+                            'raw/failed'
+                        )
+                        logger.info(f"   📦 Moved to failed: {new_path}")
+                    except Exception as move_err:
+                        logger.error(f"   ❌ Failed to move to failed/: {move_err}")
+
+                    # Update status to 'failed'
+                    registry_manager.update_storage_status(registry_id, 'failed')
+                    task.failed_files += 1
+                    task.errors.append(f"{original_filename}: {error_msg}")
+
+                conversion_time = time.time() - start_time
+
+                result = ConversionResult(
+                    filename=original_filename,
+                    status=ConversionStatus.COMPLETED if success else ConversionStatus.FAILED,
+                    input_path=storage_path,
+                    output_path=str(output_path) if success and output_path else None,
+                    file_size=doc_record.get('file_size_bytes', 0),
+                    conversion_time=conversion_time,
+                    error_message=error_msg,
+                )
+                task.results.append(result)
+
+            task.status = ConversionStatus.COMPLETED
+            logger.info(f"✅ Storage conversion task {task.task_id} completed successfully.")
+            logger.info(f"   Converted: {task.converted_files}, Failed: {task.failed_files}")
+
+        except asyncio.CancelledError as e:
+            logger.warning(f"⚠️ Storage conversion task {task.task_id} was cancelled.")
+            task.status = ConversionStatus.CANCELLED
+            task.errors.append(str(e))
+        except Exception as e:
+            logger.error(f"❌ Unhandled error in Storage conversion task {task.task_id}: {e}", exc_info=True)
+            task.status = ConversionStatus.FAILED
+            task.errors.append(f"Fatal conversion error: {str(e)}")
+        finally:
+            task.end_time = datetime.now()
+            task.current_file = None
+
     async def get_task_status(self, task_id: str) -> Optional[Dict[str, Any]]:
         task = await self.get_task(task_id)
         if not task:

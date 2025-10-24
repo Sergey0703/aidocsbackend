@@ -405,33 +405,34 @@ async def upload_document(
     auto_index: bool = Form(False)
 ):
     """
-    Upload a document file to raw documents directory for processing.
-    
+    Upload a document file to Supabase Storage for processing.
+
     **Process:**
     1. Validates file type (supports all Docling formats)
-    2. Saves to RAW documents directory (data/raw/)
-    3. File is ready for conversion and indexing
-    
+    2. Uploads to Supabase Storage (bucket: vehicle-documents, folder: raw/pending/)
+    3. Creates entry in document_registry
+    4. File is ready for conversion and indexing
+
     **Supported formats:**
     - Documents: PDF, DOCX, DOC, PPTX, PPT
     - Text: TXT, HTML, HTM
     - Images: PNG, JPG, JPEG, TIFF (with OCR)
-    
+
     **Parameters:**
     - `file` - Document file to upload
     - `auto_index` - Not used (kept for API compatibility)
-    
+
     **Workflow:**
-    1. Upload files here
-    2. Start conversion (Docling)
+    1. Upload files here → Supabase Storage
+    2. Start conversion (Docling downloads from Storage)
     3. Start indexing (chunking + embeddings)
-    
+
     **Example:**
     ```bash
     curl -X POST "http://localhost:8000/api/documents/upload" \\
          -F "file=@document.docx"
     ```
-    
+
     Returns upload confirmation with file details.
     """
     try:
@@ -441,70 +442,103 @@ async def upload_document(
                 status_code=400,
                 detail="No filename provided"
             )
-        
+
         # Get file extension
         file_ext = Path(file.filename).suffix.lower()
-        
+
         # Supported formats (same as Docling)
         ALLOWED_EXTENSIONS = {
             '.pdf', '.docx', '.doc', '.pptx', '.ppt',
             '.txt', '.html', '.htm',
             '.png', '.jpg', '.jpeg', '.tiff'
         }
-        
+
         if file_ext not in ALLOWED_EXTENSIONS:
             raise HTTPException(
                 status_code=400,
                 detail=f"Unsupported file type: {file_ext}. Supported formats: {', '.join(sorted(ALLOWED_EXTENSIONS))}"
             )
-        
+
         # Read file content
         content = await file.read()
-        
+
         if not content:
             raise HTTPException(
                 status_code=400,
                 detail="File is empty"
             )
-        
-        # Get path to raw documents directory
+
+        file_size = len(content)
+
+        # Import Storage components
         import sys
+        import os
         current_file = Path(__file__)
         project_root = current_file.parent.parent.parent.parent.parent
-        raw_dir = project_root / "rag_indexer" / "data" / "raw"
-        
-        # Create directory if it doesn't exist
-        raw_dir.mkdir(parents=True, exist_ok=True)
-        
-        # Save file to raw directory
-        save_path = raw_dir / file.filename
-        
-        # Check if file already exists
-        if save_path.exists():
-            logger.warning(f"File already exists, overwriting: {file.filename}")
-        
-        # Write file
-        with open(save_path, 'wb') as f:
-            f.write(content)
-        
-        file_size = len(content)
-        
-        logger.info(f"Uploaded document: {file.filename} ({file_size} bytes) -> {save_path}")
-        
+        sys.path.insert(0, str(project_root / "rag_indexer"))
+
+        from storage.storage_manager import SupabaseStorageManager
+        from chunking_vectors.registry_manager import DocumentRegistryManager
+
+        # Get connection string from environment
+        connection_string = os.getenv('SUPABASE_CONNECTION_STRING')
+        if not connection_string:
+            raise HTTPException(
+                status_code=500,
+                detail="SUPABASE_CONNECTION_STRING not configured"
+            )
+
+        # Initialize managers
+        storage_manager = SupabaseStorageManager()
+        registry_manager = DocumentRegistryManager(connection_string=connection_string)
+
+        # Upload to Supabase Storage
+        logger.info(f"Uploading {file.filename} ({file_size} bytes) to Supabase Storage...")
+
+        upload_result = storage_manager.upload_document(
+            file=content,  # bytes content
+            original_filename=file.filename,
+            document_type=None,  # Will be detected later
+            target_folder='raw/pending'
+        )
+
+        logger.info(f"✅ Uploaded to Storage: {upload_result['storage_path']}")
+
+        # Create registry entry
+        registry_id = registry_manager.create_entry_from_storage(
+            storage_path=upload_result['storage_path'],
+            original_filename=file.filename,
+            file_size=file_size,
+            content_type=file.content_type or 'application/octet-stream',
+            storage_bucket='vehicle-documents',
+            document_type=None,
+            vehicle_id=None,
+            extracted_data=None
+        )
+
+        if registry_id:
+            logger.info(f"✅ Created registry entry: {registry_id}")
+        else:
+            logger.warning(f"⚠️ Failed to create registry entry for {file.filename}")
+
         return {
             "success": True,
-            "message": f"File uploaded successfully: {file.filename}",
+            "message": f"File uploaded successfully to Supabase Storage: {file.filename}",
             "filename": file.filename,
             "file_size": file_size,
             "file_type": file_ext,
-            "saved_to": str(save_path),
+            "storage_path": upload_result['storage_path'],
+            "storage_bucket": "vehicle-documents",
+            "registry_id": str(registry_id) if registry_id else None,
+            "storage_status": "pending",
             "next_steps": [
-                "1. Start conversion to convert to markdown",
-                "2. Start indexing to create embeddings",
-                "3. File will appear in documents list"
+                "1. File is now in Supabase Storage (raw/pending/)",
+                "2. Start conversion to process from Storage",
+                "3. Start indexing to create embeddings",
+                "4. File will appear in documents list"
             ]
         }
-        
+
     except HTTPException:
         raise
     except Exception as e:
