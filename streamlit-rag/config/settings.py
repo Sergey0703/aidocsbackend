@@ -30,17 +30,17 @@ class LLMConfig:
     api_key: str = None
     
     # Main LLM for answer generation
-    main_model: str = "gemini-pro"
+    main_model: str = "gemini-2.0-flash-exp"
     main_timeout: float = 60.0
-    
+
     # Entity extraction LLM (more precise)
-    extraction_model: str = "gemini-pro"
+    extraction_model: str = "gemini-2.0-flash-exp"
     extraction_timeout: float = 30.0
     extraction_temperature: float = 0.0
     extraction_max_tokens: int = 50  # Увеличено с 10 до 50 для Gemini
-    
+
     # Query rewriting LLM (creative)
-    rewrite_model: str = "gemini-pro"
+    rewrite_model: str = "gemini-2.0-flash-exp"
     rewrite_timeout: float = 20.0
     rewrite_temperature: float = 0.3
     rewrite_max_tokens: int = 150  # Увеличено со 100 до 150 для Gemini
@@ -301,9 +301,9 @@ class ProductionRAGConfig:
         # UPDATED: Gemini API for LLM operations
         self.llm = LLMConfig(
             api_key=gemini_api_key,
-            main_model=os.getenv("MAIN_LLM_MODEL", "gemini-pro"),
-            extraction_model=os.getenv("EXTRACTION_LLM_MODEL", "gemini-pro"),
-            rewrite_model=os.getenv("REWRITE_LLM_MODEL", "gemini-pro"),
+            main_model=os.getenv("MAIN_LLM_MODEL", "gemini-2.0-flash-exp"),
+            extraction_model=os.getenv("EXTRACTION_LLM_MODEL", "gemini-2.0-flash-exp"),
+            rewrite_model=os.getenv("REWRITE_LLM_MODEL", "gemini-2.0-flash-exp"),
             request_rate_limit=int(os.getenv("GEMINI_REQUEST_RATE_LIMIT", "10")),
             retry_attempts=int(os.getenv("GEMINI_RETRY_ATTEMPTS", "3")),
             retry_delay=float(os.getenv("GEMINI_RETRY_DELAY", "1.0")),
