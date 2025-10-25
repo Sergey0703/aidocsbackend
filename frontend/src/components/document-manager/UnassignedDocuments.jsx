@@ -143,7 +143,7 @@ const UnassignedDocuments = ({ documents, onAssign }) => {
               </div>
               <div className="document-info">
                 <div className="document-name">
-                  {getFileName(doc.raw_file_path)}
+                  {doc.original_filename || 'Unknown'}
                 </div>
                 <div className="document-meta">
                   <span className="document-date">

@@ -112,7 +112,7 @@ const GroupedDocuments = ({ group, onLink, onCreateAndLink }) => {
               </div>
               <div className="document-details">
                 <div className="document-name">
-                  {getFileName(doc.raw_file_path)}
+                  {doc.original_filename || 'Unknown'}
                 </div>
                 <div className="document-meta">
                   <span className="document-date">
