@@ -289,6 +289,12 @@ class IndexingService:
             
             enriched_count = 0
             for doc in documents:
+                # Skip enrichment if registry_id already present (from Storage mode)
+                if doc.metadata.get('registry_id'):
+                    enriched_count += 1
+                    logger.debug(f"   ✓ Document already has registry_id: {doc.metadata.get('file_name')}")
+                    continue
+
                 markdown_path = doc.metadata.get('file_path') or doc.metadata.get('file_name')
                 
                 if markdown_path:

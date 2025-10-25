@@ -27,7 +27,7 @@ def clean_json_recursive(obj):
 
 def clean_problematic_node(node):
     """
-    Clean problematic metadata and content from a node - безопасная очистка!
+    Clean problematic metadata and content from a node -  !
     
     Args:
         node: Node object to clean
@@ -46,7 +46,7 @@ def clean_problematic_node(node):
         # Clean problematic characters from content
         content = cleaned_node.get_content()
         
-        # Remove null bytes (\u0000) and other problematic characters - безопасная очистка!
+        # Remove null bytes (\u0000) and other problematic characters -  !
         content = content.replace('\u0000', '').replace('\x00', '').replace('\x01', '').replace('\x02', '')
         
         # Remove control characters (except newlines and tabs)
@@ -61,21 +61,21 @@ def clean_problematic_node(node):
         cleaned_node.text = cleaned_content
         cleaned_node.metadata['text'] = cleaned_content
         
-        # Clean metadata values recursively (для совместимости!)
+        # Clean metadata values recursively ( !)
         cleaned_node.metadata = clean_json_recursive(cleaned_node.metadata)
         
-        # ВАЖНО: очистка других полей LlamaIndex от null bytes
+        # :    LlamaIndex  null bytes
         if hasattr(cleaned_node, 'id_') and cleaned_node.id_:
             cleaned_node.id_ = str(cleaned_node.id_).replace('\u0000', '').replace('\x00', '')
         
         if hasattr(cleaned_node, 'doc_id') and cleaned_node.doc_id:
             cleaned_node.doc_id = str(cleaned_node.doc_id).replace('\u0000', '').replace('\x00', '')
         
-        # Очистка ref_doc_id если есть
+        #  ref_doc_id  
         if hasattr(cleaned_node, 'ref_doc_id') and cleaned_node.ref_doc_id:
             cleaned_node.ref_doc_id = str(cleaned_node.ref_doc_id).replace('\u0000', '').replace('\x00', '')
         
-        # Очистка source_node если есть
+        #  source_node  
         if hasattr(cleaned_node, 'source_node') and cleaned_node.source_node:
             if hasattr(cleaned_node.source_node, 'node_id'):
                 cleaned_node.source_node.node_id = str(cleaned_node.source_node.node_id).replace('\u0000', '').replace('\x00', '')
@@ -94,7 +94,7 @@ def clean_problematic_node(node):
 
 def aggressive_clean_all_nodes(nodes):
     """
-    Агрессивная очистка всех nodes от null bytes перед отправкой в БД
+       nodes  null bytes    
     
     Args:
         nodes: List of nodes to clean
@@ -106,10 +106,10 @@ def aggressive_clean_all_nodes(nodes):
     
     for node in nodes:
         try:
-            # Основная очистка каждого чанка
+            #    
             cleaned_node = clean_problematic_node(node)
             
-            # Дополнительная очистка - проверим все строковые атрибуты
+            #   -    
             for attr_name in dir(cleaned_node):
                 if not attr_name.startswith('_'):  # Skip private attributes
                     try:
@@ -199,7 +199,7 @@ class EmbeddingProcessor:
     
     def validate_content_for_embedding(self, content):
         """
-        Validate content before embedding generation - расширенная проверка
+        Validate content before embedding generation -  
         
         Args:
             content: Text content to validate
@@ -211,40 +211,40 @@ class EmbeddingProcessor:
         if len(content.strip()) < 10:
             return False, f"too_short ({len(content)} chars)"
         
-        # Более умная проверка: разный подход проверки контента на основе критериев
-        # Сначала проверим процент букв в тексте по сравнению с общими символами
-        sample = content[:1000]  # Проверим только первую 1000 символов
+        #   :       
+        #           
+        sample = content[:1000]  #    1000 
         
-        # Разрешим некоторые символы в качестве "нормальных"
+        #      ""
         allowed_special = set('\n\t\r\f\v\x0b\x0c')
         
-        # Подсчет "плохих" символов (невозможных)
+        #  ""  ()
         truly_binary = 0
         for c in sample:
-            if ord(c) < 32:  # Контрольные символы
-                if c not in '\n\t\r':  # Кроме допустимых
+            if ord(c) < 32:  #  
+                if c not in '\n\t\r':  #  
                     truly_binary += 1
-            elif ord(c) > 127:  # Символы UTF-8
-                if c not in allowed_special:  # Кроме специальных допустимых
-                    # Проверим, что символ может быть либо буквой либо цифрой
+            elif ord(c) > 127:  #  UTF-8
+                if c not in allowed_special:  #   
+                    # ,        
                     if not (c.isprintable() or c.isspace() or c.isalnum()):
                         truly_binary += 1
         
         binary_ratio = truly_binary / len(sample) if sample else 0
         
-        # Более мягкий критерий: плохих символов менее 90%!
-        if binary_ratio > 0.9:  # Более мягкие требования менее 90%
+        #   :    90%!
+        if binary_ratio > 0.9:  #     90%
             return False, f"binary_data_detected ({binary_ratio:.1%})"
         
-        # Проверка на наличие букв - более точно
+        #     -  
         letters_digits = sum(1 for c in sample if c.isalnum())
         text_ratio = letters_digits / len(sample) if sample else 0
         
-        # Более мягкий критерий: букв/цифр менее 10%!
-        if text_ratio < 0.1:  # Менее строго менее 10%
+        #   : /  10%!
+        if text_ratio < 0.1:  #    10%
             return False, f"low_text_quality ({text_ratio:.1%})"
         
-        # Дополнительная проверка: есть ли хотя бы несколько нормальных слов
+        #  :       
         words = content.split()
         if len(words) < 3:
             return False, f"too_few_words ({len(words)} words)"
@@ -455,7 +455,7 @@ class EmbeddingProcessor:
         total_saved = 0
         failed_chunks = []
         
-        # Безопасная очистка: агрессивно очистим все nodes перед сохранением!
+        #  :    nodes  !
         print(f"   INFO: Safely cleaning all nodes from null bytes before database save...")
         cleaned_nodes = aggressive_clean_all_nodes(nodes_with_embeddings)
         print(f"   INFO: Safely cleaned {len(cleaned_nodes)} nodes (original: {len(nodes_with_embeddings)})")

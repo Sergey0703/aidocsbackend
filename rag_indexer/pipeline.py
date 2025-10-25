@@ -2,11 +2,11 @@
 # -*- coding: utf-8 -*-
 """
 RAG Pipeline - Complete Document Processing
-Orchestrates the full pipeline: Raw Documents → Markdown → Vectors
+Orchestrates the full pipeline: Raw Documents  Markdown  Vectors
 
 Workflow:
-    Part 1 (Docling): Raw docs → Markdown
-    Part 2 (LlamaIndex): Markdown → Chunks → Embeddings → Vectors
+    Part 1 (Docling): Raw docs  Markdown
+    Part 2 (LlamaIndex): Markdown  Chunks  Embeddings  Vectors
 """
 
 import sys
@@ -68,19 +68,19 @@ class PipelineOrchestrator:
     def print_banner(self):
         """Print pipeline banner"""
         print("\n" + "=" * 70)
-        print("🚀 RAG COMPLETE PIPELINE")
+        print(" RAG COMPLETE PIPELINE")
         print("=" * 70)
-        print("📄 Part 1: Raw Documents → Markdown (Docling)")
-        print("🧩 Part 2: Markdown → Chunks → Vectors (LlamaIndex + Gemini)")
+        print(" Part 1: Raw Documents  Markdown (Docling)")
+        print(" Part 2: Markdown  Chunks  Vectors (LlamaIndex + Gemini)")
         print("=" * 70)
         
         mode = "INCREMENTAL" if self.incremental else "FULL"
         print(f"Mode: {mode}")
         
         if self.skip_conversion:
-            print("⚠️  Skipping Part 1 (Conversion)")
+            print("  Skipping Part 1 (Conversion)")
         if self.skip_indexing:
-            print("⚠️  Skipping Part 2 (Indexing)")
+            print("  Skipping Part 2 (Indexing)")
         
         print("=" * 70 + "\n")
     
@@ -92,25 +92,25 @@ class PipelineOrchestrator:
             dict: Conversion statistics
         """
         if self.skip_conversion:
-            print("⏩ Skipping Part 1: Document conversion")
+            print(" Skipping Part 1: Document conversion")
             return {'skipped': True}
         
         print("\n" + "=" * 70)
-        print("📄 PART 1: DOCUMENT CONVERSION (Docling)")
+        print(" PART 1: DOCUMENT CONVERSION (Docling)")
         print("=" * 70)
         
         try:
             # Load configuration
-            print("\n🔧 Loading Docling configuration...")
+            print("\n Loading Docling configuration...")
             config = get_docling_config()
             
             # Create scanner
-            print("\n📂 Scanning for documents...")
+            print("\n Scanning for documents...")
             scanner = create_document_scanner(config)
             files_to_process = scanner.scan_directory()
             
             if not files_to_process:
-                print("\n⚠️ No files found to convert")
+                print("\n No files found to convert")
                 return {'files': 0, 'success': True, 'skipped': False}
             
             # Filter already converted (if incremental)
@@ -121,11 +121,11 @@ class PipelineOrchestrator:
                 )
                 
                 if not files_to_process:
-                    print("\n✅ All files already converted")
+                    print("\n All files already converted")
                     return {'files': 0, 'success': True, 'skipped': False, 'already_converted': True}
             
             # Create converter
-            print("\n🔄 Initializing converter...")
+            print("\n Initializing converter...")
             converter = create_document_converter(config)
             
             # Convert documents
@@ -136,7 +136,7 @@ class PipelineOrchestrator:
             # Store stats
             self.stats['documents_converted'] = results['successful']
             
-            print(f"\n✅ Part 1 completed in {conversion_time/60:.1f} minutes")
+            print(f"\n Part 1 completed in {conversion_time/60:.1f} minutes")
             print(f"   Converted: {results['successful']}/{results['total_files']} files")
             
             return {
@@ -149,7 +149,7 @@ class PipelineOrchestrator:
             }
             
         except Exception as e:
-            print(f"\n❌ Part 1 failed: {e}")
+            print(f"\n Part 1 failed: {e}")
             return {'success': False, 'error': str(e), 'skipped': False}
     
     def run_part2_indexing(self):
@@ -160,11 +160,11 @@ class PipelineOrchestrator:
             bool: Success status
         """
         if self.skip_indexing:
-            print("⏩ Skipping Part 2: Vector indexing")
+            print(" Skipping Part 2: Vector indexing")
             return True
         
         print("\n" + "=" * 70)
-        print("🧩 PART 2: VECTOR INDEXING (LlamaIndex + Gemini)")
+        print(" PART 2: VECTOR INDEXING (LlamaIndex + Gemini)")
         print("=" * 70)
         
         try:
@@ -173,7 +173,7 @@ class PipelineOrchestrator:
             markdown_dir = Path(config.DOCUMENTS_DIR)
             
             if not markdown_dir.exists():
-                print(f"\n❌ Markdown directory not found: {markdown_dir}")
+                print(f"\n Markdown directory not found: {markdown_dir}")
                 print("   Run Part 1 first to convert documents")
                 return False
             
@@ -183,31 +183,31 @@ class PipelineOrchestrator:
             markdown_files = [f for f in markdown_files if '_metadata' not in f.parts]
             
             if not markdown_files:
-                print(f"\n⚠️ No markdown files found in {markdown_dir}")
+                print(f"\n No markdown files found in {markdown_dir}")
                 print("   Run Part 1 first to convert documents")
                 return False
             
-            print(f"\n📄 Found {len(markdown_files)} markdown files")
+            print(f"\n Found {len(markdown_files)} markdown files")
             
             # Set incremental mode via environment variable
             if self.incremental:
-                print(f"🔄 Incremental mode: ENABLED")
+                print(f" Incremental mode: ENABLED")
                 import os
                 os.environ['INCREMENTAL_MODE'] = 'true'
             else:
-                print(f"🔄 Incremental mode: DISABLED (full reindex)")
+                print(f" Incremental mode: DISABLED (full reindex)")
             
             # Run indexer
             start_time = time.time()
             success = run_indexer()
             indexing_time = time.time() - start_time
             
-            print(f"\n✅ Part 2 completed in {indexing_time/60:.1f} minutes")
+            print(f"\n Part 2 completed in {indexing_time/60:.1f} minutes")
             
             return success
             
         except Exception as e:
-            print(f"\n❌ Part 2 failed: {e}")
+            print(f"\n Part 2 failed: {e}")
             import traceback
             traceback.print_exc()
             return False
@@ -229,7 +229,7 @@ class PipelineOrchestrator:
         self.stats['conversion_stats'] = conversion_results
         
         if not conversion_results.get('skipped', False) and not conversion_results.get('success', False):
-            print("\n❌ Pipeline stopped: Part 1 failed")
+            print("\n Pipeline stopped: Part 1 failed")
             self.stats['success'] = False
             self._print_final_summary()
             return False
@@ -239,7 +239,7 @@ class PipelineOrchestrator:
         self.stats['indexing_stats'] = {'success': indexing_success}
         
         if not indexing_success and not self.skip_indexing:
-            print("\n❌ Pipeline stopped: Part 2 failed")
+            print("\n Pipeline stopped: Part 2 failed")
             self.stats['success'] = False
             self._print_final_summary()
             return False
@@ -256,50 +256,50 @@ class PipelineOrchestrator:
     def _print_final_summary(self):
         """Print final pipeline summary"""
         print("\n" + "=" * 70)
-        print("📊 PIPELINE SUMMARY")
+        print(" PIPELINE SUMMARY")
         print("=" * 70)
         
         if self.stats['start_time'] and self.stats['end_time']:
             total_time = self.stats['total_time']
-            print(f"⏱️  Total time: {total_time/60:.1f} minutes ({total_time:.1f} seconds)")
+            print(f"  Total time: {total_time/60:.1f} minutes ({total_time:.1f} seconds)")
         
         # Part 1 stats
         if self.stats['conversion_stats']:
             conv = self.stats['conversion_stats']
-            print(f"\n📄 Part 1 (Conversion):")
+            print(f"\n Part 1 (Conversion):")
             
             if conv.get('skipped'):
-                print(f"   ⏩ Skipped by user")
+                print(f"    Skipped by user")
             elif conv.get('already_converted'):
-                print(f"   ✅ All files already converted (incremental mode)")
+                print(f"    All files already converted (incremental mode)")
             else:
                 print(f"   Files processed: {conv.get('total', 0)}")
-                print(f"   ✅ Successful: {conv.get('successful', 0)}")
-                print(f"   ❌ Failed: {conv.get('failed', 0)}")
+                print(f"    Successful: {conv.get('successful', 0)}")
+                print(f"    Failed: {conv.get('failed', 0)}")
                 if conv.get('time'):
-                    print(f"   ⏱️  Time: {conv['time']/60:.1f} minutes")
+                    print(f"     Time: {conv['time']/60:.1f} minutes")
         
         # Part 2 stats
         if self.stats['indexing_stats']:
             idx = self.stats['indexing_stats']
-            print(f"\n🧩 Part 2 (Indexing):")
+            print(f"\n Part 2 (Indexing):")
             
             if self.skip_indexing:
-                print(f"   ⏩ Skipped by user")
+                print(f"    Skipped by user")
             elif idx.get('success'):
-                print(f"   ✅ Completed successfully")
+                print(f"    Completed successfully")
                 print(f"   Check database for indexed vectors")
             else:
-                print(f"   ❌ Failed (see logs above)")
+                print(f"    Failed (see logs above)")
         
         # Final status
         print(f"\n" + "=" * 70)
         if self.stats['success']:
-            print("✅ PIPELINE COMPLETED SUCCESSFULLY!")
-            print("🎉 Your RAG system is ready to use")
+            print(" PIPELINE COMPLETED SUCCESSFULLY!")
+            print(" Your RAG system is ready to use")
         else:
-            print("❌ PIPELINE COMPLETED WITH ERRORS")
-            print("⚠️  Check logs above for details")
+            print(" PIPELINE COMPLETED WITH ERRORS")
+            print("  Check logs above for details")
         
         print("=" * 70 + "\n")
 
@@ -358,11 +358,11 @@ Examples:
     
     # Validate arguments
     if args.documents_only and args.indexing_only:
-        print("❌ Error: Cannot use --documents-only and --indexing-only together")
+        print(" Error: Cannot use --documents-only and --indexing-only together")
         sys.exit(1)
     
     if args.incremental and args.full:
-        print("❌ Error: Cannot use --incremental and --full together")
+        print(" Error: Cannot use --incremental and --full together")
         sys.exit(1)
     
     # Determine mode
@@ -383,11 +383,11 @@ Examples:
         sys.exit(0 if success else 1)
         
     except KeyboardInterrupt:
-        print("\n\n⚠️  Pipeline interrupted by user")
+        print("\n\n  Pipeline interrupted by user")
         sys.exit(1)
         
     except Exception as e:
-        print(f"\n\n❌ Pipeline failed: {e}")
+        print(f"\n\n Pipeline failed: {e}")
         import traceback
         traceback.print_exc()
         sys.exit(1)

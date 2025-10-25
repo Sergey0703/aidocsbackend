@@ -50,6 +50,16 @@ class DoclingConfig:
         # --- OCR SETTINGS ---
         self.ENABLE_OCR = os.getenv("ENABLE_OCR", "true").lower() == "true"
         self.OCR_LANGUAGE = os.getenv("OCR_LANGUAGE", "eng")
+
+        # --- GEMINI VISION API SETTINGS (for picture description) ---
+        self.USE_GEMINI_VISION = os.getenv("USE_GEMINI_VISION", "false").lower() == "true"
+        self.GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
+        self.GEMINI_VISION_MODEL = os.getenv("GEMINI_VISION_MODEL", "gemini-2.0-flash-exp")
+        self.GEMINI_VISION_TIMEOUT = int(os.getenv("GEMINI_VISION_TIMEOUT", "30"))
+        self.GEMINI_VISION_PROMPT = os.getenv(
+            "GEMINI_VISION_PROMPT",
+            "Extract all text from this document image. Preserve formatting, tables, and structure. Be accurate and complete."
+        )
         
         # --- NAMING CONVENTION ---
         # Format: timestamp_originalname.md
@@ -111,6 +121,7 @@ class DoclingConfig:
         print(f"Mirror structure: {'[+]' if self.MIRROR_DIRECTORY_STRUCTURE else '[-]'}")
         print(f"OCR enabled: {'[+]' if self.ENABLE_OCR else '[-]'}")
         print(f"Extract tables: {'[+]' if self.EXTRACT_TABLES else '[-]'}")
+        print(f"Gemini Vision API: {'[+]' if self.USE_GEMINI_VISION else '[-]'} ({self.GEMINI_VISION_MODEL if self.USE_GEMINI_VISION else 'disabled'})")
         print(f"\nBatch size: {self.BATCH_SIZE}")
         print(f"Max file size: {self.MAX_FILE_SIZE_MB} MB")
         print(f"GPU acceleration: {'[+]' if self.USE_GPU else '[-]'}")

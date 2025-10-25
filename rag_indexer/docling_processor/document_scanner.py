@@ -165,8 +165,8 @@ class DocumentScanner:
                 new_files.append(file_path)
         
         if skipped_count > 0:
-            print(f"   ⏩ Skipping {skipped_count} already converted files")
-            print(f"   🆕 {len(new_files)} new/modified files to process")
+            print(f"    Skipping {skipped_count} already converted files")
+            print(f"    {len(new_files)} new/modified files to process")
         else:
             print(f"   All {len(files_to_process)} files need conversion")
         

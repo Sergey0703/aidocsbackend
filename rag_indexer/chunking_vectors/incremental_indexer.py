@@ -179,7 +179,7 @@ class IncrementalIndexer:
             else:
                 unchanged_docs.append(doc)
         
-        print(f"   🆕 New files: {len(new_docs)}")
+        print(f"     New files: {len(new_docs)}")
         print(f"   [*] Modified files: {len(modified_docs)}")
         print(f"   [+] Unchanged files: {len(unchanged_docs)}")
         

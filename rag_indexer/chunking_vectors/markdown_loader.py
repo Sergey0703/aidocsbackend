@@ -42,7 +42,7 @@ class MarkdownLoader:
     """
     Simple markdown file loader for preprocessed documents from Docling.
     Enriches document metadata with registry_id for database integration.
-    🆕 Supports both local filesystem and Supabase Storage modes.
+      Supports both local filesystem and Supabase Storage modes.
     """
 
     def __init__(self, input_dir: str, recursive: bool = True, config: Any = None, storage_manager=None):
@@ -173,14 +173,14 @@ class MarkdownLoader:
                     json_path = json_dir / rel_path.parent / f"{md_file_path.stem}.json"
                     if json_path.exists():
                         base_metadata['json_path'] = str(json_path.resolve())
-                        logger.info(f"✓ Found JSON for {md_file_path.name}: {json_path.name}")
+                        logger.info(f"[+] Found JSON for {md_file_path.name}: {json_path.name}")
                     else:
-                        logger.warning(f"✗ No JSON file for {md_file_path.name} (expected: {json_path.name})")
-                        logger.warning(f"  → Will use markdown fallback (structure may be lost)")
+                        logger.warning(f"  No JSON file for {md_file_path.name} (expected: {json_path.name})")
+                        logger.warning(f"    Will use markdown fallback (structure may be lost)")
                 except Exception as e:
-                    logger.warning(f"✗ Could not locate JSON file for {md_file_path.name}: {e}")
+                    logger.warning(f"  Could not locate JSON file for {md_file_path.name}: {e}")
             else:
-                logger.warning(f"✗ JSON directory not found: {json_dir}")
+                logger.warning(f"  JSON directory not found: {json_dir}")
 
             final_metadata = {**base_metadata, **json_metadata}
             cleaned_metadata = clean_metadata_recursive(final_metadata)
@@ -239,7 +239,7 @@ class MarkdownLoader:
 
     def _load_from_storage(self, registry_manager) -> List[Document]:
         """
-        🆕 Load documents from Supabase Storage via document_registry.
+          Load documents from Supabase Storage via document_registry.
         Downloads MD/JSON files to temporary directory, loads them, then cleans up.
         """
         import tempfile
@@ -248,7 +248,7 @@ class MarkdownLoader:
         if not self.storage_manager:
             raise ValueError("Storage manager not provided! Cannot load from Storage.")
 
-        logger.info("[*] 🗄️ STORAGE MODE: Loading documents from Supabase Storage")
+        logger.info("[*]   STORAGE MODE: Loading documents from Supabase Storage")
 
         # Create temporary directory for downloads
         temp_dir = Path(tempfile.mkdtemp(prefix="markdown_loader_"))
@@ -287,26 +287,26 @@ class MarkdownLoader:
 
                 try:
                     # Download MD file
-                    logger.info(f"   📥 Downloading {original_filename} MD from Storage...")
+                    logger.info(f"     Downloading {original_filename} MD from Storage...")
                     md_temp_path = Path(self.storage_manager.download_to_temp(md_storage_path))
 
                     # Download metadata JSON (optional)
                     metadata_temp_path = None
                     if metadata_storage_path:
-                        logger.info(f"   📥 Downloading metadata JSON...")
+                        logger.info(f"     Downloading metadata JSON...")
                         metadata_temp_path = Path(self.storage_manager.download_to_temp(metadata_storage_path))
 
                     # Download DoclingDocument JSON (for HybridChunker)
                     json_temp_path = None
                     if json_storage_path:
-                        logger.info(f"   📥 Downloading DoclingDocument JSON...")
+                        logger.info(f"     Downloading DoclingDocument JSON...")
                         json_temp_path = Path(self.storage_manager.download_to_temp(json_storage_path))
 
                     # Read MD content
                     content, error = self._read_markdown_file(str(md_temp_path))
 
                     if error or not content:
-                        logger.error(f"   ❌ Failed to read {original_filename}: {error}")
+                        logger.error(f"   [ERR] Failed to read {original_filename}: {error}")
                         self.loading_stats['failed_files'] += 1
                         continue
 
@@ -318,7 +318,7 @@ class MarkdownLoader:
                                 json_metadata = json.load(f)
                             self.loading_stats['metadata_files_loaded'] += 1
                         except Exception as meta_err:
-                            logger.warning(f"   ⚠️ Failed to load metadata: {meta_err}")
+                            logger.warning(f"     Failed to load metadata: {meta_err}")
 
                     # Build document metadata
                     doc_metadata = {
@@ -334,7 +334,7 @@ class MarkdownLoader:
                     # Add JSON path for HybridChunker
                     if json_temp_path and json_temp_path.exists():
                         doc_metadata['json_path'] = str(json_temp_path)
-                        logger.info(f"   ✓ JSON available for HybridChunker: {json_temp_path.name}")
+                        logger.info(f"   [+] JSON available for HybridChunker: {json_temp_path.name}")
 
                     # Create Document
                     cleaned_metadata = clean_metadata_recursive(doc_metadata)
@@ -349,10 +349,10 @@ class MarkdownLoader:
                     self.loading_stats['total_characters'] += len(content)
                     self.loading_stats['registry_enrichments'] += 1
 
-                    logger.info(f"   ✅ Loaded {original_filename} from Storage")
+                    logger.info(f"   [OK] Loaded {original_filename} from Storage")
 
                 except Exception as doc_err:
-                    logger.error(f"   ❌ Failed to load {original_filename}: {doc_err}")
+                    logger.error(f"   [ERR] Failed to load {original_filename}: {doc_err}")
                     self.loading_stats['failed_files'] += 1
                     continue
 
@@ -367,21 +367,21 @@ class MarkdownLoader:
                 if 'conn' in locals():
                     conn.close()
             except Exception as db_err:
-                logger.warning(f"   ⚠️ Failed to close DB connection: {db_err}")
+                logger.warning(f"     Failed to close DB connection: {db_err}")
 
             # Cleanup temporary files
-            logger.info(f"[*] 🧹 Cleaning up temporary files...")
+            logger.info(f"[*]   Cleaning up temporary files...")
             try:
                 import shutil
                 shutil.rmtree(temp_dir)
-                logger.info(f"   ✅ Temporary directory cleaned")
+                logger.info(f"   [OK] Temporary directory cleaned")
             except Exception as cleanup_err:
-                logger.warning(f"   ⚠️ Cleanup failed: {cleanup_err}")
+                logger.warning(f"     Cleanup failed: {cleanup_err}")
 
     def load_data(self, registry_manager=None) -> Tuple[List[Document], Dict[str, Any]]:
         """
         Load all markdown files, enrich with JSON metadata and registry_id.
-        🆕 Supports both local filesystem and Supabase Storage modes.
+          Supports both local filesystem and Supabase Storage modes.
 
         Args:
             registry_manager: RegistryManager instance (optional, but recommended)
@@ -400,16 +400,16 @@ class MarkdownLoader:
         else:
             logger.warning("[!] Registry enrichment: DISABLED (registry_id will be NULL)")
 
-        # 🆕 CHECK FOR STORAGE MODE: If storage_manager is provided, use Storage mode
+        #   CHECK FOR STORAGE MODE: If storage_manager is provided, use Storage mode
         if self.storage_manager and registry_manager:
-            logger.info("[*] 🗄️ Detected Storage manager → Using STORAGE MODE")
+            logger.info("[*]   Detected Storage manager   Using STORAGE MODE")
             documents = self._load_from_storage(registry_manager)
             self.loading_stats['loading_time'] = time.time() - start_time
             self._print_loading_summary()
             return documents, self.loading_stats
 
         # Legacy: Local filesystem mode
-        logger.info("[*] 📁 Using LOCAL FILESYSTEM MODE")
+        logger.info("[*]   Using LOCAL FILESYSTEM MODE")
         markdown_files = self._scan_markdown_files()
         
         if not markdown_files:
@@ -505,13 +505,13 @@ class MarkdownLoader:
 def create_markdown_loader(documents_dir: str, recursive: bool = True, config: Any = None, storage_manager=None) -> MarkdownLoader:
     """
     Factory function to create a MarkdownLoader instance.
-    🆕 Now supports Storage mode via storage_manager parameter.
+      Now supports Storage mode via storage_manager parameter.
     """
     return MarkdownLoader(
         input_dir=documents_dir,
         recursive=recursive,
         config=config,
-        storage_manager=storage_manager  # 🆕 Added
+        storage_manager=storage_manager  #   Added
     )
 
 

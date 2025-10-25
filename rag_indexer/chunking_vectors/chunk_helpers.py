@@ -321,7 +321,7 @@ def validate_chunk_content(valid_nodes, config):
         content = node.get_content()
         
         # Look for common encoding issue indicators
-        if '�' in content or '\x00' in content:
+        if '' in content or '\x00' in content:
             encoding_issues += 1
     
     if encoding_issues > 0:
@@ -472,7 +472,7 @@ def print_chunk_optimization_suggestions(optimization_results):
     # Configuration recommendations
     recommendations = optimization_results['configuration_recommendations']
     if recommendations:
-        print(f"\n⚙️ Recommended Configuration Changes:")
+        print(f"\n Recommended Configuration Changes:")
         for key, value in recommendations.items():
             print(f"   {key}={value}")
     

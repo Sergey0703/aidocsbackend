@@ -3,7 +3,14 @@
     "allow": [
       "Bash(dir \"c:\\projects\\aidocsbackend\\streamlit-rag\\api\")",
       "Bash(dir \"c:\\projects\\aidocsbackend\\streamlit-rag\\retrieval\")",
-      "Bash(dir \"c:\\projects\\aidocsbackend\\streamlit-rag\\config\")"
+      "Bash(dir \"c:\\projects\\aidocsbackend\\streamlit-rag\\config\")",
+      "Bash(source ../venv/Scripts/activate)",
+      "Bash(python process_documents.py:*)",
+      "Bash(python indexer.py:*)",
+      "Bash(tee:*)",
+      "Bash(source venv/Scripts/activate)",
+      "Bash(curl:*)",
+      "Bash(python:*)"
     ],
     "deny": [],
     "ask": []

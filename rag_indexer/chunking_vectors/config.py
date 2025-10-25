@@ -24,19 +24,19 @@ class Config:
     def _load_settings(self):
         """Load all settings from environment variables with defaults"""
         
-        # --- START ИСПРАВЛЕНИЕ: Используем абсолютные пути ---
-        # Вычисляем путь к директории rag_indexer/data относительно этого файла,
-        # что делает его независимым от точки запуска.
+        # --- START :    ---
+        #     rag_indexer/data   ,
+        #       .
         base_dir = Path(__file__).resolve().parent.parent / "data"
         project_root = Path(__file__).resolve().parent.parent.parent
         
         # --- DIRECTORY AND FILE SETTINGS ---
         self.DOCUMENTS_DIR = os.getenv("DOCUMENTS_DIR", str(base_dir / "markdown"))
         self.ERROR_LOG_FILE = str(project_root / "logs" / "indexing_errors.log")
-        # --- END ИСПРАВЛЕНИЕ ---
+        # --- END  ---
         
         # --- BLACKLIST SETTINGS (Keep for excluding logs/temp directories) ---
-        # Добавил "_metadata", чтобы сканер индексации не пытался обработать JSON-файлы
+        #  "_metadata",       JSON-
         blacklist_env = os.getenv("BLACKLIST_DIRECTORIES", "logs,temp,.git,__pycache__,.vscode,.idea,node_modules,_metadata")
         self.BLACKLIST_DIRECTORIES = [dir.strip() for dir in blacklist_env.split(",") if dir.strip()]
         
@@ -94,9 +94,9 @@ class Config:
         if not self.GEMINI_API_KEY:
             raise ValueError("GEMINI_API_KEY not found in .env file!")
         
-        # --- START ИСПРАВЛЕНИЕ: Создаем директории, если их нет ---
-        # Проверяем и создаем директории для документов и логов, если они отсутствуют.
-        # Это делает приложение более устойчивым к первому запуску.
+        # --- START :  ,    ---
+        #        ,   .
+        #        .
         docs_path = Path(self.DOCUMENTS_DIR)
         if not docs_path.exists():
             print(f"[!] WARNING: Documents directory does not exist: {self.DOCUMENTS_DIR}")
@@ -108,7 +108,7 @@ class Config:
             print(f"[!] WARNING: Logs directory does not exist: {logs_path}")
             print(f"   Creating directory...")
             logs_path.mkdir(parents=True, exist_ok=True)
-        # --- END ИСПРАВЛЕНИЕ ---
+        # --- END  ---
         
         # Validate numeric ranges
         if self.CHUNK_SIZE < 100:
@@ -389,7 +389,7 @@ def get_recommended_gemini_env_vars():
         'ENABLE_PROGRESS_LOGGING': 'true',
         
         # Documents directory (markdown input)
-        # Этот путь теперь вычисляется автоматически, но можно переопределить
+        #     ,   
         'DOCUMENTS_DIR': './rag_indexer/data/markdown',
         
         # Database

@@ -1,5 +1,5 @@
 # rag_indexer/chunking_vectors/registry_manager.py
-# ЗАМЕНИТЬ ПОЛНОСТЬЮ этот файл
+#    
 
 import logging
 import psycopg2
@@ -44,7 +44,7 @@ class DocumentRegistryManager:
             # Normalize path for case-insensitive comparison (Windows compatibility)
             normalized_path = file_path.lower().replace('\\', '/')
 
-            # 🆕 SEARCH BY MARKDOWN_FILE_PATH (case-insensitive)
+            #  SEARCH BY MARKDOWN_FILE_PATH (case-insensitive)
             cur.execute("""
                 SELECT id FROM vecs.document_registry
                 WHERE LOWER(REPLACE(markdown_file_path, '\\', '/')) = %s
@@ -59,7 +59,7 @@ class DocumentRegistryManager:
                 conn.close()
                 return registry_id
             
-            # 🆕 CREATE NEW ENTRY IF NOT FOUND
+            #  CREATE NEW ENTRY IF NOT FOUND
             # Since this is called during markdown loading, we only have markdown path
             import uuid
             registry_id = str(uuid.uuid4())

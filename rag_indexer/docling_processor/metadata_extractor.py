@@ -56,7 +56,7 @@ class MetadataExtractor:
             'markdown_path': str(output_path),
             'markdown_size_bytes': len(markdown_content.encode('utf-8')),
             
-            # Content hash (для определения изменений)
+            # Content hash (  )
             'content_hash': self._calculate_hash(markdown_content),
             'original_file_hash': self._calculate_file_hash(input_path),
             
@@ -75,7 +75,7 @@ class MetadataExtractor:
                 input_path, markdown_content, docling_result
             ),
             
-            # Document metadata (если доступно)
+            # Document metadata ( )
             'author': self._extract_author(docling_result),
             'creation_date': self._extract_creation_date(docling_result),
             'title': self._extract_title(docling_result),

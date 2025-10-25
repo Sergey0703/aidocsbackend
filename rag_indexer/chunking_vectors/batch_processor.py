@@ -20,7 +20,7 @@ def safe_restart_ollama_for_next_batch():
     Returns:
         bool: Always returns True for Gemini API compatibility
     """
-    print(f"\n   ℹ️ INFO: Ollama restart not applicable for Gemini API - skipping...")
+    print(f"\n    INFO: Ollama restart not applicable for Gemini API - skipping...")
     return True
 
 
@@ -114,7 +114,7 @@ class BatchProcessor:
             return True  # No pause needed
         
         print(f"\n{'='*60}")
-        print(f"⏸️ GEMINI API HEALTH PAUSE - BETWEEN BATCHES")
+        print(f" GEMINI API HEALTH PAUSE - BETWEEN BATCHES")
         print(f"Completed batch {batch_num}/{total_batches}")
         print(f"Next pause scheduled after batch {batch_num + self.batch_restart_interval}")
         print(f"{'='*60}")
@@ -143,7 +143,7 @@ class BatchProcessor:
             time.sleep(1)
             remaining = pause_duration - i - 1
             if remaining > 0:
-                print(f"   ⏳ Pause remaining: {remaining:.0f}s", end='\r')
+                print(f"    Pause remaining: {remaining:.0f}s", end='\r')
         
         # Handle fractional seconds
         fractional = pause_duration - int(pause_duration)

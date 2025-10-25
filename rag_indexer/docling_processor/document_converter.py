@@ -17,8 +17,9 @@ from typing import Dict, Optional
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 # Docling 2.x imports
-from docling.document_converter import DocumentConverter as DoclingConverter
+from docling.document_converter import DocumentConverter as DoclingConverter, PdfFormatOption
 from docling.datamodel.base_models import InputFormat
+from docling.datamodel.pipeline_options import PdfPipelineOptions, PictureDescriptionApiOptions
 
 from .metadata_extractor import MetadataExtractor
 from .utils_docling import safe_write_file, format_time
@@ -50,6 +51,13 @@ class DocumentConverter:
         """
         self.config = config
         self.metadata_extractor = MetadataExtractor(config)
+
+        #  Disable OCR enhancer if Gemini Vision is enabled (Gemini Vision handles OCR natively)
+        use_gemini_vision = getattr(config, 'USE_GEMINI_VISION', False)
+        if use_gemini_vision:
+            print("[*]  Gemini Vision enabled  Disabling separate OCR enhancer")
+            enable_ocr_enhancement = False  # Gemini Vision replaces OCR enhancer
+
         self.docling = self._init_docling_converter()
         self.enable_ocr_enhancement = enable_ocr_enhancement
         self.ocr_strategy = ocr_strategy
@@ -102,22 +110,76 @@ class DocumentConverter:
     def _init_docling_converter(self):
         """
         Initialize Docling document converter for version 2.55.1
-
-        Uses the EXACT same initialization that worked in test_docling.py
+         Now supports Gemini Vision API for picture description
         """
         print("[*] Initializing Docling 2.x converter...")
 
         try:
-            # Use the EXACT same code that worked in the test script
-            converter = DoclingConverter(
-                allowed_formats=[
-                    InputFormat.PDF,
-                    InputFormat.DOCX,
-                    InputFormat.PPTX,
-                    InputFormat.HTML,
-                    InputFormat.IMAGE,
-                ]
-            )
+            # Check if Gemini Vision API is enabled
+            use_gemini_vision = getattr(self.config, 'USE_GEMINI_VISION', False)
+
+            if use_gemini_vision:
+                # Configure Gemini Vision API for picture description
+                print("[*]  Gemini Vision API enabled for picture description")
+
+                gemini_api_key = getattr(self.config, 'GEMINI_API_KEY', '')
+                if not gemini_api_key:
+                    print("[!] WARNING: GEMINI_API_KEY not set! Falling back to default converter")
+                    use_gemini_vision = False
+
+            if use_gemini_vision:
+                # Create pipeline options for Gemini Vision
+                pipeline_options = PdfPipelineOptions()
+                pipeline_options.enable_remote_services = True  # Required for API calls
+                pipeline_options.do_picture_description = True
+
+                # Configure Gemini Vision API via OpenAI-compatible endpoint
+                pipeline_options.picture_description_options = PictureDescriptionApiOptions(
+                    url=f"https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
+                    headers={
+                        "Authorization": f"Bearer {self.config.GEMINI_API_KEY}",
+                        "Content-Type": "application/json"
+                    },
+                    params=dict(
+                        model=self.config.GEMINI_VISION_MODEL,
+                        temperature=0.0,  # Deterministic output for OCR
+                        max_tokens=2048,  # Enough for detailed text extraction
+                    ),
+                    prompt=self.config.GEMINI_VISION_PROMPT,
+                    timeout=self.config.GEMINI_VISION_TIMEOUT,
+                    concurrency=2,  # Process 2 images in parallel
+                )
+
+                # Create converter with Gemini Vision options
+                converter = DoclingConverter(
+                    allowed_formats=[
+                        InputFormat.PDF,
+                        InputFormat.DOCX,
+                        InputFormat.PPTX,
+                        InputFormat.HTML,
+                        InputFormat.IMAGE,
+                    ],
+                    format_options={
+                        InputFormat.PDF: PdfFormatOption(pipeline_options=pipeline_options)
+                    }
+                )
+
+                print(f"[+] Gemini Vision API configured:")
+                print(f"    Model: {self.config.GEMINI_VISION_MODEL}")
+                print(f"    Timeout: {self.config.GEMINI_VISION_TIMEOUT}s")
+                print(f"    Concurrency: 2 images in parallel")
+
+            else:
+                # Default converter without Gemini Vision
+                converter = DoclingConverter(
+                    allowed_formats=[
+                        InputFormat.PDF,
+                        InputFormat.DOCX,
+                        InputFormat.PPTX,
+                        InputFormat.HTML,
+                        InputFormat.IMAGE,
+                    ]
+                )
 
             print("[+] Docling 2.x converter initialized successfully")
             print(f"   Using default OCR and table extraction settings")
@@ -415,9 +477,9 @@ class DocumentConverter:
 
             # Show OCR engine usage
             if self.stats.get('easyocr_used', 0) > 0:
-                print(f"   🔤 EasyOCR used: {self.stats['easyocr_used']} image(s)")
+                print(f"    EasyOCR used: {self.stats['easyocr_used']} image(s)")
             if self.stats.get('gemini_used', 0) > 0:
-                print(f"   ✨ Gemini Vision used: {self.stats['gemini_used']} image(s)")
+                print(f"    Gemini Vision used: {self.stats['gemini_used']} image(s)")
             if self.stats.get('fallback_triggered', 0) > 0:
                 print(f"   [*] Fallback triggered: {self.stats['fallback_triggered']} time(s)")
 

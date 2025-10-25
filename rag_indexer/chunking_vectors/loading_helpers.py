@@ -35,7 +35,7 @@ def load_markdown_documents(config, progress_tracker):
     from .markdown_loader import create_markdown_loader
     
     # Create markdown loader
-    print("\n📖 Initializing markdown loader...")
+    print("\n Initializing markdown loader...")
     loader = create_markdown_loader(
         documents_dir=config.DOCUMENTS_DIR,
         recursive=True,
@@ -443,6 +443,6 @@ def create_comprehensive_loading_report(documents, processing_summary, loading_t
 
 
 if __name__ == "__main__":
-    print("📖 Simplified Loading Helpers Module")
+    print(" Simplified Loading Helpers Module")
     print("Purpose: Load markdown files from Docling (Part 1) output")
     print("=" * 60)
