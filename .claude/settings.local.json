@@ -10,7 +10,10 @@
       "Bash(tee:*)",
       "Bash(source venv/Scripts/activate)",
       "Bash(curl:*)",
-      "Bash(python:*)"
+      "Bash(python:*)",
+      "Bash(tasklist:*)",
+      "Bash(findstr:*)",
+      "Bash(taskkill:*)"
     ],
     "deny": [],
     "ask": []

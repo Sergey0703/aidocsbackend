@@ -52,7 +52,7 @@ class DoclingConfig:
         self.OCR_LANGUAGE = os.getenv("OCR_LANGUAGE", "eng")
 
         # --- GEMINI VISION API SETTINGS (for picture description) ---
-        self.USE_GEMINI_VISION = os.getenv("USE_GEMINI_VISION", "false").lower() == "true"
+        self.USE_GEMINI_VISION = os.getenv("USE_GEMINI_VISION", "true").lower() == "true"
         self.GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
         self.GEMINI_VISION_MODEL = os.getenv("GEMINI_VISION_MODEL", "gemini-2.0-flash-exp")
         self.GEMINI_VISION_TIMEOUT = int(os.getenv("GEMINI_VISION_TIMEOUT", "30"))

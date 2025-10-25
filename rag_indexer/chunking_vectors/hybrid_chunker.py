@@ -311,9 +311,8 @@ class HybridChunkerWrapper:
                         try:
                             # Get enriched content (with heading hierarchy)
                             enriched_text = self.chunker.contextualize(chunk=chunk)
-                            # Store both versions
+                            # Update chunk text with contextualized version
                             chunk.text = enriched_text
-                            chunk.original_text = chunk.text
                             self.stats['contextualized_chunks'] += 1
                         except Exception as e:
                             logger.warning(f"Failed to contextualize chunk: {e}")
