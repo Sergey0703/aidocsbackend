@@ -233,6 +233,7 @@ class IndexingService:
             from chunking_vectors.embedding_processor import create_embedding_processor
             from chunking_vectors.markdown_loader import create_markdown_loader
             from chunking_vectors.registry_manager import create_registry_manager
+            from storage.storage_manager import SupabaseStorageManager  # 🆕 Added for Storage mode
             from llama_index.core.node_parser import SentenceSplitter
             from llama_index.embeddings.google_genai import GoogleGenAIEmbedding
             from llama_index.vector_stores.supabase import SupabaseVectorStore
@@ -258,12 +259,14 @@ class IndexingService:
             task.current_stage = ProcessingStage.LOADING
             task.current_stage_name = "Loading Documents"
             
-            logger.info("Initializing document registry manager and markdown loader...")
+            logger.info("Initializing storage manager, registry manager, and markdown loader...")
+            storage_manager = SupabaseStorageManager()  # 🆕 Initialize Storage manager
             registry_manager = create_registry_manager(config.CONNECTION_STRING)
             loader = create_markdown_loader(
                 documents_dir=config.DOCUMENTS_DIR,
                 recursive=True,
-                config=config
+                config=config,
+                storage_manager=storage_manager  # 🆕 Pass to loader for Storage mode support
             )
 
             logger.info("🔗 Loading documents with registry_id enrichment...")

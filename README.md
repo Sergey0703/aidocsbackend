@@ -3,6 +3,7 @@
 -- Vehicle Management + Document Registry + Vector Search
 -- UPDATED: documents.id changed from UUID to TEXT
 -- UPDATED: Added Supabase Storage support to document_registry
+-- UPDATED: Added MD/JSON Storage paths (markdown_storage_path, json_storage_path)
 -- ============================================================================
 
 -- ШАГ 1: Создание или обновление универсальной функции для `updated_at`
@@ -65,7 +66,7 @@ CREATE TABLE IF NOT EXISTS vecs.document_registry (
 
     -- 🆕 Supabase Storage fields (for Storage mode)
     storage_bucket TEXT DEFAULT 'vehicle-documents',
-    storage_path TEXT,
+    storage_path TEXT,                      -- RAW file path in Storage (raw/pending/, raw/processed/)
     original_filename TEXT,
     file_size_bytes BIGINT,
     content_type TEXT,
@@ -76,6 +77,11 @@ CREATE TABLE IF NOT EXISTS vecs.document_registry (
         'failed',
         'indexed'
     )),
+
+    -- 🆕 Storage paths for converted files (MD/JSON)
+    markdown_storage_path TEXT,             -- MD file in Storage (markdown/processed/filename.md)
+    markdown_metadata_path TEXT,            -- Conversion metadata (markdown/_metadata/filename.json)
+    json_storage_path TEXT,                 -- DoclingDocument JSON (json/processed/filename.json)
 
     -- Пути к файлам (legacy/filesystem mode - now optional)
     raw_file_path TEXT,
@@ -174,6 +180,30 @@ BEGIN
         ALTER TABLE vecs.document_registry ADD CONSTRAINT check_storage_status
             CHECK (storage_status IN ('pending', 'processing', 'processed', 'failed', 'indexed'));
     END IF;
+
+    -- 🆕 Add markdown_storage_path column if it doesn't exist
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns
+                   WHERE table_schema = 'vecs'
+                   AND table_name = 'document_registry'
+                   AND column_name = 'markdown_storage_path') THEN
+        ALTER TABLE vecs.document_registry ADD COLUMN markdown_storage_path TEXT;
+    END IF;
+
+    -- 🆕 Add markdown_metadata_path column if it doesn't exist
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns
+                   WHERE table_schema = 'vecs'
+                   AND table_name = 'document_registry'
+                   AND column_name = 'markdown_metadata_path') THEN
+        ALTER TABLE vecs.document_registry ADD COLUMN markdown_metadata_path TEXT;
+    END IF;
+
+    -- 🆕 Add json_storage_path column if it doesn't exist
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns
+                   WHERE table_schema = 'vecs'
+                   AND table_name = 'document_registry'
+                   AND column_name = 'json_storage_path') THEN
+        ALTER TABLE vecs.document_registry ADD COLUMN json_storage_path TEXT;
+    END IF;
 END $$;
 
 -- 🆕 Storage mode indexes (создаются ПОСЛЕ добавления колонок)
@@ -183,6 +213,10 @@ CREATE INDEX IF NOT EXISTS idx_document_registry_uploaded_at ON vecs.document_re
 CREATE UNIQUE INDEX IF NOT EXISTS idx_document_registry_storage_path_unique
     ON vecs.document_registry(storage_bucket, storage_path)
     WHERE storage_path IS NOT NULL;
+
+-- 🆕 Indexes for MD/JSON Storage paths
+CREATE INDEX IF NOT EXISTS idx_document_registry_markdown_storage_path ON vecs.document_registry(markdown_storage_path);
+CREATE INDEX IF NOT EXISTS idx_document_registry_json_storage_path ON vecs.document_registry(json_storage_path);
 
 -- Триггер
 DROP TRIGGER IF EXISTS update_document_registry_updated_at ON vecs.document_registry;

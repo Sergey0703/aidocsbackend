@@ -392,19 +392,137 @@ class ConversionService:
                     if success and output_path:
                         logger.info(f"   ✅ Converted to: {output_path}")
 
-                        # Update registry with markdown path
+                        # Update registry with markdown path (legacy field)
                         registry_manager.update_markdown_path(
                             registry_id=registry_id,
                             markdown_path=str(output_path)
                         )
 
-                        # Move file in Storage to processed/
+                        # 🆕 UPLOAD MD/JSON TO STORAGE
+                        md_path = Path(output_path)
+                        filename_stem = md_path.stem  # e.g., "1761335038_VCR"
+
+                        try:
+                            import psycopg2  # For DB updates
+                            # 1. Upload Markdown to Storage (markdown/processed/)
+                            if md_path.exists():
+                                md_storage_path = f"markdown/processed/{md_path.name}"
+                                logger.info(f"   📤 Uploading MD to Storage: {md_storage_path}")
+
+                                # Read file and upload directly
+                                with open(md_path, 'rb') as f:
+                                    file_content = f.read()
+
+                                await asyncio.to_thread(
+                                    storage_manager.client.storage.from_(storage_manager.bucket_name).upload,
+                                    path=md_storage_path,
+                                    file=file_content,
+                                    file_options={"content-type": "text/markdown"}
+                                )
+                                logger.info(f"   ✅ MD uploaded to Storage")
+
+                                # Update registry with markdown Storage path
+                                conn = psycopg2.connect(registry_manager.connection_string)
+                                cur = conn.cursor()
+                                cur.execute(
+                                    "UPDATE vecs.document_registry SET markdown_storage_path = %s WHERE id = %s",
+                                    (md_storage_path, str(registry_id))
+                                )
+                                conn.commit()
+                                cur.close()
+                                conn.close()
+
+                            # 2. Upload Metadata JSON to Storage (markdown/_metadata/)
+                            metadata_dir = md_path.parent / "_metadata"
+                            metadata_file = metadata_dir / f"{filename_stem}.json"
+                            if metadata_file.exists():
+                                metadata_storage_path = f"markdown/_metadata/{metadata_file.name}"
+                                logger.info(f"   📤 Uploading metadata to Storage: {metadata_storage_path}")
+
+                                with open(metadata_file, 'rb') as f:
+                                    file_content = f.read()
+
+                                await asyncio.to_thread(
+                                    storage_manager.client.storage.from_(storage_manager.bucket_name).upload,
+                                    path=metadata_storage_path,
+                                    file=file_content,
+                                    file_options={"content-type": "application/json"}
+                                )
+                                logger.info(f"   ✅ Metadata uploaded to Storage")
+
+                                # Update registry
+                                conn = psycopg2.connect(registry_manager.connection_string)
+                                cur = conn.cursor()
+                                cur.execute(
+                                    "UPDATE vecs.document_registry SET markdown_metadata_path = %s WHERE id = %s",
+                                    (metadata_storage_path, str(registry_id))
+                                )
+                                conn.commit()
+                                cur.close()
+                                conn.close()
+
+                            # 3. Upload DoclingDocument JSON to Storage (json/processed/)
+                            json_dir = md_path.parent.parent / "json"
+                            json_file = json_dir / f"{filename_stem}.json"
+                            if json_file.exists():
+                                json_storage_path = f"json/processed/{json_file.name}"
+                                logger.info(f"   📤 Uploading JSON to Storage: {json_storage_path}")
+
+                                with open(json_file, 'rb') as f:
+                                    file_content = f.read()
+
+                                await asyncio.to_thread(
+                                    storage_manager.client.storage.from_(storage_manager.bucket_name).upload,
+                                    path=json_storage_path,
+                                    file=file_content,
+                                    file_options={"content-type": "application/json"}
+                                )
+                                logger.info(f"   ✅ JSON uploaded to Storage")
+
+                                # Update registry
+                                conn = psycopg2.connect(registry_manager.connection_string)
+                                cur = conn.cursor()
+                                cur.execute(
+                                    "UPDATE vecs.document_registry SET json_storage_path = %s WHERE id = %s",
+                                    (json_storage_path, str(registry_id))
+                                )
+                                conn.commit()
+                                cur.close()
+                                conn.close()
+
+                            logger.info(f"   🎉 All files uploaded to Storage successfully")
+
+                            # 🆕 CLEANUP: Delete local files after successful upload to Storage
+                            logger.info(f"   🧹 Cleaning up local files...")
+                            files_to_delete = []
+
+                            if md_path.exists():
+                                files_to_delete.append(md_path)
+                            if metadata_file.exists():
+                                files_to_delete.append(metadata_file)
+                            if json_file.exists():
+                                files_to_delete.append(json_file)
+
+                            for file_path in files_to_delete:
+                                try:
+                                    file_path.unlink()
+                                    logger.info(f"   🗑️ Deleted: {file_path.name}")
+                                except Exception as del_err:
+                                    logger.warning(f"   ⚠️ Failed to delete {file_path.name}: {del_err}")
+
+                            logger.info(f"   ✅ Local cleanup complete")
+
+                        except Exception as upload_error:
+                            logger.error(f"   ⚠️ Failed to upload to Storage: {upload_error}")
+                            # Non-critical - continue with local files (they won't be deleted)
+
+                        # Move RAW file in Storage to processed/
                         new_path = await asyncio.to_thread(
                             storage_manager.move_document,
                             storage_path,
                             'raw/processed'
                         )
-                        logger.info(f"   📦 Moved in Storage to: {new_path}")
+                        logger.info(f"   📦 Moved RAW in Storage to: {new_path}")
 
                         # Update storage_status to 'processed' AND update storage_path
                         registry_manager.update_storage_status(
