@@ -3,61 +3,23 @@ import React from 'react';
 import './ConversionProgress.css';
 
 const ConversionProgress = ({ status, isActive }) => {
-  // Guard clause: return early if no status (preparing phase)
+  // Guard clause: return early if no status
   if (!status) {
     return (
       <div className="conversion-progress">
-        <div className="preparing-state">
-          <div className="preparing-header">
-            <div className="spinner-icon rotating">🔄</div>
-            <h3>Preparing conversion...</h3>
-          </div>
-          <div className="preparing-stages">
-            <div className="stage active">
-              <div className="stage-dot pulsing"></div>
-              <span>Uploading file to storage</span>
-            </div>
-            <div className="stage">
-              <div className="stage-dot"></div>
-              <span>Creating conversion task</span>
-            </div>
-            <div className="stage">
-              <div className="stage-dot"></div>
-              <span>Initializing Docling converter</span>
-            </div>
-          </div>
+        <div className="no-status-message">
+          No conversion status available
         </div>
       </div>
     );
   }
 
-  // Guard clause: check if progress exists or is zero (starting phase)
-  if (!status.progress || status.progress.progress_percentage === 0) {
+  // Guard clause: check if progress exists
+  if (!status.progress) {
     return (
       <div className="conversion-progress">
-        <div className="preparing-state">
-          <div className="preparing-header">
-            <div className="spinner-icon rotating">🔄</div>
-            <h3>Starting conversion...</h3>
-          </div>
-          <div className="preparing-stages">
-            <div className="stage completed">
-              <div className="stage-dot"></div>
-              <span>✅ File uploaded to storage</span>
-            </div>
-            <div className="stage active">
-              <div className="stage-dot pulsing"></div>
-              <span>Converting to Markdown format</span>
-            </div>
-            <div className="stage">
-              <div className="stage-dot"></div>
-              <span>Extracting metadata and structure</span>
-            </div>
-            <div className="stage">
-              <div className="stage-dot"></div>
-              <span>Uploading converted files</span>
-            </div>
-          </div>
+        <div className="no-status-message">
+          Loading conversion status...
         </div>
       </div>
     );
@@ -76,7 +38,7 @@ const ConversionProgress = ({ status, isActive }) => {
   const getStatusBadge = () => {
     // Safety check for progress.status
     const statusValue = progress?.status || 'unknown';
-
+    
     switch (statusValue.toLowerCase()) {
       case 'pending':
         return <span className="status-badge pending">⏳ Pending</span>;
@@ -94,7 +56,7 @@ const ConversionProgress = ({ status, isActive }) => {
   const getProgressColor = () => {
     const failedFiles = progress?.failed_files || 0;
     const statusValue = progress?.status || '';
-
+    
     if (failedFiles > 0) return '#dc3545';
     if (statusValue === 'completed') return '#28a745';
     return '#007bff';

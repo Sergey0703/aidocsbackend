@@ -109,3 +109,131 @@
     display: flex;
     justify-content: space-between;
 }
+/* 🆕 Preparing State Styles */
+.preparing-state {
+  padding: 2rem;
+  text-align: center;
+}
+
+.preparing-header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 2rem;
+}
+
+.preparing-header h3 {
+  font-size: 1.3rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.spinner-icon {
+  font-size: 3rem;
+  animation: spin 2s linear infinite;
+}
+
+.spinner-icon.rotating {
+  animation: spin 1.5s linear infinite;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Preparing Stages */
+.preparing-stages {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  text-align: left;
+  max-width: 400px;
+  margin: 0 auto;
+}
+
+.stage {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.75rem 1rem;
+  border-radius: 8px;
+  background-color: #f8f9fa;
+  transition: all 0.3s ease;
+}
+
+.stage.active {
+  background-color: #e0f2fe;
+  border-left: 3px solid #0284c7;
+}
+
+.stage.completed {
+  background-color: #dcfce7;
+  border-left: 3px solid #22c55e;
+}
+
+.stage span {
+  font-size: 0.95rem;
+  color: var(--text-primary);
+  font-weight: 500;
+}
+
+.stage-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background-color: #d1d5db;
+  flex-shrink: 0;
+}
+
+.stage.active .stage-dot {
+  background-color: #0284c7;
+}
+
+.stage.completed .stage-dot {
+  background-color: #22c55e;
+}
+
+.stage-dot.pulsing {
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.5;
+    transform: scale(1.2);
+  }
+}
+
+/* Status info styles */
+.status-info {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+}
+
+.pulse-indicator {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+}
+
+.pulse-dot {
+  width: 8px;
+  height: 8px;
+  background-color: #22c55e;
+  border-radius: 50%;
+  animation: pulse 1.5s ease-in-out infinite;
+}
