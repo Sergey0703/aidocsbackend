@@ -202,6 +202,88 @@ class DocumentConverter:
                 fallback_threshold=self.ocr_fallback_threshold
             )
         return self.ocr_enhancer
+
+    def _extract_text_from_document(self, document) -> str:
+        """
+        Manually extract text from DoclingDocument when export_to_markdown() produces JSON coordinates.
+
+        This happens with form-like documents where Docling exports picture elements as JSON
+        with coordinates instead of extracting the text content.
+
+        Args:
+            document: DoclingDocument instance
+
+        Returns:
+            str: Markdown-formatted text content
+        """
+        lines = []
+
+        # Add document name as title
+        if hasattr(document, 'name') and document.name:
+            lines.append(f"# {document.name}\n")
+
+        # Extract all text items from the document
+        # DoclingDocument stores text in a 'texts' array accessible via iteration
+        try:
+            # Try to access texts directly from JSON export
+            doc_dict = document.export_to_dict()
+
+            # Extract texts array
+            texts = doc_dict.get('texts', [])
+
+            if texts:
+                # Group texts by label for better formatting
+                current_section = None
+
+                for text_item in texts:
+                    text_content = text_item.get('text', '').strip()
+                    label = text_item.get('label', 'text')
+
+                    if not text_content:
+                        continue
+
+                    # Format based on label
+                    if label == 'section_header':
+                        # Section headers as markdown headers
+                        level = text_item.get('level', 2)
+                        lines.append(f"\n{'#' * level} {text_content}\n")
+                        current_section = text_content
+                    elif label == 'text':
+                        # Regular text
+                        lines.append(f"{text_content}  ")
+                    elif label == 'list_item':
+                        # List items
+                        lines.append(f"- {text_content}")
+                    else:
+                        # Default: treat as paragraph
+                        lines.append(f"{text_content}  ")
+
+            # Also extract tables if present
+            tables = doc_dict.get('tables', [])
+            if tables:
+                lines.append("\n## Tables\n")
+                for i, table in enumerate(tables):
+                    lines.append(f"\n### Table {i+1}\n")
+                    # Try to extract table data
+                    if 'data' in table:
+                        # Format as markdown table
+                        table_data = table['data']
+                        if table_data and len(table_data) > 0:
+                            # Header row
+                            lines.append("| " + " | ".join(str(cell) for cell in table_data[0]) + " |")
+                            lines.append("| " + " | ".join("---" for _ in table_data[0]) + " |")
+                            # Data rows
+                            for row in table_data[1:]:
+                                lines.append("| " + " | ".join(str(cell) for cell in row) + " |")
+
+            result = "\n".join(lines)
+            return result if result.strip() else None
+
+        except Exception as e:
+            print(f"   [!] Error extracting text from document: {e}")
+            import traceback
+            traceback.print_exc()
+            return None
     
     def convert_file(self, input_path):
         """
@@ -226,10 +308,29 @@ class DocumentConverter:
         try:
             # Convert document - EXACT same way as in test script
             result = self.docling.convert(str(input_path))
-            
-            # Export to markdown
+
+            # Export to markdown with fallback to manual text extraction
             markdown_content = result.document.export_to_markdown()
-            
+
+            # Check if markdown contains only JSON coordinates (form documents issue)
+            # Detect various coordinate formats: "point"/"bbox"/"bbox_2d" with "text"
+            has_json_block = '```json' in markdown_content
+            has_coordinates = any(coord in markdown_content for coord in ['"point":', '"bbox":', '"bbox_2d":'])
+            has_text_field = '"text":' in markdown_content
+
+            if has_json_block and has_coordinates and has_text_field:
+                print(f"   [!] Detected JSON coordinates in markdown - extracting text manually...")
+                try:
+                    # Extract text from DoclingDocument's texts array
+                    manual_markdown = self._extract_text_from_document(result.document)
+                    if manual_markdown and len(manual_markdown.strip()) > 10:
+                        markdown_content = manual_markdown
+                        print(f"   [+] Successfully extracted {len(manual_markdown)} chars of text")
+                    else:
+                        print(f"   [!] Manual extraction returned empty content, keeping original")
+                except Exception as extract_error:
+                    print(f"   [!] Manual extraction failed: {extract_error}, using default export")
+
             # Validate content
             if not markdown_content or len(markdown_content.strip()) < 10:
                 raise ValueError("Conversion produced empty or invalid content")
