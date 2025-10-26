@@ -1,5 +1,26 @@
-# Simplified settings for RAG Indexer Part 2: Chunking & Vectors Only
-# Expects markdown input from Docling (Part 1)
+# ============================================================================
+# COMPLETE .ENV CONFIGURATION
+# ============================================================================
+# This configuration supports BOTH Storage mode (new) and Filesystem mode (legacy)
+# ============================================================================
+
+# ============================================================================
+# 🆕 SUPABASE STORAGE CONFIGURATION (NEW - for Storage mode)
+# ============================================================================
+
+# Supabase project URL and service role key
+SUPABASE_URL=https://xzchopxzxkesqkoonumj.supabase.co
+SUPABASE_SERVICE_ROLE_KEY=
+# Storage bucket name
+SUPABASE_STORAGE_BUCKET=vehicle-documents
+
+# Temporary directory for downloading files from Storage
+STORAGE_TEMP_DIR=/tmp/rag_storage_temp
+
+# Storage path prefixes (optional, defaults shown)
+STORAGE_PENDING_PREFIX=raw/pending/
+STORAGE_PROCESSED_PREFIX=raw/processed/
+STORAGE_FAILED_PREFIX=raw/failed/
 
 # ============================================================================
 # DATABASE SETTINGS
@@ -31,10 +52,10 @@ MIN_CHUNK_LENGTH=50            # Minimum chunk length to keep
 # ============================================================================
 # HYBRID CHUNKING SETTINGS (Docling HybridChunker)
 # ============================================================================
-USE_HYBRID_CHUNKING=false      # Enable Docling HybridChunker (structure-aware chunking) - REQUIRES JSON from Docling conversion
+USE_HYBRID_CHUNKING=true       # Enable Docling HybridChunker (structure-aware chunking)
 HYBRID_MAX_TOKENS=512          # Max tokens per chunk (matching CHUNK_SIZE for consistency)
 HYBRID_MERGE_PEERS=true        # Merge sibling paragraphs in same section
-HYBRID_USE_CONTEXTUALIZE=false # Add heading hierarchy to chunk content (can enable later)
+HYBRID_USE_CONTEXTUALIZE=true # Add heading hierarchy to chunk content (ENABLED for better RAG quality)
 
 # Tokenizer settings for HybridChunker
 HYBRID_TOKENIZER=huggingface   # Options: huggingface, openai
@@ -77,26 +98,37 @@ SKIP_VALIDATION=false
 # ============================================================================
 # NOTES
 # ============================================================================
-# This configuration is for Part 2: Chunking & Vectors Only
-# 
+# This configuration supports BOTH modes:
+#
+# 1. STORAGE MODE (Recommended - NEW):
+#    - Uses Supabase Storage for raw documents
+#    - Upload: python scripts/upload_documents.py --dir /path/to/docs
+#    - Process: python process_documents_storage.py
+#    - Index: python indexer.py
+#
+# 2. FILESYSTEM MODE (Legacy):
+#    - Uses RAW_DOCUMENTS_DIR for local files
+#    - Process: python process_documents.py
+#    - Index: python indexer.py
+#
+# Quick Start (Storage Mode):
+# 1. Run: python scripts/setup_storage.py (creates bucket)
+# 2. Run SQL schema from ../README.md in Supabase SQL Editor
+# 3. Upload: python scripts/upload_documents.py --dir /path/to/docs
+# 4. Process: python process_documents_storage.py
+# 5. Index: python indexer.py
+#
 # Prerequisites:
-# 1. Markdown files should be in DOCUMENTS_DIR (output from Docling - Part 1)
-# 2. Supabase database should be running and accessible
-# 3. GEMINI_API_KEY must be set with valid Google AI API key
-#
-# Workflow:
-# 1. Docling (Part 1) converts documents → markdown files
-# 2. This system (Part 2) reads markdown → chunks → embeddings → vector store
-#
-# To get Gemini API key:
-# Visit: https://makersuite.google.com/app/apikey
+# - Supabase project with Storage enabled
+# - GEMINI_API_KEY from https://makersuite.google.com/app/apikey
+# - Database schema applied (run SQL from README.md)
 # ============================================================================
 # DOCLING - DOCUMENT CONVERSION SETTINGS
 # ============================================================================
-RAW_DOCUMENTS_DIR=./data/raw
-MARKDOWN_OUTPUT_DIR=./data/markdown
-FAILED_CONVERSIONS_DIR=./data/failed
-METADATA_DIR=./data/markdown/_metadata
+RAW_DOCUMENTS_DIR=c:/projects/aidocsbackend/rag_indexer/data/raw_test
+MARKDOWN_OUTPUT_DIR=c:/projects/aidocsbackend/rag_indexer/data/markdown
+FAILED_CONVERSIONS_DIR=c:/projects/aidocsbackend/rag_indexer/data/failed
+METADATA_DIR=c:/projects/aidocsbackend/rag_indexer/data/markdown/_metadata
 
 # Supported formats (comma-separated)
 SUPPORTED_FORMATS=pdf,docx,doc,pptx,ppt,txt,html,htm,png,jpg,jpeg,tiff
@@ -106,6 +138,10 @@ RECURSIVE_SCAN=true
 MIRROR_DIRECTORY_STRUCTURE=true
 PRESERVE_IMAGES=false
 EXTRACT_TABLES=true
+
+# JSON output for Hybrid Chunking (saves DoclingDocument JSON alongside markdown)
+SAVE_JSON_OUTPUT=true
+JSON_OUTPUT_DIR=c:/projects/aidocsbackend/rag_indexer/data/json
 
 # OCR settings
 ENABLE_OCR=true
@@ -128,3 +164,23 @@ MAX_FILE_SIZE_MB=100
 # Logging
 VERBOSE_LOGGING=true
 LOG_DIR=./logs
+
+# ============================================================================
+# INCREMENTAL MODE (for indexing only)
+# ============================================================================
+INCREMENTAL_MODE=true
+# 🆕 GEMINI VISION API SETTINGS (for fast OCR via Docling)
+# Enable Gemini Vision API for picture description (replaces slow EasyOCR)
+USE_GEMINI_VISION=true
+
+# Gemini API key (same as used for embeddings)
+# Already set above: GEMINI_API_KEY=your-key-here
+
+# Vision model (fast and accurate)
+GEMINI_VISION_MODEL=gemini-2.0-flash-exp
+
+# Timeout for vision API calls (in seconds)
+GEMINI_VISION_TIMEOUT=30
+
+# Prompt for text extraction from images
+GEMINI_VISION_PROMPT=Extract all text from this document image. Preserve formatting, tables, and structure. Be accurate and complete.

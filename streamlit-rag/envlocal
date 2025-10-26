@@ -1,37 +1,34 @@
-# Database Configuration
+# Database connection - UPDATE: Changed from local to network Supabase
 SUPABASE_CONNECTION_STRING=""
-TABLE_NAME=documents
 
-# Gemini API Configuration
+# Streamlit server settings
+STREAMLIT_SERVER_PORT=8501
+STREAMLIT_SERVER_ADDRESS=0.0.0.0
+STREAMLIT_SERVER_MAX_UPLOAD_SIZE=200
+STREAMLIT_SERVER_ENABLE_CORS=false
+
+# Gemini API settings
 GEMINI_API_KEY=
 EMBED_MODEL=text-embedding-004
-EMBED_DIM=768
+EMBED_DIM=3072
 
-# Document Directory Configuration
-DOCUMENTS_DIR=./data/markdown
-
-# Processing Configuration
-CHUNK_SIZE=512
-CHUNK_OVERLAP=128
-MIN_CHUNK_LENGTH=50
-
-# Batch Processing
-PROCESSING_BATCH_SIZE=50
-BATCH_SIZE=5
-DB_BATCH_SIZE=200
-NUM_WORKERS=4
-
-# Performance Settings
+# Gemini API performance settings
 GEMINI_TIMEOUT=300
 GEMINI_REQUEST_RATE_LIMIT=10
 GEMINI_RETRY_ATTEMPTS=3
 GEMINI_RETRY_DELAY=1.0
 GEMINI_MAX_TOKENS_PER_REQUEST=2048
 
-# Logging Configuration
-ENABLE_PROGRESS_LOGGING=true
-LOG_BATCH_TIMING=true
-LOG_GEMINI_API_CALLS=false
+# LLM model settings for Gemini
+MAIN_LLM_MODEL=gemini-2.5-flash
+EXTRACTION_LLM_MODEL=gemini-2.5-flash
+REWRITE_LLM_MODEL=gemini-2.5-flash
 
-# Blacklisted Directories
-BLACKLIST_DIRECTORIES=logs,temp,.git,__pycache__,.vscode,.idea,node_modules
+# Batch processing settings
+PROCESSING_BATCH_SIZE=50
+BATCH_SIZE=5
+DB_BATCH_SIZE=200
+
+# Logging settings
+LOG_GEMINI_API_CALLS=false
+ENABLE_PROGRESS_LOGGING=true
