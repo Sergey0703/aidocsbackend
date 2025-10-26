@@ -8,6 +8,7 @@ import logging
 import time
 import uuid
 import sys
+import hashlib
 from datetime import datetime
 from typing import Dict, List, Optional, Any
 from pathlib import Path
@@ -21,6 +22,26 @@ from ..models.schemas import (
 logger = logging.getLogger(__name__)
 
 FILE_CONVERSION_TIMEOUT = 300  # 5 minutes
+
+
+def calculate_file_hash(file_path: str, algorithm: str = 'sha256') -> str:
+    """
+    Calculate hash of a file for change detection.
+
+    Args:
+        file_path: Path to file
+        algorithm: Hash algorithm (default: sha256)
+
+    Returns:
+        Hex digest of file hash
+    """
+    hash_obj = hashlib.new(algorithm)
+    with open(file_path, 'rb') as f:
+        # Read file in chunks to handle large files
+        for chunk in iter(lambda: f.read(8192), b''):
+            hash_obj.update(chunk)
+    return hash_obj.hexdigest()
+
 
 class ConversionTaskState:
     """State management for a single conversion task."""
@@ -379,6 +400,14 @@ class ConversionService:
                         raise Exception("Failed to download file from Storage")
 
                     logger.info(f"   ✅ Downloaded to: {temp_file_path}")
+
+                    # Calculate file hash for incremental indexing
+                    logger.info(f"   🔒 Calculating file hash...")
+                    file_hash = await asyncio.to_thread(calculate_file_hash, temp_file_path)
+                    logger.info(f"   ✅ File hash: {file_hash[:16]}...")
+
+                    # Update registry with file hash
+                    registry_manager.update_file_hash(registry_id, file_hash)
 
                     # Convert document
                     logger.info(f"   🔄 Converting with Docling...")

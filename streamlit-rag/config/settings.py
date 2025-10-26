@@ -68,10 +68,10 @@ class SearchConfig:
     enable_vector_search: bool = True
     enable_database_search: bool = True
     
-    # Vector search thresholds (lowered for better recall)
-    default_similarity_threshold: float = 0.30  # Lowered from 0.35
-    entity_similarity_threshold: float = 0.25   # Lowered from 0.30
-    fallback_similarity_threshold: float = 0.20 # Lowered from 0.25
+    # Vector search thresholds (balanced for precision vs recall)
+    default_similarity_threshold: float = 0.50  # Raised for better precision
+    entity_similarity_threshold: float = 0.45   # Raised for entity searches
+    fallback_similarity_threshold: float = 0.40 # Raised to filter irrelevant results
     
     # Vector search top_k (respecting 1000 limit)
     default_top_k: int = 20

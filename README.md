@@ -83,6 +83,9 @@ CREATE TABLE IF NOT EXISTS vecs.document_registry (
     markdown_metadata_path TEXT,            -- Conversion metadata (markdown/_metadata/filename.json)
     json_storage_path TEXT,                 -- DoclingDocument JSON (json/processed/filename.json)
 
+    -- 🆕 File hash for incremental indexing (detects file changes)
+    file_hash TEXT,                         -- SHA256 hash of original file (for change detection)
+
     -- Пути к файлам (legacy/filesystem mode - now optional)
     raw_file_path TEXT,
     markdown_file_path TEXT,
@@ -204,6 +207,14 @@ BEGIN
                    AND column_name = 'json_storage_path') THEN
         ALTER TABLE vecs.document_registry ADD COLUMN json_storage_path TEXT;
     END IF;
+
+    -- 🆕 Add file_hash column if it doesn't exist (for incremental indexing)
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns
+                   WHERE table_schema = 'vecs'
+                   AND table_name = 'document_registry'
+                   AND column_name = 'file_hash') THEN
+        ALTER TABLE vecs.document_registry ADD COLUMN file_hash TEXT;
+    END IF;
 END $$;
 
 -- 🆕 Storage mode indexes (создаются ПОСЛЕ добавления колонок)
@@ -217,6 +228,9 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_document_registry_storage_path_unique
 -- 🆕 Indexes for MD/JSON Storage paths
 CREATE INDEX IF NOT EXISTS idx_document_registry_markdown_storage_path ON vecs.document_registry(markdown_storage_path);
 CREATE INDEX IF NOT EXISTS idx_document_registry_json_storage_path ON vecs.document_registry(json_storage_path);
+
+-- 🆕 Index for file_hash (for incremental indexing change detection)
+CREATE INDEX IF NOT EXISTS idx_document_registry_file_hash ON vecs.document_registry(file_hash);
 
 -- Триггер
 DROP TRIGGER IF EXISTS update_document_registry_updated_at ON vecs.document_registry;

@@ -91,7 +91,49 @@ class DocumentRegistryManager:
         except Exception as e:
             logger.error(f"Failed to get/create registry entry for {file_path}: {e}")
             return None
-    
+
+    def get_registry_info_by_markdown_path(self, markdown_path: str) -> Optional[Dict]:
+        """
+        Get full registry information by markdown file path.
+        Returns registry_id, storage_path, and file_hash for incremental indexing.
+
+        Args:
+            markdown_path: Path to markdown file
+
+        Returns:
+            Dict with registry_id, storage_path, file_hash or None
+        """
+        try:
+            conn = psycopg2.connect(self.connection_string)
+            cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+
+            # Normalize path for case-insensitive comparison
+            normalized_path = markdown_path.lower().replace('\\', '/')
+
+            cur.execute("""
+                SELECT id, storage_path, raw_file_path, file_hash
+                FROM vecs.document_registry
+                WHERE LOWER(REPLACE(markdown_file_path, '\\', '/')) = %s
+                   OR LOWER(REPLACE(markdown_storage_path, '\\', '/')) = %s
+            """, (normalized_path, normalized_path))
+
+            result = cur.fetchone()
+            cur.close()
+            conn.close()
+
+            if result:
+                return {
+                    'registry_id': str(result['id']),
+                    'storage_path': result['storage_path'],
+                    'raw_file_path': result['raw_file_path'],
+                    'file_hash': result['file_hash']
+                }
+            return None
+
+        except Exception as e:
+            logger.error(f"Failed to get registry info for {markdown_path}: {e}")
+            return None
+
     def update_file_hash(self, registry_id: str, file_hash: str) -> bool:
         """
         Update file hash for registry entry
@@ -343,6 +385,127 @@ class DocumentRegistryManager:
             logger.error(f"Failed to update markdown path: {e}")
             return False
 
+    def update_file_hash(self, registry_id: str, file_hash: str) -> bool:
+        """
+        Update the file hash for a registry entry (for incremental indexing).
+
+        Args:
+            registry_id: Registry UUID
+            file_hash: SHA256 hash of the original file
+
+        Returns:
+            bool: Success status
+        """
+        try:
+            conn = psycopg2.connect(self.connection_string)
+            cur = conn.cursor()
+
+            cur.execute("""
+                UPDATE vecs.document_registry
+                SET file_hash = %s,
+                    updated_at = now()
+                WHERE id = %s
+            """, (file_hash, registry_id))
+
+            conn.commit()
+            rows_updated = cur.rowcount
+
+            cur.close()
+            conn.close()
+
+            if rows_updated > 0:
+                logger.info(f"[+] Updated file_hash for {registry_id}")
+                return True
+            else:
+                logger.warning(f"[!] No registry found with id {registry_id}")
+                return False
+
+        except Exception as e:
+            logger.error(f"Failed to update file hash: {e}")
+            return False
+
+    def find_by_file_hash(self, file_hash: str) -> Optional[Dict]:
+        """
+        Find registry entry by file hash (for deduplication).
+
+        Args:
+            file_hash: SHA256 hash of the file
+
+        Returns:
+            Dict with registry entry or None if not found
+        """
+        try:
+            conn = psycopg2.connect(self.connection_string)
+            cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+
+            cur.execute("""
+                SELECT
+                    id,
+                    original_filename,
+                    file_hash,
+                    storage_path,
+                    status,
+                    storage_status,
+                    uploaded_at
+                FROM vecs.document_registry
+                WHERE file_hash = %s
+                ORDER BY uploaded_at DESC
+                LIMIT 1
+            """, (file_hash,))
+
+            result = cur.fetchone()
+            cur.close()
+            conn.close()
+
+            return dict(result) if result else None
+
+        except Exception as e:
+            logger.error(f"Failed to find by file hash: {e}")
+            return None
+
+    def find_by_filename(self, filename: str) -> Optional[Dict]:
+        """
+        Find registry entry by original filename (for file replacement detection).
+
+        Args:
+            filename: Original filename to search for
+
+        Returns:
+            Dict with full registry entry or None if not found
+        """
+        try:
+            conn = psycopg2.connect(self.connection_string)
+            cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+
+            cur.execute("""
+                SELECT
+                    id,
+                    original_filename,
+                    file_hash,
+                    storage_bucket,
+                    storage_path,
+                    markdown_storage_path,
+                    markdown_metadata_path,
+                    json_storage_path,
+                    status,
+                    storage_status,
+                    uploaded_at
+                FROM vecs.document_registry
+                WHERE original_filename = %s
+                ORDER BY uploaded_at DESC
+                LIMIT 1
+            """, (filename,))
+
+            result = cur.fetchone()
+            cur.close()
+            conn.close()
+
+            return dict(result) if result else None
+
+        except Exception as e:
+            logger.error(f"Failed to find by filename: {e}")
+            return None
+
     def get_pending_documents(self, limit: Optional[int] = None) -> List[Dict]:
         """
         Get all documents with storage_status='pending' (waiting for processing).
@@ -453,6 +616,46 @@ class DocumentRegistryManager:
         except Exception as e:
             logger.error(f"Failed to get document by storage path: {e}")
             return None
+
+    def delete_document_completely(self, registry_id: str) -> bool:
+        """
+        Delete document registry entry and all associated chunks.
+
+        Due to CASCADE DELETE on vecs.documents.registry_id,
+        deleting from document_registry will automatically delete all chunks.
+
+        Args:
+            registry_id: UUID of registry entry to delete
+
+        Returns:
+            bool: Success status
+        """
+        try:
+            conn = psycopg2.connect(self.connection_string)
+            cur = conn.cursor()
+
+            # Delete from registry (will CASCADE to chunks)
+            cur.execute("""
+                DELETE FROM vecs.document_registry
+                WHERE id = %s
+            """, (registry_id,))
+
+            conn.commit()
+            rows_deleted = cur.rowcount
+
+            cur.close()
+            conn.close()
+
+            if rows_deleted > 0:
+                logger.info(f"[+] Deleted registry entry {registry_id} and all associated chunks (CASCADE)")
+                return True
+            else:
+                logger.warning(f"[!] No registry found with id {registry_id}")
+                return False
+
+        except Exception as e:
+            logger.error(f"Failed to delete document {registry_id}: {e}")
+            return False
 
 
 def create_registry_manager(connection_string: str) -> DocumentRegistryManager:

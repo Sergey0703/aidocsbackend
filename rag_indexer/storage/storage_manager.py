@@ -111,14 +111,11 @@ class SupabaseStorageManager:
                 file_content = file.read()
                 file_size = len(file_content)
 
-            # Use original filename with timestamp prefix to avoid conflicts
-            import time
-            timestamp = int(time.time())
-            safe_filename = original_filename.replace(' ', '_')  # Replace spaces
-            unique_filename = f"{timestamp}_{safe_filename}"
+            # Use original filename (no timestamp prefix needed - deduplication is done by hash)
+            safe_filename = original_filename.replace(' ', '_')  # Replace spaces only
 
             # Build storage path
-            storage_path = f"{target_folder}/{unique_filename}"
+            storage_path = f"{target_folder}/{safe_filename}"
 
             # Detect content type
             content_type = self._get_content_type(original_filename)
@@ -247,6 +244,68 @@ class SupabaseStorageManager:
         except Exception as e:
             logger.error(f"Failed to delete {storage_path}: {e}")
             raise
+
+    def delete_document_all_files(
+        self,
+        storage_path: Optional[str] = None,
+        markdown_storage_path: Optional[str] = None,
+        markdown_metadata_path: Optional[str] = None,
+        json_storage_path: Optional[str] = None
+    ) -> dict:
+        """
+        Delete all files associated with a document from Storage.
+
+        Deletes:
+        - Raw file (storage_path)
+        - Markdown file (markdown_storage_path)
+        - Markdown metadata (markdown_metadata_path)
+        - JSON file (json_storage_path)
+
+        Args:
+            storage_path: Raw file path
+            markdown_storage_path: Markdown file path
+            markdown_metadata_path: Metadata file path
+            json_storage_path: JSON file path
+
+        Returns:
+            dict: {
+                'deleted': list of successfully deleted paths,
+                'failed': list of paths that failed to delete,
+                'total': total number of files processed
+            }
+        """
+        paths_to_delete = []
+
+        # Collect all non-None paths
+        if storage_path:
+            paths_to_delete.append(storage_path)
+        if markdown_storage_path:
+            paths_to_delete.append(markdown_storage_path)
+        if markdown_metadata_path:
+            paths_to_delete.append(markdown_metadata_path)
+        if json_storage_path:
+            paths_to_delete.append(json_storage_path)
+
+        deleted = []
+        failed = []
+
+        for path in paths_to_delete:
+            try:
+                logger.info(f"   Deleting {path}")
+                self.client.storage.from_(self.bucket_name).remove([path])
+                deleted.append(path)
+                logger.info(f"   ✅ Deleted {path}")
+            except Exception as e:
+                logger.warning(f"   ⚠️ Failed to delete {path}: {e}")
+                failed.append(path)
+
+        logger.info(f"Deleted {len(deleted)}/{len(paths_to_delete)} files from Storage")
+
+        return {
+            'deleted': deleted,
+            'failed': failed,
+            'total': len(paths_to_delete)
+        }
 
     def list_documents(self, prefix: str = '', limit: int = 1000) -> list[dict]:
         """

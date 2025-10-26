@@ -197,14 +197,15 @@ class MarkdownLoader:
 
     def _enrich_with_registry_id(self, document: Document, registry_manager) -> Document:
         """
-        Enrich document metadata with registry_id from document_registry table.
-        
+        Enrich document metadata with registry_id, original_path, and original_file_hash
+        from document_registry table (for incremental indexing support).
+
         Args:
             document: LlamaIndex Document
             registry_manager: RegistryManager instance
-        
+
         Returns:
-            Document: Enriched document with registry_id
+            Document: Enriched document with registry_id, original_path, original_file_hash
         """
         try:
             file_path = document.metadata.get('file_path')
@@ -212,24 +213,40 @@ class MarkdownLoader:
                 logger.warning(f"Document missing file_path, cannot create registry entry")
                 self.loading_stats['registry_failures'] += 1
                 return document
-            
-            # [*] FIXED: Call with correct parameters (only file_path)
-            # Get or create registry entry using ONLY the markdown file path
-            registry_id = registry_manager.get_or_create_registry_entry(
-                file_path=file_path
-            )
-            
-            if registry_id:
+
+            # Get full registry information (registry_id, storage_path, file_hash)
+            registry_info = registry_manager.get_registry_info_by_markdown_path(file_path)
+
+            if registry_info:
                 # Add registry_id to metadata
-                document.metadata['registry_id'] = registry_id
+                document.metadata['registry_id'] = registry_info['registry_id']
+
+                # Add original_path for incremental indexing (use storage_path or raw_file_path)
+                original_path = registry_info.get('storage_path') or registry_info.get('raw_file_path')
+                if original_path:
+                    document.metadata['original_path'] = original_path
+
+                # Add file_hash for change detection
+                if registry_info.get('file_hash'):
+                    document.metadata['original_file_hash'] = registry_info['file_hash']
+
                 self.loading_stats['registry_enrichments'] += 1
-                logger.debug(f"[+] Added registry_id {registry_id} to {document.metadata.get('file_name')}")
+                logger.debug(f"[+] Added registry info to {document.metadata.get('file_name')}: "
+                           f"registry_id={registry_info['registry_id']}, "
+                           f"original_path={original_path}, "
+                           f"file_hash={'present' if registry_info.get('file_hash') else 'missing'}")
             else:
-                logger.error(f"[-] Failed to get registry_id for {file_path}")
-                self.loading_stats['registry_failures'] += 1
-            
+                # Fallback: create registry entry with only markdown path
+                registry_id = registry_manager.get_or_create_registry_entry(file_path=file_path)
+                if registry_id:
+                    document.metadata['registry_id'] = registry_id
+                    logger.warning(f"[!] Created registry entry without original_path/file_hash for {file_path}")
+                else:
+                    logger.error(f"[-] Failed to get registry_id for {file_path}")
+                    self.loading_stats['registry_failures'] += 1
+
             return document
-            
+
         except Exception as e:
             logger.error(f"Failed to enrich document with registry_id: {e}", exc_info=True)
             import traceback
@@ -266,7 +283,9 @@ class MarkdownLoader:
                     markdown_storage_path,
                     markdown_metadata_path,
                     json_storage_path,
-                    original_filename
+                    original_filename,
+                    storage_path,
+                    file_hash
                 FROM vecs.document_registry
                 WHERE markdown_storage_path IS NOT NULL
                   AND status = 'processed'
@@ -284,6 +303,8 @@ class MarkdownLoader:
                 metadata_storage_path = record[2]
                 json_storage_path = record[3]
                 original_filename = record[4]
+                storage_path = record[5]  # For incremental indexing
+                file_hash = record[6]  # For change detection
 
                 try:
                     # Download MD file
@@ -330,6 +351,12 @@ class MarkdownLoader:
                         'registry_id': registry_id,  # Add registry_id immediately
                         **json_metadata
                     }
+
+                    # Add incremental indexing metadata (for change detection)
+                    if storage_path:
+                        doc_metadata['original_path'] = storage_path
+                    if file_hash:
+                        doc_metadata['original_file_hash'] = file_hash
 
                     # Add JSON path for HybridChunker
                     if json_temp_path and json_temp_path.exists():

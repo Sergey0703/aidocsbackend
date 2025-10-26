@@ -473,6 +473,7 @@ async def upload_document(
         # Import Storage components
         import sys
         import os
+        import hashlib
         current_file = Path(__file__)
         project_root = current_file.parent.parent.parent.parent.parent
         sys.path.insert(0, str(project_root / "rag_indexer"))
@@ -492,7 +493,56 @@ async def upload_document(
         storage_manager = SupabaseStorageManager()
         registry_manager = DocumentRegistryManager(connection_string=connection_string)
 
-        # Upload to Supabase Storage
+        # Calculate file hash for deduplication
+        file_hash = hashlib.sha256(content).hexdigest()
+        logger.info(f"🔒 Calculated file hash: {file_hash[:16]}...")
+
+        # Step 1: Check if file with same hash already exists (DUPLICATE)
+        existing_by_hash = registry_manager.find_by_file_hash(file_hash)
+
+        if existing_by_hash:
+            logger.info(f"✅ File already exists in system (hash match): {existing_by_hash.get('original_filename')}")
+            logger.info(f"   Registry ID: {existing_by_hash['id']}, Status: {existing_by_hash['status']}")
+
+            return {
+                "success": True,
+                "message": f"File already exists in system (duplicate detected)",
+                "filename": file.filename,
+                "file_size": file_size,
+                "file_hash": file_hash[:16],
+                "duplicate": True,
+                "existing_registry_id": str(existing_by_hash['id']),
+                "existing_filename": existing_by_hash.get('original_filename'),
+                "status": existing_by_hash.get('status')
+            }
+
+        # Step 2: Check if file with same filename exists but different hash (REPLACEMENT)
+        existing_by_filename = registry_manager.find_by_filename(file.filename)
+
+        if existing_by_filename and existing_by_filename.get('file_hash') != file_hash:
+            # This is a MODIFIED file - delete old version and upload new
+            logger.info(f"🔄 File with same name exists but different hash - replacing old version")
+            logger.info(f"   Old hash: {existing_by_filename.get('file_hash', 'N/A')[:16]}...")
+            logger.info(f"   New hash: {file_hash[:16]}...")
+
+            old_registry_id = str(existing_by_filename['id'])
+
+            # Delete all Storage files associated with old version
+            logger.info(f"   Deleting old Storage files...")
+            delete_result = storage_manager.delete_document_all_files(
+                storage_path=existing_by_filename.get('storage_path'),
+                markdown_storage_path=existing_by_filename.get('markdown_storage_path'),
+                markdown_metadata_path=existing_by_filename.get('markdown_metadata_path'),
+                json_storage_path=existing_by_filename.get('json_storage_path')
+            )
+            logger.info(f"   Deleted {delete_result['deleted'].__len__()}/{delete_result['total']} Storage files")
+
+            # Delete registry entry (will CASCADE delete all chunks)
+            logger.info(f"   Deleting registry entry and chunks...")
+            registry_manager.delete_document_completely(old_registry_id)
+            logger.info(f"   ✅ Old version deleted completely")
+
+        # Upload to Supabase Storage (new file or replacement)
         logger.info(f"Uploading {file.filename} ({file_size} bytes) to Supabase Storage...")
 
         upload_result = storage_manager.upload_document(
@@ -518,6 +568,10 @@ async def upload_document(
 
         if registry_id:
             logger.info(f"✅ Created registry entry: {registry_id}")
+
+            # Save file hash to registry (for deduplication and incremental indexing)
+            registry_manager.update_file_hash(registry_id, file_hash)
+            logger.info(f"✅ Saved file hash to registry")
         else:
             logger.warning(f"⚠️ Failed to create registry entry for {file.filename}")
 
