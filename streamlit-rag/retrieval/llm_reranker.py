@@ -153,8 +153,8 @@ class GeminiReranker:
         # Extract content from result
         content = result.content if hasattr(result, 'content') else str(result)
 
-        # Truncate content to avoid token limits (keep first 500 chars)
-        content_preview = content[:500] + "..." if len(content) > 500 else content
+        # Truncate content to avoid token limits (keep first 1500 chars for better context)
+        content_preview = content[:1500] + "..." if len(content) > 1500 else content
 
         # Construct prompt for relevance evaluation
         prompt = f"""You are a search relevance evaluator. Your task is to determine if a search result is truly relevant to the user's query.

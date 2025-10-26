@@ -51,7 +51,7 @@ class LLMConfig:
     rerank_temperature: float = 0.0  # Deterministic for consistency
     rerank_max_tokens: int = 10  # Just need relevance score 0-10
     rerank_batch_size: int = 10  # Process results in batches
-    rerank_min_score: float = 4.5  # Minimum relevance score to keep result (0-10 scale, balanced threshold)
+    rerank_min_score: float = 2.5  # Minimum relevance score to keep result (0-10 scale, lowered for better recall)
 
     # Gemini API performance settings
     request_rate_limit: int = 10  # requests per second

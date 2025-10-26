@@ -48,10 +48,12 @@ class HybridResultsFusionEngine:
         self.config = config
 
         # Initialize LLM re-ranker for semantic validation
+        # TEMPORARILY DISABLED: LLM reranker sees only JSON chunks, not actual content
+        # TODO: Re-enable after fixing chunking contextualize to produce natural text
         try:
             self.reranker = GeminiReranker(config)
-            self.reranking_enabled = True
-            logger.info("[+] LLM re-ranking enabled")
+            self.reranking_enabled = False  # DISABLED temporarily
+            logger.info("[!] LLM re-ranking DISABLED (temporarily - chunks need contextualize fix)")
         except Exception as e:
             logger.warning(f"[!] LLM re-ranking disabled: {e}")
             self.reranker = None
