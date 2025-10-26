@@ -137,9 +137,38 @@ async def search(
             logger.info(f"  Top scores: {top_scores}")
 
         # ====================================================================
-        # STAGE 3: Format Response
+        # STAGE 3: Answer Generation (NEW!)
         # ====================================================================
-        logger.info("STAGE 3: Format Response")
+        logger.info("STAGE 3: Answer Generation")
+        answer_start = time.time()
+
+        generated_answer = None
+        if fusion_result.fused_results:
+            # Use QueryEngine to generate natural language answer
+            try:
+                answer_result = await components["answer_engine"].generate_answer(
+                    query=search_query,
+                    retrieved_results=fusion_result.fused_results,
+                    original_query=request.query
+                )
+                generated_answer = answer_result.answer
+                answer_time = time.time() - answer_start
+                logger.info(f"✓ Answer generated (confidence: {answer_result.confidence:.3f})")
+                logger.info(f"  Time: {answer_time:.3f}s")
+                logger.info(f"  Preview: {generated_answer[:100]}...")
+            except Exception as e:
+                answer_time = time.time() - answer_start
+                logger.warning(f"[!] Answer generation failed: {e}")
+                logger.info(f"  Time: {answer_time:.3f}s")
+                # Continue without answer - still return search results
+        else:
+            answer_time = 0
+            logger.info("  No results to generate answer from")
+
+        # ====================================================================
+        # STAGE 4: Format Response
+        # ====================================================================
+        logger.info("STAGE 4: Format Response")
 
         # Convert backend results to API response format
         # Apply top_k limit (default 10 if not specified)
@@ -193,12 +222,15 @@ async def search(
         logger.info("=" * 80)
         logger.info("SEARCH COMPLETED")
         logger.info(f"Total Time: {total_time:.3f}s | Results: {len(search_results)}")
-        logger.info(f"Breakdown: Retrieval={retrieval_time:.3f}s | Fusion={fusion_time:.3f}s")
+        logger.info(f"Breakdown: Retrieval={retrieval_time:.3f}s | Fusion={fusion_time:.3f}s | Answer={answer_time:.3f}s")
+        if generated_answer:
+            logger.info(f"Answer: {generated_answer[:150]}...")
         logger.info("=" * 80)
 
         return SearchResponse(
             success=True,
             query=request.query,
+            answer=generated_answer,  # NEW: Natural language answer!
             results=search_results,
             total_results=len(search_results),
             search_time=total_time,
@@ -207,6 +239,8 @@ async def search(
                 "fusion_method": fusion_result.fusion_method,
                 "retrieval_time": retrieval_time,
                 "fusion_time": fusion_time,
+                "answer_time": answer_time,  # NEW: Answer generation time
+                "has_answer": generated_answer is not None,  # NEW: Whether answer was generated
                 "original_candidates": len(multi_retrieval_result.results),
                 "after_fusion": fusion_result.final_count
             }

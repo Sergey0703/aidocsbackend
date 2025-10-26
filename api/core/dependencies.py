@@ -47,6 +47,7 @@ class SystemComponents:
             from query_processing.query_rewriter import ProductionQueryRewriter
             from retrieval.multi_retriever import MultiStrategyRetriever
             from retrieval.results_fusion import HybridResultsFusionEngine
+            from answer_generation import AnswerGenerationEngine
             
             logger.info("📦 Importing components from backend...")
             
@@ -65,13 +66,18 @@ class SystemComponents:
             # Initialize fusion engine
             logger.info("  🔗 Initializing Results Fusion Engine...")
             fusion_engine = HybridResultsFusionEngine(config)
-            
+
+            # Initialize answer generation engine
+            logger.info("  💬 Initializing Answer Generation Engine...")
+            answer_engine = AnswerGenerationEngine(config)
+
             # Store components
             self._components = {
                 "entity_extractor": entity_extractor,
                 "query_rewriter": query_rewriter,
                 "retriever": retriever,
                 "fusion_engine": fusion_engine,
+                "answer_engine": answer_engine,
                 "config": config
             }
             

@@ -119,45 +119,21 @@ class QueryPreprocessor:
                 rejection_reason=validation_result[1]
             )
 
-        # LEVEL 2: Stop words removal
-        cleaned_query, removed_words = self._remove_stop_words(query)
+        # SIMPLIFIED PREPROCESSING: Pass query as-is
+        # QueryEngine (LlamaIndex) handles query understanding internally
+        # No need for aggressive stop words removal
 
-        # Check if query became empty after stop words removal
-        if not cleaned_query.strip():
-            return PreprocessingResult(
-                query="",
-                original_query=original_query,
-                method="rejected",
-                removed_stop_words=removed_words,
-                is_valid=False,
-                rejection_reason="Query contains only common words (stop words). Please use specific search terms."
-            )
+        # Just basic normalization
+        cleaned_query = query.strip()
 
-        # LEVEL 3: AI enhancement (conditional)
-        if self.enable_ai_enhancement and self._should_use_ai_enhancement(cleaned_query):
-            try:
-                enhanced_query = self._ai_enhance_query(cleaned_query)
-                logger.info(f"[*] AI enhanced: '{cleaned_query}' -> '{enhanced_query}'")
-
-                return PreprocessingResult(
-                    query=enhanced_query,
-                    original_query=original_query,
-                    method="ai_enhanced",
-                    removed_stop_words=removed_words,
-                    is_valid=True,
-                    ai_enhancement=f"Enhanced from '{cleaned_query}'"
-                )
-            except Exception as e:
-                logger.warning(f"[!] AI enhancement failed: {e}, using rule-based")
-                # Fall back to rule-based if AI fails
-
-        # Default: Rule-based cleaned query
+        # Return the query as-is for QueryEngine to handle
         return PreprocessingResult(
             query=cleaned_query,
             original_query=original_query,
-            method="rule_based",
-            removed_stop_words=removed_words,
-            is_valid=True
+            method="passthrough",  # Indicates minimal processing
+            removed_stop_words=[],  # No stop words removed
+            is_valid=True,
+            ai_enhancement="Query passed to QueryEngine for natural language understanding"
         )
 
     def _validate_query(self, query: str) -> Tuple[bool, Optional[str]]:

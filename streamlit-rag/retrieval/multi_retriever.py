@@ -218,27 +218,11 @@ class LlamaIndexRetriever(BaseRetriever):
             filtered_nodes = similarity_postprocessor.postprocess_nodes(nodes)
             logger.info(f"   Vector: {len(filtered_nodes)} after similarity filter")
             
-            # Content validation
-            validated_nodes = []
-            
-            for node in filtered_nodes:
-                try:
-                    content = node.node.text if hasattr(node.node, 'text') else str(node.node)
-                    
-                    # Smart content relevance check
-                    if self._is_content_relevant(query, content, extracted_entity):
-                        validated_nodes.append(node)
-                    else:
-                        similarity_score = node.score if hasattr(node, 'score') else 0.0
-                        metadata = node.node.metadata if hasattr(node.node, 'metadata') else {}
-                        filename = metadata.get('file_name', 'Unknown')
-                        logger.debug(f"   Filtered out: {filename} (score: {similarity_score:.3f}) - not relevant")
-                        
-                except Exception as e:
-                    logger.warning(f"Error validating node: {e}")
-                    continue
-            
-            logger.info(f"   Vector: {len(validated_nodes)} after content validation")
+            # Content validation - DISABLED for RAG Q&A
+            # QueryEngine handles relevance internally, no need for aggressive filtering
+            validated_nodes = filtered_nodes  # Accept all similarity-filtered nodes
+
+            logger.info(f"   Vector: {len(validated_nodes)} after content validation (disabled for RAG)")
             
             # Convert to RetrievalResult objects
             results = []
@@ -301,24 +285,30 @@ class LlamaIndexRetriever(BaseRetriever):
             return []
     
     def _is_content_relevant(self, query: str, content: str, extracted_entity: str = None) -> bool:
-        """Smart content relevance check"""
-        
+        """
+        Smart content relevance check
+
+        UPDATED: Relaxed for RAG Q&A - QueryEngine handles relevance internally
+        """
+
         query_lower = query.lower()
         content_lower = content.lower()
-        
+
         # For VRN queries - check if entity is in content
         if extracted_entity:
             entity_lower = extracted_entity.lower()
             if entity_lower in content_lower:
                 return True
-        
-        # For general queries - require at least 70% of significant words
+
+        # RELAXED for RAG Q&A: Accept if ANY significant word matches
+        # QueryEngine will handle final relevance determination
         query_words = [word for word in query_lower.split() if len(word) > 2]
         if not query_words:
-            return True
-        
+            return True  # Empty query words - accept
+
+        # Changed from 70% to just 1 word match (very permissive)
         found_words = sum(1 for word in query_words if word in content_lower)
-        return found_words / len(query_words) >= 0.7
+        return found_words >= 1  # At least ONE word match
 
 
 class DatabaseRetriever(BaseRetriever):

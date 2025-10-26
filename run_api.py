@@ -23,6 +23,6 @@ if __name__ == "__main__":
         "api.main:app",  # Импорт из api/main.py
         host="0.0.0.0",
         port=8000,
-        reload=True,
+        reload=False,  # Disabled for Answer Generation testing
         log_level="info"
     )
