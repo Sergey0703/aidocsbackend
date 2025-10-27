@@ -8,7 +8,7 @@
 .drop-zone {
   border: 2px dashed var(--border-color);
   border-radius: 8px;
-  padding: 2rem;
+  padding: 1rem 2rem; /* Уменьшен вертикальный padding с 2rem до 1rem */
   text-align: center;
   cursor: pointer;
   transition: all 0.2s;
@@ -24,18 +24,19 @@
 }
 
 .upload-icon {
-  font-size: 2.5rem;
+  font-size: 1.8rem; /* Уменьшен с 2.5rem до 1.8rem */
   color: var(--primary-color);
-  margin-bottom: 0.5rem;
+  margin-bottom: 0.25rem; /* Уменьшен с 0.5rem */
 }
 .drop-zone-title {
   font-weight: 600;
-  margin: 0 0 0.5rem 0;
+  margin: 0 0 0.25rem 0; /* Уменьшен с 0.5rem */
+  font-size: 0.95rem; /* Добавлен размер шрифта */
 }
 .drop-zone-subtitle {
   color: var(--text-secondary);
-  font-size: 0.9rem;
-  margin-bottom: 1rem;
+  font-size: 0.85rem; /* Уменьшен с 0.9rem */
+  margin-bottom: 0.5rem; /* Уменьшен с 1rem */
 }
 
 /* ИЗМЕНЕНИЕ: Стили для кнопки "Choose Files" */
