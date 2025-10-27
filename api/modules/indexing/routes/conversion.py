@@ -97,6 +97,7 @@ async def start_conversion(
             sys.path.insert(0, str(rag_indexer_path))
 
         use_storage_mode = False
+        has_pending_docs = False
         try:
             from chunking_vectors.registry_manager import DocumentRegistryManager
             connection_string = os.getenv('SUPABASE_CONNECTION_STRING')
@@ -105,12 +106,45 @@ async def start_conversion(
                 pending_storage_docs = registry_manager.get_pending_documents(limit=1)
                 if pending_storage_docs:
                     use_storage_mode = True
+                    has_pending_docs = True
                     logger.info("🗄️ Detected pending Storage documents → Using Storage mode")
                 else:
-                    logger.info("📁 No pending Storage documents → Using Filesystem mode")
+                    logger.info("📁 No pending Storage documents")
+                    # Don't fallback to Filesystem - just finish with success
+                    has_pending_docs = False
         except Exception as e:
             logger.warning(f"⚠️ Failed to check Storage mode, using Filesystem: {e}")
             use_storage_mode = False
+            has_pending_docs = True  # Unknown state, try Filesystem
+
+        # If no pending documents found, complete task immediately
+        if not has_pending_docs:
+            logger.info("✅ No pending documents to convert - task completed")
+
+            # Update task state to completed
+            task = await service.get_task(task_id)
+            if task:
+                from ..models.schemas import ConversionStatus
+                from datetime import datetime
+
+                task.status = ConversionStatus.COMPLETED
+                task.start_time = datetime.now()
+                task.end_time = datetime.now()
+                task.total_files = 0
+                task.converted_files = 0
+                task.failed_files = 0
+                task.skipped_files = 0
+
+            return ConversionResponse(
+                success=True,
+                task_id=task_id,
+                message="No pending documents to convert (all files already processed)",
+                mode="storage",
+                status="completed",
+                input_dir=None,
+                output_dir=None,
+                supported_formats=[]
+            )
 
         # Start conversion in appropriate mode
         if use_storage_mode:

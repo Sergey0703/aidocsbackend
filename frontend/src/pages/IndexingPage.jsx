@@ -35,8 +35,10 @@ const IndexingPage = () => {
   });
 
   // Сообщения для пользователя
+  // eslint-disable-next-line no-unused-vars
   const [error, setError] = useState(null);
   const [indexingResult, setIndexingResult] = useState(null);
+  const [uploadMessage, setUploadMessage] = useState(null); // {type: 'info'|'warning'|'error', message: string}
 
   // --- DATA FETCHING ---
 
@@ -151,22 +153,56 @@ const IndexingPage = () => {
     setIndexingResult(null);
     setConversionTaskId(null);
     setIndexingTaskId(null);
+    setUploadMessage(null); // Clear previous upload message
     setIsUploading(true);
 
     try {
       console.log(`Starting upload of ${files.length} files...`);
+
+      let uploadedCount = 0;
+      let duplicateCount = 0;
+      let duplicateFiles = [];
+
       for (const file of files) {
-        await ragApi.uploadDocument(file, false); // false = не запускать индексацию автоматически
+        const uploadResponse = await ragApi.uploadDocument(file, false); // false = не запускать индексацию автоматически
+
+        // Check if file is duplicate
+        if (uploadResponse.duplicate) {
+          duplicateCount++;
+          duplicateFiles.push(file.name);
+          console.log(`📋 Duplicate file: ${file.name} (already indexed)`);
+        } else {
+          uploadedCount++;
+        }
       }
-      
-      console.log('✅ All files uploaded successfully!');
+
+      console.log(`✅ Upload complete: ${uploadedCount} new, ${duplicateCount} duplicates`);
       setIsUploading(false);
-      
-      // Запускаем конвертацию после успешной загрузки
-      setIsConverting(true);
-      const response = await ragApi.startConversion(uploadSettings);
-      setConversionTaskId(response.task_id);
-      
+
+      // Show message if all files were duplicates
+      if (uploadedCount === 0 && duplicateCount > 0) {
+        setUploadMessage({
+          type: 'info',
+          message: `✅ All ${duplicateCount} file(s) already exist in the system and have been indexed: ${duplicateFiles.join(', ')}`
+        });
+        return; // Don't start conversion/indexing
+      }
+
+      // Show info if some files were duplicates
+      if (duplicateCount > 0) {
+        setUploadMessage({
+          type: 'warning',
+          message: `⚠️ ${duplicateCount} duplicate file(s) skipped: ${duplicateFiles.join(', ')}`
+        });
+      }
+
+      // Start conversion only if we have new files
+      if (uploadedCount > 0) {
+        setIsConverting(true);
+        const response = await ragApi.startConversion(uploadSettings);
+        setConversionTaskId(response.task_id);
+      }
+
     } catch (err) {
       console.error('Failed to upload or convert:', err);
       setError(err.message || err.response?.data?.detail || 'Failed to process files.');
@@ -203,6 +239,20 @@ const IndexingPage = () => {
               settings={uploadSettings}
               onSettingsChange={setUploadSettings}
             />
+
+            {/* Upload Message */}
+            {uploadMessage && (
+              <div className={`upload-message ${uploadMessage.type}`} style={{
+                marginTop: '1rem',
+                padding: '1rem',
+                borderRadius: '4px',
+                backgroundColor: uploadMessage.type === 'info' ? '#e3f2fd' : uploadMessage.type === 'warning' ? '#fff3e0' : '#ffebee',
+                border: uploadMessage.type === 'info' ? '1px solid #2196f3' : uploadMessage.type === 'warning' ? '1px solid #ff9800' : '1px solid #f44336',
+                color: uploadMessage.type === 'info' ? '#1565c0' : uploadMessage.type === 'warning' ? '#e65100' : '#c62828'
+              }}>
+                {uploadMessage.message}
+              </div>
+            )}
           </div>
         </div>
 
