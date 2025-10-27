@@ -1,5 +1,5 @@
 # Database Configuration
-SUPABASE_CONNECTION_STRING=""
+SUPABASE_CONNECTION_STRING="postgresql://postgres.xzchopxzxkesqkoonumj:@aws-1-eu-west-1.pooler.supabase.com:6543/postgres"
 TABLE_NAME=documents
 
 # Gemini API Configuration

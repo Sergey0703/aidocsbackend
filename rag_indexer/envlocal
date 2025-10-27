@@ -11,6 +11,7 @@
 # Supabase project URL and service role key
 SUPABASE_URL=https://xzchopxzxkesqkoonumj.supabase.co
 SUPABASE_SERVICE_ROLE_KEY=
+
 # Storage bucket name
 SUPABASE_STORAGE_BUCKET=vehicle-documents
 
@@ -25,7 +26,7 @@ STORAGE_FAILED_PREFIX=raw/failed/
 # ============================================================================
 # DATABASE SETTINGS
 # ============================================================================
-SUPABASE_CONNECTION_STRING=""
+SUPABASE_CONNECTION_STRING="postgresql://postgres.xzchopxzxkesqkoonumj:@aws-1-eu-west-1.pooler.supabase.com:6543/postgres"
 TABLE_NAME=documents
 
 # ============================================================================
@@ -183,4 +184,4 @@ GEMINI_VISION_MODEL=gemini-2.0-flash-exp
 GEMINI_VISION_TIMEOUT=30
 
 # Prompt for text extraction from images
-GEMINI_VISION_PROMPT=Extract all text from this document image. Preserve formatting, tables, and structure. Be accurate and complete.
+GEMINI_VISION_PROMPT=Extract ALL text from this image in plain text format. For forms and structured documents, extract field labels and their values as readable text. For tables, preserve rows and columns in markdown table format. Do NOT use JSON, coordinates, or bounding boxes - only output human-readable plain text with markdown formatting. Be accurate and extract every piece of text visible in the image.
