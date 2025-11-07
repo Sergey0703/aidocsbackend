@@ -470,6 +470,32 @@ The system is designed with a clean separation between the frontend, backend, an
 
 This README focuses on setting up and running the **Backend API**.
 
+## Project Structure
+
+```
+aidocsbackend/
+├── api/                    # FastAPI backend
+├── rag_indexer/           # Document processing pipeline
+├── streamlit-rag/         # RAG logic
+├── frontend/              # React web application
+├── dev_tools/             # Development utilities
+│   ├── tests/            # Test files
+│   ├── scripts/          # Analysis, diagnostics, and maintenance scripts
+│   │   ├── analysis/    # Scripts for data analysis and quality checks
+│   │   ├── diagnostics/ # Scripts for database and system diagnostics
+│   │   └── maintenance/ # Scripts for data fixing and maintenance
+│   ├── docs/            # Technical documentation
+│   └── logs/            # Archived logs
+├── data/                  # Working data directory
+├── .env                   # Environment configuration
+├── requirements.txt       # Python dependencies
+├── run_api.py            # API server launcher
+├── run_indexer.py        # Indexer launcher
+└── README.md             # This file
+```
+
+For detailed information about development tools, see [dev_tools/README.md](dev_tools/README.md).
+
 ## Prerequisites
 
 Before you begin, ensure you have the following installed:

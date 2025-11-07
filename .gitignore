@@ -27,6 +27,13 @@ nul
 indexing_errors.log
 logs/
 
+# Development tools logs
+dev_tools/logs/*.log
+dev_tools/logs/*.txt
+
+# Keep dev_tools structure
+!dev_tools/logs/.gitkeep
+
 # OS files
 .DS_Store
 Thumbs.db
