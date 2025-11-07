@@ -476,7 +476,7 @@ This README focuses on setting up and running the **Backend API**.
 aidocsbackend/
 ├── api/                    # FastAPI backend
 ├── rag_indexer/           # Document processing pipeline
-├── streamlit-rag/         # RAG logic
+├── rag_client/         # RAG logic
 ├── frontend/              # React web application
 ├── dev_tools/             # Development utilities
 │   ├── tests/            # Test files
@@ -637,19 +637,19 @@ The system includes two search tools for testing and exploration:
 
 ### Quick CLI Search
 ```bash
-cd streamlit-rag
+cd rag_client
 python simple_search.py "231-D-54321"
 python simple_search.py "John Nolan" --verbose
 ```
 
 ### Interactive Console Search
 ```bash
-cd streamlit-rag
+cd rag_client
 python console_search.py
 # Then choose from the interactive menu
 ```
 
-**📚 For detailed guide on both tools, see [SEARCH_TOOLS_GUIDE.md](streamlit-rag/SEARCH_TOOLS_GUIDE.md)**
+**📚 For detailed guide on both tools, see [SEARCH_TOOLS_GUIDE.md](rag_client/SEARCH_TOOLS_GUIDE.md)**
 
 ## Troubleshooting
 
@@ -672,7 +672,7 @@ USING hnsw (vec vector_cosine_ops);
 
 **Solution 2 (Alternative):** Use the Python script:
 ```bash
-cd streamlit-rag
+cd rag_client
 python create_vector_index.py
 ```
 
@@ -698,7 +698,7 @@ The system will fall back to regex-based entity extraction (75% accuracy vs 90% 
 
 ### Invalid Query Errors
 
-If valid queries are being rejected, check the domain configuration in `streamlit-rag/config/settings.py`:
+If valid queries are being rejected, check the domain configuration in `rag_client/config/settings.py`:
 
 ```python
 # Expand document_types to include your document types

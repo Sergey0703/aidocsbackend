@@ -12,7 +12,7 @@ This is a production-ready RAG (Retrieval-Augmented Generation) system specializ
 - **LLM Operations**: Google Gemini API (gemini-pro)
 - **Vector Database**: Supabase PostgreSQL with pgvector extension
 - **RAG Framework**: LlamaIndex (chunking, embeddings, retrieval)
-- **Backend API**: FastAPI (located in `run_api.py` → `streamlit-rag/api/`)
+- **Backend API**: FastAPI (located in `run_api.py` → `client_rag/api/`)
 - **Database Schema**: Vehicle registry with document tracking
 
 ## Project Structure
@@ -44,7 +44,7 @@ Two-stage document processing pipeline:
 - `process_documents.py` - Document conversion script (Part 1 only: raw → markdown)
 - `pipeline.py` - Complete pipeline orchestrator (Part 1 + Part 2)
 
-### 2. `streamlit-rag/` - Query & Retrieval API
+### 2. `client_rag/` - Query & Retrieval API
 Production RAG query system with hybrid search:
 
 - `config/settings.py` - **Main configuration class** with hybrid search settings
@@ -123,12 +123,12 @@ python indexer.py
 python run_api.py
 
 # API will be available at http://0.0.0.0:8000
-# Points to: streamlit-rag/api/main.py (FastAPI app)
+# Points to: client_rag/api/main.py (FastAPI app)
 ```
 
 **Testing & Scripts:**
 ```bash
-cd streamlit-rag/scripts
+cd client_rag/scripts
 
 # Quick search test
 python quick_search.py
@@ -148,8 +148,8 @@ python search_file_by_name.py
 - `rag_indexer/.env` - Database connection, API keys, directories
 
 **API Configuration:**
-- `streamlit-rag/config/settings.py` - **Primary configuration** for hybrid search
-- `streamlit-rag/.env` - API keys, connection strings
+- `client_rag/config/settings.py` - **Primary configuration** for hybrid search
+- `client_rag/.env` - API keys, connection strings
 
 **Key Environment Variables:**
 ```bash
@@ -310,7 +310,7 @@ Applied at module load time in `multi_retriever.py:22-43`.
 
 ### Modifying Search Behavior
 
-Primary configuration in `streamlit-rag/config/settings.py`:
+Primary configuration in `client_rag/config/settings.py`:
 - `SearchConfig` - Thresholds, weights, strategy selection
 - `known_entities` - Entity-specific search parameters
 - Weights for hybrid fusion (database_result_weight, vector_result_weight)
@@ -333,7 +333,7 @@ Primary configuration in `streamlit-rag/config/settings.py`:
 
 ### Testing Search Quality
 
-Use `streamlit-rag/scripts/quick_search.py` for rapid iteration:
+Use `client_rag/scripts/quick_search.py` for rapid iteration:
 ```python
 # Modify query in script
 query = "John Nolan"  # or VRN like "191-D-12345"
@@ -379,7 +379,7 @@ The FastAPI backend (accessed via `run_api.py`) provides:
 - Entity extraction endpoints
 - Result fusion and ranking
 
-**Expected API Structure** (in `streamlit-rag/api/`):
+**Expected API Structure** (in `client_rag/api/`):
 - `main.py` - FastAPI app instance
 - `routes/` - API endpoint definitions
 - `models/` - Pydantic request/response models

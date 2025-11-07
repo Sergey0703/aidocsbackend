@@ -17,10 +17,10 @@ cd c:\Projects\aidocsbackend
 # source venv/bin/activate
 
 # 3. Install dependencies (if not already installed)
-pip install -r streamlit-rag/requirements.txt
+pip install -r client_rag/requirements.txt
 
 # 4. Verify .env file exists with required variables
-# streamlit-rag/.env should contain:
+# client_rag/.env should contain:
 # - SUPABASE_CONNECTION_STRING
 # - GEMINI_API_KEY
 # - EMBED_MODEL
@@ -46,8 +46,8 @@ Full-featured interactive menu-driven search application.
 
 **Usage:**
 ```bash
-# Navigate to streamlit-rag directory
-cd streamlit-rag
+# Navigate to client_rag directory
+cd client_rag
 
 # Run the interactive search
 python console_search.py
@@ -236,8 +236,8 @@ python console_search.py
 
 **1. Import Errors**
 ```bash
-# Make sure you're in the streamlit-rag directory
-cd streamlit-rag
+# Make sure you're in the client_rag directory
+cd client_rag
 python console_search.py
 ```
 

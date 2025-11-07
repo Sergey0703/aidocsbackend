@@ -454,7 +454,7 @@ python simple_search.py "query" --top-k 5
 - Verify `SUPABASE_CONNECTION_STRING` is correct
 
 **Problem:** "Import error"
-- Ensure you're in the `streamlit-rag/` directory
+- Ensure you're in the `client_rag/` directory
 - Check virtual environment is activated
 
 ---

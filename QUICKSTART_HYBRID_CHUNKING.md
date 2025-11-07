@@ -273,10 +273,10 @@ psql -h YOUR_HOST -U YOUR_USER -d YOUR_DB \
 }
 ```
 
-### Test search in streamlit-rag:
+### Test search in client_rag:
 
 ```bash
-cd streamlit-rag/scripts
+cd client_rag/scripts
 
 # Run test query
 python quick_search.py
@@ -365,7 +365,7 @@ pip install transformers
 2. Disable contextualize: `HYBRID_USE_CONTEXTUALIZE=false`
 3. Use smaller tokenizer model
 
-### Issue: Search broken in streamlit-rag
+### Issue: Search broken in client_rag
 
 **This should NOT happen** - hybrid chunking is compatible.
 
@@ -373,7 +373,7 @@ pip install transformers
 1. Metadata has `file_name` field
 2. Metadata has `registry_id` field
 3. UUID monkey patch is active (check logs)
-4. Run: `python streamlit-rag/scripts/analyze_chunks.py`
+4. Run: `python client_rag/scripts/analyze_chunks.py`
 
 ---
 
@@ -385,7 +385,7 @@ pip install transformers
 - ✅ Database backed up
 - ✅ Reindexing completed without errors
 - ✅ Chunks have correct metadata (`chunking_method=hybrid_docling`)
-- ✅ Search works in `streamlit-rag`
+- ✅ Search works in `client_rag`
 - ✅ No performance degradation (< 2x slower)
 
 ---
@@ -400,7 +400,7 @@ pip install transformers
    ```
    Reindex to get heading hierarchy in chunks.
 
-2. **Structural Filtering** in `streamlit-rag`:
+2. **Structural Filtering** in `client_rag`:
    - Filter by `chunk_type` (table, text, list)
    - Use `parent_heading` for context display
    - Boost table chunks for table queries
@@ -420,7 +420,7 @@ pip install transformers
 
 **Testing:**
 - Comparison script: `rag_indexer/scripts/test_hybrid_chunking.py`
-- Validation scripts: `streamlit-rag/scripts/`
+- Validation scripts: `client_rag/scripts/`
 
 **Rollback:**
 - Database backup in `backups/`

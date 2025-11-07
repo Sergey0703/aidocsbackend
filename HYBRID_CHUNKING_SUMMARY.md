@@ -96,9 +96,9 @@
 - Toggle flag: `USE_HYBRID_CHUNKING=true/false`
 - Automatic fallback if dependencies missing
 - Preserve all existing metadata
-- No breaking changes to `streamlit-rag`
+- No breaking changes to `client_rag`
 
-### ✅ Minimal Changes to streamlit-rag
+### ✅ Minimal Changes to client_rag
 
 **Why:**
 - Retrieval works at database level (agnostic to chunking)
@@ -196,7 +196,7 @@ Markdown → DoclingDocument → HybridChunker → Chunks → Embeddings → DB
 | `chunk_helpers.py` | **Update** | ~50 | Medium (core logic) |
 | `.env` | **Update** | +6 | Low (config only) |
 
-### streamlit-rag/ (Retrieval)
+### client_rag/ (Retrieval)
 
 | Component | Change Level | Risk | Required? |
 |-----------|--------------|------|-----------|
@@ -277,7 +277,7 @@ Markdown → DoclingDocument → HybridChunker → Chunks → Embeddings → DB
 
 ### Risk 3: Metadata Incompatibility
 
-**Impact:** streamlit-rag fails to read chunks
+**Impact:** client_rag fails to read chunks
 
 **Mitigation:**
 - Backward compatible metadata (file_name, registry_id preserved)
@@ -307,7 +307,7 @@ Migration is successful when:
 
 - ✅ All tests pass (`test_hybrid_chunking.py`)
 - ✅ Chunks have required metadata (file_name, registry_id)
-- ✅ Search works without errors in `streamlit-rag`
+- ✅ Search works without errors in `client_rag`
 - ✅ Chunk count within ±20% of baseline
 - ✅ Search quality maintained or improved
 - ✅ Performance acceptable (< 2x slower)
@@ -335,7 +335,7 @@ Migration is successful when:
 
 ---
 
-### 2. Structural Filtering in streamlit-rag
+### 2. Structural Filtering in client_rag
 
 **When:** After migration is stable (1 week)
 
@@ -402,7 +402,7 @@ rag_indexer/
 
 ### Code (No Changes)
 ```
-streamlit-rag/                         (95% compatible)
+client_rag/                         (95% compatible)
 ├── retrieval/
 │   ├── multi_retriever.py             (No changes)
 │   └── results_fusion.py              (No changes)
@@ -440,7 +440,7 @@ python indexer.py
 
 ### Validate
 ```bash
-cd streamlit-rag/scripts
+cd client_rag/scripts
 python quick_search.py
 ```
 
@@ -519,7 +519,7 @@ USE_HYBRID_CHUNKING=false
 
 **Testing:**
 - Test script: `rag_indexer/scripts/test_hybrid_chunking.py`
-- Validation: `streamlit-rag/scripts/quick_search.py`
+- Validation: `client_rag/scripts/quick_search.py`
 
 **Rollback:**
 - Database backup procedure in docs

@@ -12,8 +12,8 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
-# Add streamlit-rag to Python path for backend imports
-backend_path = Path(__file__).parent.parent / "streamlit-rag"
+# Add rag_client to Python path for backend imports
+backend_path = Path(__file__).parent.parent / "rag_client"
 sys.path.insert(0, str(backend_path))
 
 # Import from modules

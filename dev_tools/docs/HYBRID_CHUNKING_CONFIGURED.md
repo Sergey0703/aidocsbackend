@@ -132,8 +132,8 @@ python indexer.py
 cd rag_indexer
 python indexer.py
 
-# 4. Validate in streamlit-rag
-cd ../streamlit-rag/scripts
+# 4. Validate in client_rag
+cd ../client_rag/scripts
 python quick_search.py
 ```
 
@@ -172,7 +172,7 @@ Markdown → DoclingDocument → HybridChunker → Structure-aware chunks
 ### About Configuration
 - `USE_HYBRID_CHUNKING=true` - Enables hybrid chunking
 - `USE_HYBRID_CHUNKING=false` - Falls back to SentenceSplitter
-- No changes needed in `streamlit-rag/` (95% compatible)
+- No changes needed in `client_rag/` (95% compatible)
 
 ### About Performance
 - Expect 1.5-2x slower chunking (structure analysis overhead)
@@ -208,10 +208,10 @@ Markdown → DoclingDocument → HybridChunker → Structure-aware chunks
 2. Check `document_registry` table has entries
 3. Verify `registry_id` in chunk metadata
 
-### If search breaks in streamlit-rag:
+### If search breaks in client_rag:
 1. Check chunks have `file_name` metadata
 2. Verify UUID monkey patch is active
-3. Run `streamlit-rag/scripts/analyze_chunks.py`
+3. Run `client_rag/scripts/analyze_chunks.py`
 
 ---
 

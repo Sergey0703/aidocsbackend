@@ -22,7 +22,7 @@
   - Updated `entity_extractor.py` and `query_rewriter.py`
 
 ### 3. ✅ Professional Query Validation System
-**Created:** `streamlit-rag/query_processing/query_validator.py`
+**Created:** `rag_client/query_processing/query_validator.py`
 
 **Architecture:**
 ```
@@ -190,20 +190,20 @@ document_types = [
 ## 📁 Files Created/Modified
 
 ### Created
-- `streamlit-rag/query_processing/query_validator.py` (295 lines)
-- `streamlit-rag/SEARCH_TOOLS_GUIDE.md` (450+ lines)
+- `rag_client/query_processing/query_validator.py` (295 lines)
+- `rag_client/SEARCH_TOOLS_GUIDE.md` (450+ lines)
 - `SESSION_SUMMARY.md` (this file)
 
 ### Modified
 - `requirements.txt` - Added SpaCy
 - `README.md` - Enhanced with testing section, troubleshooting
-- `streamlit-rag/config/settings.py` - Added DomainConfig
-- `streamlit-rag/simple_search.py` - Query validation, warning suppression
-- `streamlit-rag/console_search.py` - Warning suppression
-- `streamlit-rag/query_processing/entity_extractor.py` - Fixed max_tokens
-- `streamlit-rag/query_processing/query_rewriter.py` - Fixed max_tokens
-- `streamlit-rag/create_vector_index.py` - Fixed vecs API usage
-- `streamlit-rag/FIX_WARNINGS.md` - Updated status
+- `rag_client/config/settings.py` - Added DomainConfig
+- `rag_client/simple_search.py` - Query validation, warning suppression
+- `rag_client/console_search.py` - Warning suppression
+- `rag_client/query_processing/entity_extractor.py` - Fixed max_tokens
+- `rag_client/query_processing/query_rewriter.py` - Fixed max_tokens
+- `rag_client/create_vector_index.py` - Fixed vecs API usage
+- `rag_client/FIX_WARNINGS.md` - Updated status
 - `run_api.py` - Warning suppression
 
 ---
@@ -211,7 +211,7 @@ document_types = [
 ## 🚀 Next Steps (Optional Enhancements)
 
 ### Short Term
-1. Create FastAPI application (`streamlit-rag/api/`)
+1. Create FastAPI application (`rag_client/api/`)
 2. Add more example queries to config
 3. Create unit tests for QueryValidator
 4. Add performance benchmarking script

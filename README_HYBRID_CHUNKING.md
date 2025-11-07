@@ -81,7 +81,7 @@ cd rag_indexer
 python indexer.py
 
 # 5. Validate
-cd streamlit-rag/scripts
+cd rag_client/scripts
 python quick_search.py
 ```
 
@@ -123,7 +123,7 @@ c:\projects\aidocsbackend\
 │   └── scripts/
 │       └── test_hybrid_chunking.py    ← NEW: Test script
 │
-└── streamlit-rag/                     ← NO CHANGES (95% compatible)
+└── rag_client/                     ← NO CHANGES (95% compatible)
     ├── retrieval/
     └── scripts/                       ← Use for validation
 ```
@@ -165,7 +165,7 @@ pip install transformers
 | Component | Changes Required | Risk Level |
 |-----------|------------------|------------|
 | `rag_indexer/` | **Medium** (3 files to update) | Low |
-| `streamlit-rag/` | **Minimal** (validation only) | Very Low |
+| `rag_client/` | **Minimal** (validation only) | Very Low |
 | Database schema | **None** | None |
 | Search quality | **Improvement expected** | Low |
 
@@ -173,7 +173,7 @@ pip install transformers
 
 ## ❓ FAQ
 
-### Q: Do I need to change streamlit-rag?
+### Q: Do I need to change rag_client?
 **A:** No. 95% compatible out of the box. Only metadata validation needed.
 
 ### Q: Can I rollback easily?

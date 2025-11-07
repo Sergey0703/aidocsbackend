@@ -3,7 +3,7 @@
 **Date:** 2025-01-21
 **Target:** Migrate from SentenceSplitter to Docling HybridChunker
 **Scope:** `rag_indexer/` only (Part 2: Chunking & Vectors)
-**Impact:** `streamlit-rag/` requires minimal changes (95% compatible)
+**Impact:** `client_rag/` requires minimal changes (95% compatible)
 
 ---
 
@@ -37,7 +37,7 @@ Replace `SentenceSplitter` (LlamaIndex) with `HybridChunker` (Docling) for impro
 |-----------|--------------|------|------------------|
 | `rag_indexer/chunking_vectors/` | **High** | Medium | ✅ Critical |
 | `rag_indexer/indexer.py` | **Medium** | Low | ✅ Required |
-| `streamlit-rag/retrieval/` | **Minimal** | Very Low | ⚠️ Verification |
+| `client_rag/retrieval/` | **Minimal** | Very Low | ⚠️ Verification |
 | `vecs.documents` schema | **None** | None | ✅ Compatibility check |
 
 ### Estimated Timeline
@@ -134,7 +134,7 @@ cp rag_indexer/data/markdown/*.md rag_indexer/data/test_migration/ | head -20
 ### Phase 4: Validation (Day 2 Afternoon)
 - ✅ Full reindexing with hybrid chunking
 - ✅ Chunk count comparison (before/after)
-- ✅ Search quality A/B test (`streamlit-rag`)
+- ✅ Search quality A/B test (`client_rag`)
 - ✅ Metadata structure validation
 - ✅ Performance metrics (time, memory)
 
@@ -142,7 +142,7 @@ cp rag_indexer/data/markdown/*.md rag_indexer/data/test_migration/ | head -20
 - ✅ Switch `USE_HYBRID_CHUNKING=true` in production `.env`
 - ✅ Run full reindexing
 - ✅ Monitor logs for errors
-- ✅ Verify search quality in `streamlit-rag`
+- ✅ Verify search quality in `client_rag`
 
 ---
 
@@ -593,7 +593,7 @@ GROUP BY dr.status;
 
 ```bash
 # Run quick search tests
-cd streamlit-rag/scripts
+cd client_rag/scripts
 python quick_search.py
 
 # Expected: Similar or better results than before
@@ -622,7 +622,7 @@ AFTER (HybridChunker):
 ### 4. Metadata Validation
 
 ```python
-# streamlit-rag/scripts/validate_hybrid_metadata.py
+# client_rag/scripts/validate_hybrid_metadata.py
 
 import psycopg2
 import os
@@ -673,9 +673,9 @@ if __name__ == "__main__":
 Migration is considered successful when:
 
 - ✅ All tests pass without errors
-- ✅ Chunk count is within expected range (±20% of original)
+- ✅ Chunk count within expected range (±20% of original)
 - ✅ Search quality is maintained or improved
-- ✅ No errors in `streamlit-rag` retrieval
+- ✅ No errors in `client_rag` retrieval
 - ✅ All chunks have `registry_id` and `file_name` metadata
 - ✅ Database integrity checks pass
 - ✅ Performance is acceptable (< 2x slower than SentenceSplitter)
@@ -691,7 +691,7 @@ Migration is considered successful when:
    - Embeddings include heading hierarchy
    - Better semantic search quality
 
-2. **Structural Filtering in `streamlit-rag`**
+2. **Structural Filtering in `client_rag`**
    - Add `chunk_type` filtering (table, text, mixed)
    - Use `parent_heading` for context display
    - Boost table chunks for table queries

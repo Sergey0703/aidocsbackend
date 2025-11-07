@@ -196,7 +196,7 @@
 
 - [ ] **Запустить quick search**
   ```bash
-  cd streamlit-rag
+  cd client_rag
   python scripts/quick_search.py
   # Изменить query в скрипте и запустить
   ```

@@ -51,7 +51,7 @@ Visual guide to understand what changes in the system.
                                     │
                                     ▼
 ┌─────────────────────────────────────────────────────────────────────┐
-│ RETRIEVAL (streamlit-rag/)                                         │
+│ RETRIEVAL (client_rag/)                                             │
 ├─────────────────────────────────────────────────────────────────────┤
 │                                                                     │
 │  Query ──► Vector Search ──┐                                        │
@@ -128,7 +128,7 @@ Visual guide to understand what changes in the system.
                                     │
                                     ▼
 ┌─────────────────────────────────────────────────────────────────────┐
-│ RETRIEVAL (streamlit-rag/)                                         │
+│ RETRIEVAL (client_rag/)                                             │
 ├─────────────────────────────────────────────────────────────────────┤
 │                                                                     │
 │  Query ──► Vector Search ──┐                                        │
@@ -273,7 +273,7 @@ rag_indexer/
 ### Files with NO CHANGES
 
 ```
-streamlit-rag/
+client_rag/
 ├── retrieval/
 │   ├── multi_retriever.py             ◄── NO CHANGES
 │   └── results_fusion.py              ◄── NO CHANGES

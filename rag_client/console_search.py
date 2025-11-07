@@ -44,7 +44,7 @@ try:
     from query_processing.query_rewriter import QueryRewriter
 except ImportError as e:
     logger.error(f"❌ Import error: {e}")
-    logger.error("Make sure you're running this script from the streamlit-rag directory")
+    logger.error("Make sure you're running this script from the client_rag directory")
     sys.exit(1)
 
 

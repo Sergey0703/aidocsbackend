@@ -202,7 +202,7 @@ ORDER BY uploaded_at ASC;
 python scripts/test_storage_workflow.py test.pdf
 
 # Quick search test
-cd streamlit-rag && python scripts/quick_search.py
+cd ../rag_client && python scripts/quick_search.py
 ```
 
 ---
