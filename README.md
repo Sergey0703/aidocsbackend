@@ -695,7 +695,7 @@ cd C:\projects\aidocs
 npx create-react-app webclient
 
 # Перейдите в созданный проект
-cd webclient
+cd frontend
 
 # Установите зависимости
 npm install axios react-markdown
