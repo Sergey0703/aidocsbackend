@@ -593,10 +593,18 @@ class MultiStrategyRetriever:
         start_time = time.time()
         all_results = []
         methods_used = []
-        
+
         primary_query = queries[0] if queries else ""
-        
+
+        # 🔥 NEW: Apply query rewriting for aggregation queries
+        original_query = primary_query
+        if self._is_aggregation_query(primary_query):
+            primary_query = self._rewrite_aggregation_query(primary_query)
+            methods_used.append("query_rewriting")
+
         logger.info(f"🔥 Hybrid multi-strategy retrieval")
+        if original_query != primary_query:
+            logger.info(f"   Original query: '{original_query}'")
         logger.info(f"   Primary query: '{primary_query}'")
         logger.info(f"   Entity: '{extracted_entity}'")
         logger.info(f"   Required terms: {required_terms}")
@@ -831,36 +839,119 @@ class MultiStrategyRetriever:
         logger.info(f"Hybrid deduplication: {len(all_results)} → {len(scored_results)} unique → {min(len(scored_results), max_results)} final")
 
         return scored_results[:max_results]
-    
-    def _calculate_hybrid_score(self, 
-                               result: RetrievalResult, 
-                               query: str, 
+
+    def _is_vrn_pattern(self, text: str) -> bool:
+        """Check if text matches VRN (Vehicle Registration Number) pattern"""
+        # Irish VRN patterns: 231-D-54321, 141-D-98765, etc.
+        vrn_pattern = r'\d{2,3}-[A-Z]{1,2}-\d{4,5}'
+        return bool(re.search(vrn_pattern, text, re.IGNORECASE))
+
+    def _is_partial_vrn(self, text: str) -> bool:
+        """Check if text is partial VRN (e.g., '231-D')"""
+        partial_vrn_pattern = r'\d{2,3}-[A-Z]{1,2}$'
+        return bool(re.match(partial_vrn_pattern, text.strip(), re.IGNORECASE))
+
+    def _is_aggregation_query(self, query: str) -> bool:
+        """Check if query is an aggregation/counting query"""
+        aggregation_patterns = [
+            r'^all\s+\w+',  # "all vehicles", "all documents"
+            r'^how\s+many',  # "how many cars"
+            r'^list\s+all',  # "list all VRNs"
+            r'^show\s+(me\s+)?all',  # "show all", "show me all"
+            r'^count\s+',  # "count vehicles"
+            r'^total\s+',  # "total vehicles"
+        ]
+        query_lower = query.lower().strip()
+        return any(re.match(pattern, query_lower) for pattern in aggregation_patterns)
+
+    def _rewrite_aggregation_query(self, query: str) -> str:
+        """Rewrite aggregation queries for better retrieval
+
+        Examples:
+        - "all vehicles" → "vehicle registration number VRN"
+        - "how many cars" → "vehicle registration number insurance NCT"
+        - "list all" → "vehicle registration documents"
+        """
+        query_lower = query.lower().strip()
+
+        # Mapping: aggregation query patterns → rewritten queries
+        rewrites = {
+            r'^all\s+vehicles?': "vehicle registration number VRN insurance",
+            r'^how\s+many\s+(cars?|vehicles?)': "vehicle registration number insurance NCT VRN",
+            r'^list\s+all\s+(cars?|vehicles?|vrns?)': "vehicle registration number VRN insurance NCT",
+            r'^show\s+(me\s+)?all\s+(cars?|vehicles?)': "vehicle registration documents insurance NCT",
+            r'^count\s+(cars?|vehicles?)': "vehicle registration number VRN insurance NCT",
+        }
+
+        for pattern, rewritten in rewrites.items():
+            if re.match(pattern, query_lower):
+                logger.info(f"🔄 Query rewriting: '{query}' → '{rewritten}'")
+                return rewritten
+
+        # Default rewrite for unmatched aggregation queries
+        if self._is_aggregation_query(query):
+            default_rewrite = "vehicle registration number documents insurance NCT VRN"
+            logger.info(f"🔄 Query rewriting (default): '{query}' → '{default_rewrite}'")
+            return default_rewrite
+
+        return query  # No rewriting needed
+
+    def _calculate_hybrid_score(self,
+                               result: RetrievalResult,
+                               query: str,
                                extracted_entity: str = None) -> float:
-        """🔥 Calculate hybrid score considering source method and query type"""
-        
+        """🔥 Calculate hybrid score considering source method and query type
+
+        NEW: Adds VRN-specific boosting for exact and partial VRN matches
+        """
+
         base_score = result.similarity_score
-        
+
         # Apply source method weights
-        if result.source_method.startswith("database"):
+        source_method = result.source_method or ""  # Handle None/empty
+        if source_method.startswith("database"):
             weight = self.config.search.database_result_weight
         else:
             weight = self.config.search.vector_result_weight
-        
+
         weighted_score = base_score * weight
-        
-        # Apply VRN-specific boosts
+
+        # 🔥 NEW: VRN-specific exact match boosting
+        is_vrn_query = self._is_vrn_pattern(query)
+        is_partial_vrn_query = self._is_partial_vrn(query)
+
+        if is_vrn_query:
+            # Exact VRN query (e.g., "231-D-54321")
+            if query.upper() in result.full_content.upper():
+                # EXACT match found → major boost
+                weighted_score *= 3.0
+                logger.info(f"✅ Applied exact VRN boost (3.0x) for query '{query}' | Score: {weighted_score:.2f}")
+
+                # Database results for exact VRN get extra boost
+                if source_method.startswith("database"):
+                    weighted_score *= 1.5
+                    logger.info(f"✅ Applied database priority boost (1.5x) for exact VRN | Final score: {weighted_score:.2f}")
+
+        elif is_partial_vrn_query:
+            # Partial VRN query (e.g., "231-D")
+            if query.upper() in result.full_content.upper():
+                # Partial match found → moderate boost
+                weighted_score *= 2.0
+                logger.info(f"✅ Applied partial VRN boost (2.0x) for query '{query}' | Score: {weighted_score:.2f}")
+
+        # Apply entity-specific boosts (existing logic)
         if extracted_entity:
             # Extra boost for exact entity matches in content
             if extracted_entity.lower() in result.full_content.lower():
                 weighted_score *= self.config.search.exact_match_boost
-        
+
         # Content quality boost
         content_length = len(result.full_content)
         if 100 <= content_length <= 2000:  # Sweet spot for content length
             weighted_score *= 1.05
-        
-        # Ensure score stays within reasonable bounds
-        return min(1.0, weighted_score)
+
+        # Ensure score stays within reasonable bounds (cap at 10.0 for boosted scores)
+        return min(10.0, weighted_score)
     
     def get_retriever_status(self) -> Dict[str, bool]:
         """Get status of all retrievers"""

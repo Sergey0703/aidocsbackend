@@ -1,0 +1,158 @@
+{
+  "version": "1.0",
+  "created_date": "2025-11-08",
+  "description": "Ground truth for retrieval quality testing (Phase 3). Maps queries to relevant chunk IDs or content patterns.",
+  "domain": "vehicles",
+  "domain_config": {
+    "entity_field": "vrn",
+    "aggregation_field": "vehicles",
+    "note": "For other domains: change entity_field (e.g., 'project_id' for construction, 'species' for floriculture)"
+  },
+  "queries": [
+    {
+      "test_id": "ret_001",
+      "query": "231-D-54321",
+      "query_type": "exact_entity",
+      "description": "Exact VRN lookup - should retrieve all chunks mentioning this specific VRN",
+      "relevant_criteria": {
+        "must_contain": ["231-D-54321"],
+        "filenames": ["certificate-of-motor-insurance2025.md", "CVRT_Pass_Statement.md"],
+        "min_relevant_chunks": 2
+      },
+      "expected_metrics": {
+        "precision_at_5": 1.0,
+        "recall_at_10": 1.0,
+        "mrr": 1.0,
+        "note": "Perfect scores expected - exact match query"
+      }
+    },
+    {
+      "test_id": "ret_002",
+      "query": "Volvo FH460",
+      "query_type": "semantic_entity",
+      "description": "Semantic search for specific vehicle make/model",
+      "relevant_criteria": {
+        "must_contain_any": ["Volvo", "FH460", "FH 460"],
+        "filenames": ["certificate-of-motor-insurance2025.md", "CVRT_Pass_Statement.md"],
+        "min_relevant_chunks": 2
+      },
+      "expected_metrics": {
+        "precision_at_5": 0.8,
+        "recall_at_10": 0.9,
+        "mrr": 0.9,
+        "note": "High precision expected - specific make/model"
+      }
+    },
+    {
+      "test_id": "ret_003",
+      "query": "insurance certificate",
+      "query_type": "document_type",
+      "description": "Retrieve all insurance-related documents",
+      "relevant_criteria": {
+        "must_contain_any": ["insurance", "insured", "policy", "premium"],
+        "filenames": ["certificate-of-motor-insurance2025.md"],
+        "min_relevant_chunks": 1
+      },
+      "expected_metrics": {
+        "precision_at_5": 0.8,
+        "recall_at_10": 1.0,
+        "mrr": 1.0,
+        "note": "High recall expected - document type query"
+      }
+    },
+    {
+      "test_id": "ret_004",
+      "query": "VCR certificate",
+      "query_type": "document_type",
+      "description": "Retrieve all VCR/NCT certificate documents",
+      "relevant_criteria": {
+        "must_contain_any": ["VCR", "NCT", "certificate", "roadworthiness"],
+        "filenames": ["CVRT_Pass_Statement.md", "VCR_-_Copy.md"],
+        "min_relevant_chunks": 3
+      },
+      "expected_metrics": {
+        "precision_at_5": 0.8,
+        "recall_at_10": 0.9,
+        "mrr": 1.0,
+        "note": "Should retrieve multiple VCR docs"
+      }
+    },
+    {
+      "test_id": "ret_005",
+      "query": "all vehicles",
+      "query_type": "aggregation",
+      "description": "Aggregation query - should retrieve chunks from ALL vehicle documents",
+      "relevant_criteria": {
+        "must_contain_any": ["231-D-54321", "231-D-54329", "141-D-98765", "231-D-55555"],
+        "filenames": ["certificate-of-motor-insurance2025.md", "CVRT_Pass_Statement.md", "VCR_-_Copy.md"],
+        "min_relevant_chunks": 3,
+        "note": "After deduplication fix: expect 10+ results with diverse VRNs"
+      },
+      "expected_metrics": {
+        "precision_at_5": 0.6,
+        "recall_at_10": 0.8,
+        "mrr": 0.8,
+        "note": "Broader query - moderate precision, high recall"
+      }
+    },
+    {
+      "test_id": "ret_006",
+      "query": "truck expiry date",
+      "query_type": "semantic_attribute",
+      "description": "Retrieve chunks mentioning expiry dates for trucks",
+      "relevant_criteria": {
+        "must_contain_any": ["expiry", "expires", "valid until", "date", "truck", "Volvo"],
+        "filenames": ["certificate-of-motor-insurance2025.md", "CVRT_Pass_Statement.md"],
+        "min_relevant_chunks": 1
+      },
+      "expected_metrics": {
+        "precision_at_5": 0.6,
+        "recall_at_10": 0.7,
+        "mrr": 0.7,
+        "note": "Attribute query - moderate precision"
+      }
+    },
+    {
+      "test_id": "ret_007",
+      "query": "141-D-98765",
+      "query_type": "exact_entity",
+      "description": "Exact VRN lookup for second vehicle",
+      "relevant_criteria": {
+        "must_contain": ["141-D-98765"],
+        "filenames": ["CVRT_Pass_Statement.md"],
+        "min_relevant_chunks": 1
+      },
+      "expected_metrics": {
+        "precision_at_5": 1.0,
+        "recall_at_10": 1.0,
+        "mrr": 1.0,
+        "note": "Perfect scores expected - exact match"
+      }
+    },
+    {
+      "test_id": "ret_008",
+      "query": "231-D",
+      "query_type": "partial_entity",
+      "description": "Partial VRN - should retrieve all vehicles starting with 231-D",
+      "relevant_criteria": {
+        "must_contain_any": ["231-D-54321", "231-D-54329", "231-D-55555"],
+        "filenames": ["certificate-of-motor-insurance2025.md", "CVRT_Pass_Statement.md", "VCR_-_Copy.md"],
+        "min_relevant_chunks": 2
+      },
+      "expected_metrics": {
+        "precision_at_5": 0.8,
+        "recall_at_10": 0.9,
+        "mrr": 1.0,
+        "note": "Partial match - should retrieve multiple VRNs"
+      }
+    }
+  ],
+  "evaluation_notes": {
+    "precision_calculation": "Precision@K = (number of relevant results in top K) / K",
+    "recall_calculation": "Recall@K = (number of relevant results in top K) / (total relevant chunks in database)",
+    "mrr_calculation": "MRR = 1 / (rank of first relevant result)",
+    "relevance_judgment": "A chunk is relevant if it contains any of the 'must_contain' or 'must_contain_any' keywords",
+    "deduplication_impact": "After deduplication fix, expect higher recall (more chunks retrieved per query)",
+    "domain_adaptation": "To adapt for other domains: update entity_field, aggregation_field, and query content"
+  }
+}

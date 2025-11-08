@@ -1,0 +1,179 @@
+{
+  "timestamp": "2025-11-08 16:57:28",
+  "ground_truth_version": "1.0",
+  "domain": "vehicles",
+  "total_queries": 8,
+  "passed_queries": 4,
+  "pass_rate": 50.0,
+  "aggregate_metrics": {
+    "avg_precision_at_5": 0.55,
+    "avg_recall_at_10": 0.854,
+    "avg_mrr": 0.896
+  },
+  "performance": {
+    "total_time": 109.73,
+    "avg_latency": 13.72
+  },
+  "test_results": [
+    {
+      "test_id": "ret_001",
+      "query": "231-D-54321",
+      "query_type": "exact_entity",
+      "latency": 15.62,
+      "total_results": 3,
+      "relevant_results": 3,
+      "metrics": {
+        "precision_at_5": 0.6,
+        "recall_at_10": 1.0,
+        "mrr": 1.0
+      },
+      "expected_metrics": {
+        "precision_at_5": 1.0,
+        "recall_at_10": 1.0,
+        "mrr": 1.0,
+        "note": "Perfect scores expected - exact match query"
+      },
+      "passed": false
+    },
+    {
+      "test_id": "ret_002",
+      "query": "Volvo FH460",
+      "query_type": "semantic_entity",
+      "latency": 9.58,
+      "total_results": 2,
+      "relevant_results": 1,
+      "metrics": {
+        "precision_at_5": 0.2,
+        "recall_at_10": 0.5,
+        "mrr": 1.0
+      },
+      "expected_metrics": {
+        "precision_at_5": 0.8,
+        "recall_at_10": 0.9,
+        "mrr": 0.9,
+        "note": "High precision expected - specific make/model"
+      },
+      "passed": false
+    },
+    {
+      "test_id": "ret_003",
+      "query": "insurance certificate",
+      "query_type": "document_type",
+      "latency": 13.49,
+      "total_results": 8,
+      "relevant_results": 5,
+      "metrics": {
+        "precision_at_5": 0.8,
+        "recall_at_10": 1.0,
+        "mrr": 1.0
+      },
+      "expected_metrics": {
+        "precision_at_5": 0.8,
+        "recall_at_10": 1.0,
+        "mrr": 1.0,
+        "note": "High recall expected - document type query"
+      },
+      "passed": true
+    },
+    {
+      "test_id": "ret_004",
+      "query": "VCR certificate",
+      "query_type": "document_type",
+      "latency": 13.47,
+      "total_results": 8,
+      "relevant_results": 8,
+      "metrics": {
+        "precision_at_5": 1.0,
+        "recall_at_10": 1.0,
+        "mrr": 1.0
+      },
+      "expected_metrics": {
+        "precision_at_5": 0.8,
+        "recall_at_10": 0.9,
+        "mrr": 1.0,
+        "note": "Should retrieve multiple VCR docs"
+      },
+      "passed": true
+    },
+    {
+      "test_id": "ret_005",
+      "query": "all vehicles",
+      "query_type": "aggregation",
+      "latency": 13.39,
+      "total_results": 9,
+      "relevant_results": 1,
+      "metrics": {
+        "precision_at_5": 0.0,
+        "recall_at_10": 0.333,
+        "mrr": 0.167
+      },
+      "expected_metrics": {
+        "precision_at_5": 0.6,
+        "recall_at_10": 0.8,
+        "mrr": 0.8,
+        "note": "Broader query - moderate precision, high recall"
+      },
+      "passed": false
+    },
+    {
+      "test_id": "ret_006",
+      "query": "truck expiry date",
+      "query_type": "semantic_attribute",
+      "latency": 13.21,
+      "total_results": 4,
+      "relevant_results": 4,
+      "metrics": {
+        "precision_at_5": 0.8,
+        "recall_at_10": 1.0,
+        "mrr": 1.0
+      },
+      "expected_metrics": {
+        "precision_at_5": 0.6,
+        "recall_at_10": 0.7,
+        "mrr": 0.7,
+        "note": "Attribute query - moderate precision"
+      },
+      "passed": true
+    },
+    {
+      "test_id": "ret_007",
+      "query": "141-D-98765",
+      "query_type": "exact_entity",
+      "latency": 9.75,
+      "total_results": 1,
+      "relevant_results": 1,
+      "metrics": {
+        "precision_at_5": 0.2,
+        "recall_at_10": 1.0,
+        "mrr": 1.0
+      },
+      "expected_metrics": {
+        "precision_at_5": 1.0,
+        "recall_at_10": 1.0,
+        "mrr": 1.0,
+        "note": "Perfect scores expected - exact match"
+      },
+      "passed": false
+    },
+    {
+      "test_id": "ret_008",
+      "query": "231-D",
+      "query_type": "partial_entity",
+      "latency": 21.22,
+      "total_results": 4,
+      "relevant_results": 4,
+      "metrics": {
+        "precision_at_5": 0.8,
+        "recall_at_10": 1.0,
+        "mrr": 1.0
+      },
+      "expected_metrics": {
+        "precision_at_5": 0.8,
+        "recall_at_10": 0.9,
+        "mrr": 1.0,
+        "note": "Partial match - should retrieve multiple VRNs"
+      },
+      "passed": true
+    }
+  ]
+}
