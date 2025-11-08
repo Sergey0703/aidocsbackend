@@ -5,7 +5,7 @@ import './SystemStatus.css';
 // ИСПРАВЛЕНИЕ: Заменены FiBrain и FiRocket на существующие иконки
 import { FiRefreshCw, FiDatabase, FiCpu, FiZap } from 'react-icons/fi';
 
-const SystemStatus = ({ lastSearchMetrics, rerankMode, onRerankModeChange }) => {
+const SystemStatus = ({ lastSearchMetrics }) => {
   const [status, setStatus] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -77,30 +77,6 @@ const SystemStatus = ({ lastSearchMetrics, rerankMode, onRerankModeChange }) => 
               isAvailable={status.embedding.available}
               details={status.embedding.available ? `${status.embedding.model}` : status.embedding.error}
             />
-          </div>
-
-          <div className="status-section">
-            {/* ИСПРАВЛЕНИЕ: FiBrain заменен на FiCpu */}
-            <h4><FiCpu /> AI Re-Ranking</h4>
-            <div className="rerank-options">
-              <label className={`rerank-option ${rerankMode === 'smart' ? 'active' : ''}`}>
-                <input type="radio" name="rerank" value="smart" checked={rerankMode === 'smart'} onChange={e => onRerankModeChange(e.target.value)} />
-                <div className="rerank-content">
-                  <div className="rerank-title">Smart</div>
-                  <div className="rerank-desc">Auto-skip</div>
-                </div>
-              </label>
-              <label className={`rerank-option ${rerankMode === 'full' ? 'active' : ''}`}>
-                <input type="radio" name="rerank" value="full" checked={rerankMode === 'full'} onChange={e => onRerankModeChange(e.target.value)} />
-                <div className="rerank-content">
-                  <div className="rerank-title">Full</div>
-                  <div className="rerank-desc">Max accuracy</div>
-                </div>
-              </label>
-            </div>
-            <div className="rerank-info">
-              {rerankMode === 'smart' ? 'Skips AI for exact matches (~70% queries)' : 'Always uses AI for max accuracy'}
-            </div>
           </div>
 
           {lastSearchMetrics && (

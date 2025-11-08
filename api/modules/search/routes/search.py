@@ -9,10 +9,13 @@ import asyncio
 from fastapi import APIRouter, Depends, HTTPException
 from typing import Dict, List
 
-from api.modules.search.models.schemas import SearchRequest, SearchResponse, SearchResult, ErrorResponse
+from api.modules.search.models.schemas import (
+    SearchRequest, SearchResponse, SearchResult, ErrorResponse,
+    EntityResult, RewriteResult, PerformanceMetrics, PipelineEfficiency
+)
 from api.core.dependencies import get_system_components, SystemComponents
 from api.core.validators import QueryValidator, ErrorMessageFormatter
-from query_processing.query_preprocessor import QueryPreprocessor
+from rag_client.query_processing.query_preprocessor import QueryPreprocessor
 
 logger = logging.getLogger(__name__)
 
@@ -135,6 +138,39 @@ async def search(
         search_query = preprocessing_result.query
 
         # ====================================================================
+        # STAGE 0.5: Entity Extraction (NEW!)
+        # ====================================================================
+        logger.info("STAGE 0.5: Entity Extraction")
+        extraction_start = time.time()
+
+        entity_result_data = await components["entity_extractor"].extract_entity(search_query)
+        extraction_time = time.time() - extraction_start
+
+        logger.info(f"✓ Entity: '{entity_result_data.entity}' | Method: {entity_result_data.method} | Confidence: {entity_result_data.confidence:.2%} | Time: {extraction_time:.3f}s")
+
+        # ====================================================================
+        # STAGE 0.6: Query Rewriting (NEW!)
+        # ====================================================================
+        logger.info("STAGE 0.6: Query Rewriting")
+        rewrite_start = time.time()
+
+        rewrite_result_data = await components["query_rewriter"].rewrite_query(
+            search_query, entity_result_data.entity
+        )
+        rewrite_time = time.time() - rewrite_start
+
+        logger.info(f"✓ Query rewrites: {len(rewrite_result_data.rewrites)} variants | Method: {rewrite_result_data.method} | Time: {rewrite_time:.3f}s")
+
+        # Build queries list for retrieval (original + rewrites)
+        retrieval_queries = [search_query] + rewrite_result_data.rewrites[:2]  # Original + top 2 rewrites
+
+        # Get required terms for content filtering
+        required_terms = []
+        if entity_result_data.entity != search_query.strip():
+            entity_words = [word.lower() for word in entity_result_data.entity.split() if len(word) > 2]
+            required_terms = entity_words
+
+        # ====================================================================
         # STAGE 1: Multi-Strategy Retrieval (Backend) with Timeout
         # ====================================================================
         logger.info("STAGE 1: Multi-Strategy Retrieval")
@@ -143,9 +179,9 @@ async def search(
         try:
             multi_retrieval_result = await asyncio.wait_for(
                 components["retriever"].multi_retrieve(
-                    queries=[search_query],  # Use preprocessed query!
-                    extracted_entity=None,
-                    required_terms=None
+                    queries=retrieval_queries,  # Use original + rewrites!
+                    extracted_entity=entity_result_data.entity,
+                    required_terms=required_terms
                 ),
                 timeout=RETRIEVAL_TIMEOUT
             )
@@ -318,6 +354,44 @@ async def search(
             # Return response with helpful message in answer field
             generated_answer = helpful_message
 
+        # ====================================================================
+        # STAGE 5: Build Performance Metrics
+        # ====================================================================
+        # Calculate pipeline efficiency percentages
+        pipeline_efficiency = PipelineEfficiency(
+            extraction_pct=(extraction_time / total_time * 100) if total_time > 0 else 0,
+            rewrite_pct=(rewrite_time / total_time * 100) if total_time > 0 else 0,
+            retrieval_pct=(retrieval_time / total_time * 100) if total_time > 0 else 0,
+            fusion_pct=(fusion_time / total_time * 100) if total_time > 0 else 0,
+            answer_pct=(answer_time / total_time * 100) if total_time > 0 else 0
+        )
+
+        performance_metrics_obj = PerformanceMetrics(
+            total_time=total_time,
+            extraction_time=extraction_time,
+            rewrite_time=rewrite_time,
+            retrieval_time=retrieval_time,
+            fusion_time=fusion_time,
+            answer_time=answer_time,
+            pipeline_efficiency=pipeline_efficiency
+        )
+
+        # Build entity result for frontend
+        entity_result_obj = EntityResult(
+            entity=entity_result_data.entity,
+            method=entity_result_data.method,
+            confidence=entity_result_data.confidence,
+            alternatives=entity_result_data.alternatives if hasattr(entity_result_data, 'alternatives') else []
+        )
+
+        # Build rewrite result for frontend
+        rewrite_result_obj = RewriteResult(
+            original_query=request.query,
+            rewrites=rewrite_result_data.rewrites,
+            method=rewrite_result_data.method,
+            confidence=rewrite_result_data.confidence
+        )
+
         return SearchResponse(
             success=True,
             query=request.query,
@@ -334,7 +408,11 @@ async def search(
                 "has_answer": generated_answer is not None,  # NEW: Whether answer was generated
                 "original_candidates": len(multi_retrieval_result.results),
                 "after_fusion": fusion_result.final_count
-            }
+            },
+            # NEW: Entity extraction and query rewriting results
+            entity_result=entity_result_obj,
+            rewrite_result=rewrite_result_obj,
+            performance_metrics=performance_metrics_obj
         )
 
     except HTTPException:

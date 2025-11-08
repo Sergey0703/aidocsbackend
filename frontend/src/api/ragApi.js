@@ -25,11 +25,10 @@ export const ragApi = {
   // ============================================================================
   
   // Search endpoint
-  search: async (query, maxResults = 20, rerankMode = 'smart') => {
+  search: async (query, maxResults = 20) => {
     const response = await api.post('/api/search', {
       query,
       max_results: maxResults,
-      rerank_mode: rerankMode,
     });
     return response.data;
   },

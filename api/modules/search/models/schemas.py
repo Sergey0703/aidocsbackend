@@ -28,6 +28,42 @@ class SearchResult(BaseModel):
     metadata: Dict[str, Any] = Field(default_factory=dict, description="Additional result metadata")
 
 
+class EntityResult(BaseModel):
+    """Entity extraction result"""
+    entity: str = Field(..., description="Extracted entity")
+    method: str = Field(..., description="Extraction method used (llm, spacy, regex)")
+    confidence: float = Field(..., description="Confidence score 0-1")
+    alternatives: List[str] = Field(default_factory=list, description="Alternative entity candidates")
+
+
+class RewriteResult(BaseModel):
+    """Query rewrite result"""
+    original_query: str = Field(..., description="Original query text")
+    rewrites: List[str] = Field(default_factory=list, description="Alternative query formulations")
+    method: str = Field(..., description="Rewrite method used")
+    confidence: float = Field(..., description="Confidence score 0-1")
+
+
+class PipelineEfficiency(BaseModel):
+    """Pipeline stage efficiency breakdown"""
+    extraction_pct: float = Field(default=0.0)
+    rewrite_pct: float = Field(default=0.0)
+    retrieval_pct: float = Field(default=0.0)
+    fusion_pct: float = Field(default=0.0)
+    answer_pct: float = Field(default=0.0)
+
+
+class PerformanceMetrics(BaseModel):
+    """Detailed performance metrics"""
+    total_time: float = Field(..., description="Total search time in seconds")
+    extraction_time: float = Field(default=0.0, description="Entity extraction time")
+    rewrite_time: float = Field(default=0.0, description="Query rewriting time")
+    retrieval_time: float = Field(..., description="Retrieval time")
+    fusion_time: float = Field(..., description="Results fusion time")
+    answer_time: float = Field(default=0.0, description="Answer generation time")
+    pipeline_efficiency: PipelineEfficiency = Field(default_factory=PipelineEfficiency)
+
+
 class SearchResponse(BaseModel):
     """Simplified response model for search endpoint"""
     success: bool = Field(default=True)
@@ -38,6 +74,11 @@ class SearchResponse(BaseModel):
     search_time: float = Field(..., description="Total search time in seconds")
     metadata: Dict[str, Any] = Field(default_factory=dict, description="Search metadata (methods used, timing breakdown)")
     timestamp: datetime = Field(default_factory=datetime.now)
+
+    # NEW: Entity extraction and query rewriting results
+    entity_result: Optional[EntityResult] = Field(default=None, description="Entity extraction result")
+    rewrite_result: Optional[RewriteResult] = Field(default=None, description="Query rewriting result")
+    performance_metrics: Optional[PerformanceMetrics] = Field(default=None, description="Detailed performance metrics")
 
 
 class ErrorResponse(BaseModel):

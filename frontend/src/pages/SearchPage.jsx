@@ -13,7 +13,6 @@ const SearchPage = () => {
   const [error, setError] = useState(null);
   const [lastQuery, setLastQuery] = useState(null);
   const [lastMaxResults, setLastMaxResults] = useState(null);
-  const [rerankMode, setRerankMode] = useState('smart');
   const [hasSearched, setHasSearched] = useState(false); // Новое состояние для отслеживания поиска
 
   const handleSearch = async (query, maxResults) => {
@@ -25,7 +24,7 @@ const SearchPage = () => {
     setLastMaxResults(maxResults);
 
     try {
-      const data = await ragApi.search(query, maxResults, rerankMode);
+      const data = await ragApi.search(query, maxResults);
       setSearchResults(data);
     } catch (err) {
       setError(err.response?.data?.detail || err.message || 'An unknown error occurred.');
@@ -48,8 +47,6 @@ const SearchPage = () => {
       <div className="search-page-left-column">
         <SystemStatus
           lastSearchMetrics={searchResults?.performance_metrics}
-          rerankMode={rerankMode}
-          onRerankModeChange={setRerankMode}
         />
       </div>
 
