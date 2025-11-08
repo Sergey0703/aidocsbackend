@@ -1,6 +1,7 @@
 # retrieval/llm_reranker.py
 # LLM-based semantic re-ranking using Gemini API
-# Validates search result relevance to prevent false matches like "river" -> "driver"
+# IMPORTANT: Re-orders results by relevance (does NOT filter them out)
+# Based on LlamaIndex postprocessor pattern: score → sort → select top_n
 
 import logging
 import asyncio
@@ -14,21 +15,31 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class RelevanceScore:
-    """Result of LLM relevance evaluation"""
-    score: float  # 0.0 to 10.0
-    is_relevant: bool  # True if score >= min_threshold
+    """Result of LLM relevance evaluation (for RANKING, not filtering)"""
+    score: float  # 0.0 to 10.0 (used for sorting results)
+    is_relevant: bool  # DEPRECATED: kept for backward compatibility, not used for filtering
     reasoning: str = ""  # Optional explanation
     evaluation_time: float = 0.0
 
 
 class GeminiReranker:
     """
-    LLM-based re-ranker using Gemini API for semantic relevance validation.
+    LLM-based re-ranker using Gemini API for semantic relevance scoring.
 
-    This component solves the critical problem where keyword matching produces
-    false positives (e.g., searching for "river" returns documents about "driver").
+    IMPORTANT: This is a POSTPROCESSOR for RE-ORDERING results, NOT a FILTER.
 
-    The re-ranker asks Gemini to evaluate: "Is this result actually relevant to the query?"
+    Purpose:
+    - Scores each result on 0-10 relevance scale
+    - Sorts results by relevance score
+    - Selects top_n results (if specified)
+    - Does NOT filter out low-scoring results
+
+    Why no filtering:
+    - Answer generation LLM needs all context for aggregation queries
+    - Example: "how many cars?" needs ALL vehicle docs to count them
+    - Low-scoring results may still contain useful information
+
+    Based on LlamaIndex best practices for reranking postprocessors.
     """
 
     def __init__(self, config):
@@ -104,17 +115,16 @@ class GeminiReranker:
                             'llm_reasoning': relevance.reasoning
                         }
 
-                    # Keep only relevant results
+                    # CRITICAL FIX: Keep ALL results (reranking, NOT filtering)
+                    # LLM reranker should RE-ORDER results, not REMOVE them
+                    # This allows answer generation LLM to see all context for aggregation queries
                     filename = result.metadata.get('file_name', 'unknown') if hasattr(result, 'metadata') else 'unknown'
-                    if relevance.is_relevant:
-                        evaluated_results.append((result, relevance.score))
-                        logger.info(f"   [+] Relevant ({relevance.score:.1f}/10): {filename}")
-                    else:
-                        logger.info(f"   [-] Filtered ({relevance.score:.1f}/10): {filename}")
+                    evaluated_results.append((result, relevance.score))
+                    logger.info(f"   Scored ({relevance.score:.1f}/10): {filename}")
 
                 except Exception as e:
                     logger.error(f"   [!] Error evaluating result: {e}")
-                    # On error, keep result with low score
+                    # On error, keep result with neutral score
                     evaluated_results.append((result, 5.0))
 
             # Rate limiting between batches
@@ -124,7 +134,7 @@ class GeminiReranker:
         # Sort by LLM relevance score (descending)
         evaluated_results.sort(key=lambda x: x[1], reverse=True)
 
-        # Apply top_k limit if specified
+        # Apply top_k limit if specified (selection, NOT filtering)
         if top_k:
             evaluated_results = evaluated_results[:top_k]
 
@@ -133,20 +143,23 @@ class GeminiReranker:
 
         elapsed = time.time() - start_time
         logger.info(f"[+] Reranking complete: {len(results)} -> {len(reranked_results)} results ({elapsed:.2f}s)")
-        logger.info(f"    Filtered out {len(results) - len(reranked_results)} irrelevant results")
+        logger.info(f"    Selected top {len(reranked_results)} by relevance score (NO filtering by min_score)")
 
         return reranked_results
 
     async def _evaluate_relevance(self, query: str, result) -> RelevanceScore:
         """
-        Ask Gemini: "Is this result relevant to the query?"
+        Ask Gemini to score result relevance (0-10 scale).
+
+        NOTE: This score is used for RANKING, not FILTERING.
+        All results are kept and passed to answer generation LLM.
 
         Args:
             query: User's search query
             result: RetrievalResult object with content
 
         Returns:
-            RelevanceScore with 0-10 rating and reasoning
+            RelevanceScore with 0-10 rating (for ranking purposes only)
         """
         start_time = time.time()
 

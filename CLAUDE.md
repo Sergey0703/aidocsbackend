@@ -203,6 +203,53 @@ The retrieval system implements a **three-strategy hybrid approach**:
 - Boost exact entity matches in content
 - Hybrid scoring combines similarity + match type
 
+### LLM Reranking Guidelines (CRITICAL)
+
+**IMPORTANT**: Based on LlamaIndex documentation and production best practices:
+
+**Reranker Purpose:**
+- LLM reranker is a **POSTPROCESSOR for re-ordering**, NOT a **FILTER for removing** results
+- Should use `top_n` parameter to select best results AFTER sorting
+- Should NOT use `min_score` threshold to filter out results before answer generation
+
+**Correct Pattern (LlamaIndex):**
+```python
+# Retrieve → Rerank → Answer Generation
+query_engine = index.as_query_engine(
+    similarity_top_k=10,           # Retrieve 10 candidates
+    node_postprocessors=[reranker] # Rerank and select top_n (e.g., 4)
+)
+# LLM sees all top_n results for answer generation
+```
+
+**Wrong Pattern (Current Implementation):**
+```python
+# Retrieve → Filter by score → Answer Generation
+if relevance.is_relevant:  # ❌ Filters out low-scoring results
+    evaluated_results.append(result)
+# Problem: LLM never sees filtered results
+```
+
+**Why This Matters for Aggregation Queries:**
+- Query: "how many cars we have?"
+- System retrieves: 10 vehicle registration documents
+- LLM reranker sees: "These docs don't DIRECTLY answer 'how many'" → scores 3-5/10
+- **Current behavior**: Filters ALL results (score < threshold) → 0 docs → "No information"
+- **Correct behavior**: Pass ALL 10 docs to answer generation → LLM counts: "I see 10 vehicles"
+
+**Solution:**
+1. Remove score-based filtering from `llm_reranker.py`
+2. Use `top_n` parameter instead of `min_score` threshold
+3. Sort by relevance score but DON'T discard low-scoring results
+4. Let answer generation LLM decide what's relevant (it's smarter for aggregation)
+
+**File to modify**: `rag_client/retrieval/llm_reranker.py`
+- Remove: `is_relevant = score >= self.llm_config.rerank_min_score`
+- Replace with: `evaluated_results.append((result, relevance.score))` for ALL results
+- Apply `top_k` limit AFTER sorting (not filtering by score)
+
+**Status**: ✅ **FIXED** (see [RERANKER_FIX_SUMMARY.md](RERANKER_FIX_SUMMARY.md) for details)
+
 ### Document Processing Workflow
 
 **Stage 1: Conversion (Docling)**
