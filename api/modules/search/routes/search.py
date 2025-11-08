@@ -1,14 +1,17 @@
 # api/modules/search/routes/search.py
 # Simplified search endpoint - delegates all logic to backend services
 # UPDATED: Added query preprocessing to filter stop words
+# UPDATED: Added comprehensive error handling and validation
 
 import logging
 import time
+import asyncio
 from fastapi import APIRouter, Depends, HTTPException
 from typing import Dict, List
 
 from api.modules.search.models.schemas import SearchRequest, SearchResponse, SearchResult, ErrorResponse
 from api.core.dependencies import get_system_components, SystemComponents
+from api.core.validators import QueryValidator, ErrorMessageFormatter
 from query_processing.query_preprocessor import QueryPreprocessor
 
 logger = logging.getLogger(__name__)
@@ -17,6 +20,12 @@ router = APIRouter()
 
 # Initialize query preprocessor (will be created per request with config)
 _query_preprocessor = None
+
+# Timeout settings (seconds)
+SEARCH_TIMEOUT = 60  # Maximum time for entire search operation
+RETRIEVAL_TIMEOUT = 30  # Maximum time for retrieval stage
+FUSION_TIMEOUT = 20  # Maximum time for fusion stage
+ANSWER_TIMEOUT = 15  # Maximum time for answer generation
 
 
 @router.post("/", response_model=SearchResponse)
@@ -42,6 +51,35 @@ async def search(
     start_time = time.time()
 
     try:
+        # ====================================================================
+        # VALIDATION: Input validation and sanitization
+        # ====================================================================
+
+        # Validate query
+        is_valid, sanitized_query, error_msg = QueryValidator.validate_query(request.query)
+        if not is_valid:
+            logger.warning(f"Invalid query rejected: {request.query} - {error_msg}")
+            raise HTTPException(status_code=400, detail=error_msg)
+
+        # Use sanitized query
+        request.query = sanitized_query
+
+        # Validate top_k
+        if request.top_k:
+            is_valid, sanitized_top_k, error_msg = QueryValidator.validate_top_k(request.top_k)
+            if not is_valid:
+                logger.warning(f"Invalid top_k: {request.top_k} - {error_msg}")
+                request.top_k = sanitized_top_k  # Use corrected value
+
+        # Validate similarity_threshold
+        if request.similarity_threshold:
+            is_valid, sanitized_threshold, error_msg = QueryValidator.validate_similarity_threshold(
+                request.similarity_threshold
+            )
+            if not is_valid:
+                logger.warning(f"Invalid similarity_threshold: {request.similarity_threshold} - {error_msg}")
+                request.similarity_threshold = sanitized_threshold  # Use corrected value
+
         logger.info("=" * 80)
         logger.info(f"SEARCH REQUEST: {request.query}")
         logger.info("=" * 80)
@@ -97,16 +135,27 @@ async def search(
         search_query = preprocessing_result.query
 
         # ====================================================================
-        # STAGE 1: Multi-Strategy Retrieval (Backend)
+        # STAGE 1: Multi-Strategy Retrieval (Backend) with Timeout
         # ====================================================================
         logger.info("STAGE 1: Multi-Strategy Retrieval")
         retrieval_start = time.time()
 
-        multi_retrieval_result = await components["retriever"].multi_retrieve(
-            queries=[search_query],  # Use preprocessed query!
-            extracted_entity=None,
-            required_terms=None
-        )
+        try:
+            multi_retrieval_result = await asyncio.wait_for(
+                components["retriever"].multi_retrieve(
+                    queries=[search_query],  # Use preprocessed query!
+                    extracted_entity=None,
+                    required_terms=None
+                ),
+                timeout=RETRIEVAL_TIMEOUT
+            )
+        except asyncio.TimeoutError:
+            retrieval_time = time.time() - retrieval_start
+            logger.error(f"Retrieval stage timeout after {retrieval_time:.3f}s")
+            raise HTTPException(
+                status_code=504,
+                detail=f"Search retrieval timed out after {retrieval_time:.1f} seconds. The query may be too complex. Please try a simpler search."
+            )
 
         retrieval_time = time.time() - retrieval_start
         logger.info(f"✓ Retrieved {len(multi_retrieval_result.results)} candidates")
@@ -114,18 +163,29 @@ async def search(
         logger.info(f"  Time: {retrieval_time:.3f}s")
 
         # ====================================================================
-        # STAGE 2: Hybrid Results Fusion + LLM Re-ranking (Backend)
+        # STAGE 2: Hybrid Results Fusion + LLM Re-ranking (Backend) with Timeout
         # ====================================================================
         logger.info("STAGE 2: Hybrid Results Fusion + LLM Re-ranking")
         fusion_start = time.time()
 
-        # Use ASYNC version for full LLM re-ranking support
-        fusion_result = await components["fusion_engine"].fuse_results_async(
-            all_results=multi_retrieval_result.results,
-            original_query=search_query,  # Use preprocessed query!
-            extracted_entity=None,  # Backend will handle entity extraction if needed
-            required_terms=None
-        )
+        try:
+            # Use ASYNC version for full LLM re-ranking support
+            fusion_result = await asyncio.wait_for(
+                components["fusion_engine"].fuse_results_async(
+                    all_results=multi_retrieval_result.results,
+                    original_query=search_query,  # Use preprocessed query!
+                    extracted_entity=None,  # Backend will handle entity extraction if needed
+                    required_terms=None
+                ),
+                timeout=FUSION_TIMEOUT
+            )
+        except asyncio.TimeoutError:
+            fusion_time = time.time() - fusion_start
+            logger.error(f"Fusion stage timeout after {fusion_time:.3f}s")
+            raise HTTPException(
+                status_code=504,
+                detail=f"Results fusion timed out after {fusion_time:.1f} seconds. Please try again or contact support."
+            )
 
         fusion_time = time.time() - fusion_start
 
@@ -144,7 +204,7 @@ async def search(
             logger.info(f"  Top scores: {top_scores}")
 
         # ====================================================================
-        # STAGE 3: Answer Generation (NEW!)
+        # STAGE 3: Answer Generation (NEW!) with Timeout
         # ====================================================================
         logger.info("STAGE 3: Answer Generation")
         answer_start = time.time()
@@ -153,16 +213,25 @@ async def search(
         if fusion_result.fused_results:
             # Use QueryEngine to generate natural language answer
             try:
-                answer_result = await components["answer_engine"].generate_answer(
-                    query=search_query,
-                    retrieved_results=fusion_result.fused_results,
-                    original_query=request.query
+                answer_result = await asyncio.wait_for(
+                    components["answer_engine"].generate_answer(
+                        query=search_query,
+                        retrieved_results=fusion_result.fused_results,
+                        original_query=request.query
+                    ),
+                    timeout=ANSWER_TIMEOUT
                 )
                 generated_answer = answer_result.answer
                 answer_time = time.time() - answer_start
                 logger.info(f"✓ Answer generated (confidence: {answer_result.confidence:.3f})")
                 logger.info(f"  Time: {answer_time:.3f}s")
                 logger.info(f"  Preview: {generated_answer[:100]}...")
+            except asyncio.TimeoutError:
+                answer_time = time.time() - answer_start
+                logger.warning(f"[!] Answer generation timeout after {answer_time:.3f}s")
+                logger.info(f"  Time: {answer_time:.3f}s")
+                # Continue without answer - still return search results
+                generated_answer = None
             except Exception as e:
                 answer_time = time.time() - answer_start
                 logger.warning(f"[!] Answer generation failed: {e}")
@@ -240,6 +309,15 @@ async def search(
             logger.info(f"Answer: {generated_answer[:150]}...")
         logger.info("=" * 80)
 
+        # ====================================================================
+        # EMPTY RESULTS: Provide helpful message when no results found
+        # ====================================================================
+        if len(search_results) == 0:
+            logger.info(f"No results found for query: {request.query}")
+            helpful_message = ErrorMessageFormatter.format_empty_results_message(request.query)
+            # Return response with helpful message in answer field
+            generated_answer = helpful_message
+
         return SearchResponse(
             success=True,
             query=request.query,
@@ -262,11 +340,32 @@ async def search(
     except HTTPException:
         # Re-raise HTTPException (e.g., from query validation)
         raise
+    except asyncio.TimeoutError:
+        total_time = time.time() - start_time
+        logger.error(f"Search timeout after {total_time:.3f}s for query: {request.query}")
+        raise HTTPException(
+            status_code=504,
+            detail=f"Search operation timed out after {total_time:.1f} seconds. Please try a simpler query or contact support."
+        )
+    except ConnectionError as e:
+        logger.error(f"Database connection error: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=503,
+            detail="Unable to connect to the database. Please try again in a moment."
+        )
+    except ValueError as e:
+        logger.error(f"Invalid value in search operation: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid input: {str(e)}"
+        )
     except Exception as e:
         logger.error(f"Search failed: {e}", exc_info=True)
+        # Use user-friendly error message
+        user_message = ErrorMessageFormatter.format_error(e, user_friendly=True)
         raise HTTPException(
             status_code=500,
-            detail=f"Search failed: {str(e)}"
+            detail=user_message
         )
 
 

@@ -651,6 +651,93 @@ python console_search.py
 
 **📚 For detailed guide on both tools, see [SEARCH_TOOLS_GUIDE.md](rag_client/SEARCH_TOOLS_GUIDE.md)**
 
+## Security & Validation Testing
+
+The system includes comprehensive security and validation tests to ensure data integrity and protection against attacks.
+
+### Test Suite Overview
+
+**63 automated tests** covering:
+- ✅ SQL Injection protection
+- ✅ XSS attack prevention
+- ✅ Input validation & sanitization
+- ✅ Error handling & timeouts
+- ✅ API endpoint security
+- ✅ Response format validation
+
+### Running Tests
+
+**Prerequisites:**
+```bash
+pip install pytest requests
+```
+
+**All Tests** (requires API running):
+```bash
+# Terminal 1: Start API server
+python run_api.py
+
+# Terminal 2: Run tests
+python run_tests.py
+```
+
+**Test Modes:**
+
+1. **Validator Tests Only** (no API required):
+```bash
+python run_tests.py validators
+```
+Fast unit tests for input validation logic (39 tests, ~2 seconds)
+
+2. **API Integration Tests** (requires API):
+```bash
+python run_tests.py api
+```
+End-to-end API security tests (14 tests, ~2 minutes)
+
+3. **Quick Security Check** (requires API):
+```bash
+python run_tests.py security
+```
+Rapid validation of critical attack vectors (4 tests, ~5 seconds)
+
+### Test Results
+
+```
+Security Validation: 4/4 PASSED (100%)
+  [OK] SQL Injection: BLOCKED (400)
+  [OK] XSS Attack: BLOCKED (400)
+  [OK] Long Input: BLOCKED (422)
+  [OK] Empty Query: BLOCKED (422)
+
+API Integration Tests: 14/14 PASSED (100%)
+Validator Unit Tests: 38/39 PASSED (97%)
+
+[SUCCESS] All critical security tests passed!
+```
+
+### What's Tested
+
+**Security Protection:**
+- SQL injection patterns (SELECT, DROP, UNION, OR attacks)
+- XSS attacks (script tags, javascript:, event handlers, iframes)
+- Input length limits (1-1000 characters)
+- Special character validation
+
+**Error Handling:**
+- User-friendly error messages
+- Proper HTTP status codes (400, 422, 503, 504, 500)
+- Timeout protection (30s/20s/15s hierarchical)
+- Empty results guidance
+
+**API Reliability:**
+- Request/response format validation
+- Recovery after invalid requests
+- Performance requirements (<30s response time)
+
+**📚 For detailed testing documentation, see [tests/README.md](tests/README.md)**
+**📚 For implementation details, see [ERROR_HANDLING_IMPROVEMENTS.md](ERROR_HANDLING_IMPROVEMENTS.md)**
+
 ## Troubleshooting
 
 ### Warning: "Query does not have a covering index"

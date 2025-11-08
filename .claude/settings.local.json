@@ -15,7 +15,9 @@
       "Bash(findstr:*)",
       "Bash(taskkill:*)",
       "Bash(mkdir:*)",
-      "Bash(dir:*)"
+      "Bash(dir:*)",
+      "Bash(ping:*)",
+      "Bash(nul)"
     ],
     "deny": [],
     "ask": []
