@@ -1,8 +1,8 @@
 # Terminology Fix - "Documents" → "Chunks"
 
 **Date**: 2025-11-08 18:00
-**Status**: ✅ COMPLETE
-**Impact**: MEDIUM - Improves clarity of API logs
+**Status**: ✅ COMPLETE (Updated with expandable chunks)
+**Impact**: HIGH - Improves clarity + restores document viewing functionality
 
 ---
 
@@ -52,36 +52,42 @@ Updated **both backend and frontend**:
 
 ### 1. `frontend/src/components/SearchResults.jsx` (FRONTEND)
 
-**Line 65-84**: Fixed heading to show correct document/chunk counts
+**Major Update**: Complete restructure with expandable document groups
 
+**Changes**:
+1. Created new `DocumentGroupsSection` component (lines 9-138)
+2. Groups chunks by document filename
+3. **Added expandable functionality** - click to view chunk contents
+4. Shows all chunk metadata when expanded
+
+**Key Features**:
+- **Collapsed view**: Shows document name, chunk count, highest score
+- **Expanded view**: Shows all chunks with full content and metadata
+- Click arrow (▶/▼) to expand/collapse
+- Each chunk shows:
+  - Source method icon (Database/Vector/File)
+  - Chunk content (full text from database)
+  - Detailed metadata (similarity, scores, match type, etc.)
+
+**Code Structure**:
 ```javascript
-// BEFORE:
-<h2 className="section-title">Source Documents ({totalResults})</h2>
+// NEW: Separate component with state management
+const DocumentGroupsSection = ({ results, totalResults }) => {
+  const [expandedGroups, setExpandedGroups] = useState({});
 
-// AFTER:
-{(() => {
-  // Count unique source documents
-  const uniqueDocuments = new Set(
-    results.map(doc => doc.file_name || doc.filename).filter(Boolean)
-  ).size;
-
-  return (
-    <div className="documents-section">
-      <h2 className="section-title">
-        Source Documents: {uniqueDocuments} {uniqueDocuments === 1 ? 'document' : 'documents'}
-        ({totalResults} {totalResults === 1 ? 'chunk' : 'chunks'})
-      </h2>
-      {/* ... */}
-    </div>
-  );
-})()}
+  // Group chunks by filename
+  // Sort by max score
+  // Render clickable headers with expandable content
+}
 ```
 
 **What this does**:
-- Groups chunks by source document filename
-- Shows document name, chunk count, and highest score for each document
-- Sorted by relevance (highest score first)
-- Clean, compact display: "VCR.md - 1 chunk - 59.4%"
+- ✅ Groups chunks by source document filename
+- ✅ Shows document name, chunk count, and highest score for each document
+- ✅ Sorted by relevance (highest score first)
+- ✅ **NEW**: Click to expand and view all chunks from that document
+- ✅ **NEW**: Full content preview for each chunk
+- ✅ **NEW**: Metadata grid showing search intelligence details
 
 ---
 
@@ -198,13 +204,40 @@ Source Documents (10)
 10. CVRT_Pass_Statement.md          32.4%  ← Duplicate!
 ```
 
-**After** (clear - grouped by document):
+**After** (clear - grouped by document with expandable content):
 ```
 Source Documents: 3 documents (10 chunks)
 
-1. VCR.md                              1 chunk   59.4%
-2. certificate-of-motor-insurance2025  4 chunks  66.0%
-3. CVRT_Pass_Statement.md              5 chunks  36.4%
+1. VCR.md                              1 chunk   59.4%  ▶  ← Click to expand
+2. certificate-of-motor-insurance2025  4 chunks  66.0%  ▶
+3. CVRT_Pass_Statement.md              5 chunks  36.4%  ▶
+```
+
+**When expanded** (click on document):
+```
+Source Documents: 3 documents (10 chunks)
+
+2. certificate-of-motor-insurance2025  4 chunks  66.0%  ▼  ← Expanded!
+
+   ┌─ Chunk 1 ─────────────────────────────── 66.0%
+   │ Content:
+   │ [Full text content from database chunk 1...]
+   │
+   │ Details:
+   │ Source: Database Match | Similarity: 0.660
+   │ Weighted Score: 0.660 | Match Type: exact_match
+   └─────────────────────────────────────────────────
+
+   ┌─ Chunk 2 ─────────────────────────────── 55.2%
+   │ Content:
+   │ [Full text content from database chunk 2...]
+   │
+   │ Details:
+   │ Source: Vector Match | Similarity: 0.552
+   │ Weighted Score: 0.552 | Match Type: semantic
+   └─────────────────────────────────────────────────
+
+   ... (2 more chunks)
 ```
 
 ---
@@ -217,6 +250,9 @@ Source Documents: 3 documents (10 chunks)
 4. **Debugging**: Easier to spot issues like "10 chunks from 1 document" (good chunking) vs "2 chunks from 10 documents" (poor chunking)
 5. **No Duplicates**: Grouped display eliminates confusing duplicate filenames
 6. **Relevance**: Documents sorted by highest chunk score (most relevant first)
+7. **✨ NEW - Expandable Content**: Click any document to view all its chunks with full content
+8. **✨ NEW - Full Metadata**: Each chunk shows detailed search intelligence (source, scores, match type)
+9. **✨ NEW - Better UX**: Collapsed by default for clean overview, expand on demand for details
 
 ---
 
@@ -251,6 +287,12 @@ To validate the fix:
    - Should show: "Source Documents: 3 documents (10 chunks)"
    - NOT: "Source Documents (10)"
 
+4. **Test expandable functionality**:
+   - Click on a document row (should see arrow change ▶ → ▼)
+   - Verify all chunks from that document are shown
+   - Check that chunk content is visible
+   - Verify metadata grid displays correctly (Source, Similarity, Match Type, etc.)
+
 ---
 
 ## Related Documentation
@@ -261,6 +303,10 @@ To validate the fix:
 
 ---
 
-**Last Updated**: 2025-11-08 18:05
-**Files Modified**: 3 (1 frontend, 2 backend)
-**Next**: Rebuild frontend (`cd frontend && npm run build`), then refresh browser to see changes
+**Last Updated**: 2025-11-08 18:30
+**Files Modified**: 3 (1 frontend component + 1 frontend CSS, 2 backend)
+**Changes Summary**:
+- ✅ Backend: Correct terminology in logs ("chunks from X documents")
+- ✅ Frontend: Grouped document display with correct counts
+- ✅ Frontend: **Expandable chunks** - click to view full content and metadata
+**Next**: Rebuild frontend (`cd frontend && npm run build`), then refresh browser to test expandable functionality
