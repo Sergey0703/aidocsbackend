@@ -1,0 +1,214 @@
+{
+  "metadata": {
+    "created": "2025-11-08",
+    "description": "Ground truth test cases for vehicle documentation RAG system",
+    "version": "1.1",
+    "total_cases": 15,
+    "last_validated": "2025-11-08",
+    "validated_against": "database_snapshot.json",
+    "database_vrns": ["141-D-98765", "231-D-54321", "231-D-54329"],
+    "database_documents": 6,
+    "database_chunks": 18,
+    "notes": "Updated to match actual database content. Entity data not yet populated in vehicles table."
+  },
+  "test_cases": [
+    {
+      "id": "vrn_001",
+      "query": "231-D-54321",
+      "expected_answer_contains": ["231-D-54321", "Volvo", "FH460"],
+      "expected_vrn": "231-D-54321",
+      "relevant_documents": ["CVRT_Pass_Statement.md", "certificate-of-motor-insurance2025.md"],
+      "query_type": "exact_vrn_lookup",
+      "difficulty": "easy",
+      "expected_metrics": {
+        "min_retrieval_precision": 0.8,
+        "min_faithfulness": 0.9,
+        "min_relevance": 0.9
+      }
+    },
+    {
+      "id": "vrn_002",
+      "query": "141-D-98765",
+      "expected_answer_contains": ["141-D-98765", "Ford", "Transit"],
+      "expected_vrn": "141-D-98765",
+      "relevant_documents": ["VCR.md", "VCR_-_Copy.md"],
+      "query_type": "exact_vrn_lookup",
+      "difficulty": "easy",
+      "expected_metrics": {
+        "min_retrieval_precision": 0.8,
+        "min_faithfulness": 0.9,
+        "min_relevance": 0.9
+      }
+    },
+    {
+      "id": "agg_001",
+      "query": "how many cars we have?",
+      "expected_answer_contains": ["three", "3"],
+      "expected_count": 3,
+      "expected_vrns": ["231-D-54321", "141-D-98765", "231-D-54329"],
+      "query_type": "aggregation_count",
+      "difficulty": "medium",
+      "expected_metrics": {
+        "min_retrieval_recall": 1.0,
+        "min_faithfulness": 0.8,
+        "min_relevance": 0.85
+      },
+      "notes": "Updated based on database_snapshot.json - 3 vehicles in database"
+    },
+    {
+      "id": "agg_002",
+      "query": "tell me about our cars",
+      "expected_answer_contains": ["vehicles", "231-D-54321", "141-D-98765"],
+      "query_type": "aggregation_list",
+      "difficulty": "medium",
+      "expected_metrics": {
+        "min_retrieval_recall": 0.75,
+        "min_faithfulness": 0.8,
+        "min_relevance": 0.8
+      }
+    },
+    {
+      "id": "entity_001",
+      "query": "Show me all VCR documents",
+      "expected_answer_contains": ["VCR", "141-D-98765"],
+      "relevant_documents": ["VCR.docx", "VCR2.docx", "VCR - Copy.docx"],
+      "query_type": "entity_search",
+      "difficulty": "easy",
+      "expected_metrics": {
+        "min_retrieval_precision": 0.7,
+        "min_faithfulness": 0.85,
+        "min_relevance": 0.85
+      },
+      "notes": "Updated - entity data not populated in current database"
+    },
+    {
+      "id": "semantic_001",
+      "query": "Tell me about vehicle 141-D-98765",
+      "expected_answer_contains": ["141-D-98765", "VCR"],
+      "query_type": "semantic_search",
+      "difficulty": "easy",
+      "expected_metrics": {
+        "min_retrieval_precision": 0.6,
+        "min_faithfulness": 0.8,
+        "min_relevance": 0.8
+      },
+      "notes": "Updated to match available VRN in database"
+    },
+    {
+      "id": "semantic_002",
+      "query": "Show me insurance information",
+      "expected_answer_contains": ["insurance", "certificate"],
+      "query_type": "semantic_search",
+      "difficulty": "easy",
+      "expected_metrics": {
+        "min_retrieval_precision": 0.7,
+        "min_faithfulness": 0.9,
+        "min_relevance": 0.85
+      },
+      "notes": "Updated to match available documents (insurance certificate exists)"
+    },
+    {
+      "id": "doc_001",
+      "query": "Show me insurance information for 231-D-54321",
+      "expected_answer_contains": ["insurance", "231-D-54321"],
+      "relevant_documents": ["certificate-of-motor-insurance2025.pdf"],
+      "query_type": "document_type_search",
+      "difficulty": "easy",
+      "expected_metrics": {
+        "min_retrieval_precision": 0.8,
+        "min_faithfulness": 0.9,
+        "min_relevance": 0.9
+      },
+      "notes": "File exists as PDF in database"
+    },
+    {
+      "id": "doc_002",
+      "query": "When does the CVRT expire for 231-D-54321?",
+      "expected_answer_may_contain": ["CVRT", "231-D-54321", "expire"],
+      "relevant_documents": ["CVRT Pass Statement.pdf"],
+      "query_type": "document_type_search",
+      "difficulty": "medium",
+      "expected_metrics": {
+        "min_retrieval_precision": 0.75,
+        "min_faithfulness": 0.9,
+        "min_relevance": 0.85
+      },
+      "notes": "Date may vary - using expected_answer_may_contain. File exists as PDF."
+    },
+    {
+      "id": "complex_001",
+      "query": "What documents do we have for vehicle 141-D-98765?",
+      "expected_answer_contains": ["141-D-98765", "VCR"],
+      "query_type": "complex_multi_field",
+      "difficulty": "medium",
+      "expected_metrics": {
+        "min_retrieval_precision": 0.6,
+        "min_faithfulness": 0.8,
+        "min_relevance": 0.75
+      },
+      "notes": "Updated to match available VRN and documents"
+    },
+    {
+      "id": "complex_002",
+      "query": "Which vehicles need NCT renewal soon?",
+      "expected_answer_may_contain": ["NCT", "expiry", "date"],
+      "query_type": "complex_reasoning",
+      "difficulty": "hard",
+      "expected_metrics": {
+        "min_retrieval_precision": 0.5,
+        "min_faithfulness": 0.7,
+        "min_relevance": 0.7
+      }
+    },
+    {
+      "id": "neg_001",
+      "query": "What is the biggest river in USA?",
+      "expected_answer_contains": ["don't have", "information", "not available"],
+      "should_reject": true,
+      "query_type": "negative_out_of_domain",
+      "difficulty": "easy",
+      "expected_metrics": {
+        "max_confidence": 0.5,
+        "min_rejection_accuracy": 0.9
+      }
+    },
+    {
+      "id": "neg_002",
+      "query": "Tell me about Tesla Model 3",
+      "expected_answer_contains": ["don't have", "information", "Tesla"],
+      "should_reject": true,
+      "query_type": "negative_out_of_domain",
+      "difficulty": "easy",
+      "expected_metrics": {
+        "max_confidence": 0.5,
+        "min_rejection_accuracy": 0.9
+      }
+    },
+    {
+      "id": "neg_003",
+      "query": "asdfghjkl",
+      "expected_answer_contains": ["unclear", "understand", "clarify"],
+      "should_reject": true,
+      "query_type": "negative_gibberish",
+      "difficulty": "easy",
+      "expected_metrics": {
+        "max_confidence": 0.3,
+        "min_rejection_accuracy": 0.95
+      }
+    },
+    {
+      "id": "edge_001",
+      "query": "231D54321",
+      "expected_answer_contains": ["231-D-54321"],
+      "expected_vrn": "231-D-54321",
+      "query_type": "edge_case_format",
+      "difficulty": "medium",
+      "notes": "VRN without hyphens",
+      "expected_metrics": {
+        "min_retrieval_precision": 0.6,
+        "min_faithfulness": 0.8,
+        "min_relevance": 0.8
+      }
+    }
+  ]
+}

@@ -1,0 +1,53 @@
+{
+  "snapshot_date": "2025-11-08T12:09:13.624038",
+  "total_documents": 6,
+  "total_chunks": 18,
+  "documents": [
+    "VCR - Copy.docx",
+    "VCR2.docx",
+    "CVRT Pass Statement.pdf",
+    "certificate-of-motor-insurance2025.pdf",
+    "VCR.docx",
+    "Vehicle Registration Certificate.pdf"
+  ],
+  "vrns": [
+    "141-D-98765",
+    "231-D-54321",
+    "231-D-54329"
+  ],
+  "entities": {
+    "owners": [],
+    "makes": [],
+    "models": []
+  },
+  "document_types": {
+    "unknown": 6
+  },
+  "status_breakdown": {
+    "processed": 1,
+    "assigned": 5
+  },
+  "vehicles": [
+    {
+      "registration_number": "141-D-98765",
+      "vin": null,
+      "make": null,
+      "model": null,
+      "has_driver": false
+    },
+    {
+      "registration_number": "231-D-54321",
+      "vin": null,
+      "make": null,
+      "model": null,
+      "has_driver": false
+    },
+    {
+      "registration_number": "231-D-54329",
+      "vin": null,
+      "make": null,
+      "model": null,
+      "has_driver": false
+    }
+  ]
+}

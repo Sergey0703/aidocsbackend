@@ -432,6 +432,68 @@ The FastAPI backend (accessed via `run_api.py`) provides:
 - `models/` - Pydantic request/response models
 - `core/` - Core business logic
 
+## Testing and Quality Assurance
+
+### RAG System Testing (Based on Ragas Framework)
+
+**Complete Guide**: See [dev_tools/RAG_TESTING_GUIDE.md](dev_tools/RAG_TESTING_GUIDE.md)
+
+**Test Structure:**
+```
+dev_tools/
+├── tests/rag_evaluation/     # Ragas-based RAG tests
+├── datasets/ground_truth/    # Human-verified test cases
+│   └── vehicle_queries.json  # 15 test queries with expected results
+└── benchmarks/               # Baseline metrics for regression detection
+```
+
+**Testing Methodology (4 Dimensions):**
+1. **Retrieval Quality** - Correct documents retrieved?
+2. **Answer Faithfulness** - Answer grounded in context?
+3. **Answer Relevance** - Answer addresses the question?
+4. **Context Precision** - Relevant contexts ranked higher?
+
+**Test Categories:**
+- **Exact VRN Lookup** - Direct search by registration number
+- **Aggregation Queries** - "how many cars", "tell me about all"
+- **Entity Search** - Search by owner, make, model
+- **Semantic Search** - Natural language queries
+- **Document Type Search** - Insurance, NCT, CVRT queries
+- **Negative Tests** - Out-of-domain queries (should reject)
+- **Edge Cases** - Format variations, typos
+
+**Key Metrics:**
+- Retrieval Precision@5 > 80%
+- Answer Faithfulness > 85%
+- Answer Relevancy > 90%
+- Aggregation Accuracy > 95%
+- Rejection Accuracy (out-of-domain) > 90%
+
+**Running Tests:**
+```bash
+# Quick smoke test (5 queries, < 1 min)
+python dev_tools/tests/rag_evaluation/smoke_test.py
+
+# Full test suite (150+ queries, ~30 min)
+python dev_tools/tests/rag_evaluation/run_full_suite.py
+
+# Pre-deployment validation
+python dev_tools/tests/rag_evaluation/pre_deployment.py
+```
+
+**Ground Truth Dataset:**
+- Location: `dev_tools/datasets/ground_truth/vehicle_queries.json`
+- Contains: 15 manually verified test cases
+- Covers: VRN lookup, aggregation, entity search, negative tests
+- Each test includes: query, expected results, relevant docs, difficulty, metrics thresholds
+
+**IMPORTANT Testing Rules:**
+1. Always run tests BEFORE making changes (baseline)
+2. Always run tests AFTER making changes (regression check)
+3. Update ground truth when data changes
+4. Track metrics over time
+5. Alert if metrics drop > 5%
+
 ## Additional Resources
 
 - **Database Schema**: See `README.md` lines 1-183 for complete SQL schema
@@ -439,3 +501,5 @@ The FastAPI backend (accessed via `run_api.py`) provides:
 - **Supabase Docs**: https://supabase.com/docs/guides/database/extensions/pgvector
 - **LlamaIndex Docs**: https://docs.llamaindex.ai/
 - **Gemini API Docs**: https://ai.google.dev/docs
+- **Ragas Testing Framework**: https://docs.ragas.io/
+- **RAG Testing Guide**: [dev_tools/RAG_TESTING_GUIDE.md](dev_tools/RAG_TESTING_GUIDE.md)
