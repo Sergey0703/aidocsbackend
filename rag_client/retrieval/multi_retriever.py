@@ -772,55 +772,64 @@ class MultiStrategyRetriever:
         logger.info(f"🔍 Vector variants summary: {len(all_results)} total results")
         return all_results
     
-    def _hybrid_dedupe_and_rank(self, 
-                               all_results: List[RetrievalResult], 
+    def _hybrid_dedupe_and_rank(self,
+                               all_results: List[RetrievalResult],
                                max_results: int,
                                primary_query: str,
                                extracted_entity: str = None) -> List[RetrievalResult]:
-        """🔥 Hybrid deduplication and ranking with source-aware scoring"""
-        
+        """Hybrid deduplication and ranking with source-aware scoring
+
+        CHANGED: Previously kept only 1 chunk per filename
+        NOW: Keeps ALL unique content chunks, removing only exact duplicates
+        This enables aggregation queries to see all entities in multi-entity documents
+        """
+
         if not all_results:
             return []
-        
-        # Group by filename for deduplication
+
+        # Deduplicate by content hash only (not filename)
+        # This allows multiple chunks from same file with different content
         unique_results = {}
-        
+
         for result in all_results:
-            file_key = result.filename
-            
-            if file_key not in unique_results:
-                # First occurrence of this file
-                unique_results[file_key] = result
+            # Create deduplication key based on content hash
+            content_hash = hash(result.full_content[:200]) if hasattr(result, 'full_content') else hash(str(result.content)[:200])
+            dedup_key = f"{content_hash}"
+
+            if dedup_key not in unique_results:
+                # First occurrence of this content
+                unique_results[dedup_key] = result
+                result.metadata["dedup_status"] = "unique"
 
             else:
-                # Duplicate file - keep the better one
-                existing = unique_results[file_key]
-                
+                # Exact duplicate content - keep the better one
+                existing = unique_results[dedup_key]
+
                 # Prefer database results over vector for exact matches
                 if result.source_method.startswith("database") and existing.source_method.startswith("vector"):
                     # Database result beats vector result
-                    unique_results[file_key] = result
+                    unique_results[dedup_key] = result
                     result.metadata["dedup_reason"] = "database_priority"
                 elif result.similarity_score > existing.similarity_score:
                     # Higher score wins
-                    unique_results[file_key] = result
+                    unique_results[dedup_key] = result
                     result.metadata["dedup_reason"] = "higher_score"
                 else:
                     # Keep existing
                     existing.metadata["dedup_reason"] = "kept_existing"
-        
+
         # Apply hybrid scoring
         scored_results = []
         for result in unique_results.values():
             hybrid_score = self._calculate_hybrid_score(result, primary_query, extracted_entity)
             result.metadata["hybrid_score"] = hybrid_score
             scored_results.append(result)
-        
+
         # Sort by hybrid score
         scored_results.sort(key=lambda x: x.metadata.get("hybrid_score", x.similarity_score), reverse=True)
-        
-        logger.info(f"🔥 Hybrid deduplication: {len(all_results)} → {len(scored_results)} unique → {min(len(scored_results), max_results)} final")
-        
+
+        logger.info(f"Hybrid deduplication: {len(all_results)} → {len(scored_results)} unique → {min(len(scored_results), max_results)} final")
+
         return scored_results[:max_results]
     
     def _calculate_hybrid_score(self, 

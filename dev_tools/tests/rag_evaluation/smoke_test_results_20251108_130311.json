@@ -1,0 +1,130 @@
+{
+  "timestamp": "2025-11-08T13:03:11.313836",
+  "total_tests": 5,
+  "passed": 1,
+  "pass_rate": 20.0,
+  "total_time": 65.15178990364075,
+  "results": [
+    {
+      "test_id": "vrn_001",
+      "query": "231-D-54321",
+      "query_type": "exact_vrn_lookup",
+      "latency": 17.81596875190735,
+      "passed": true,
+      "checks": [
+        {
+          "name": "Expected keywords",
+          "passed": true,
+          "message": "Found: ['231-D-54321', 'Volvo', 'FH460']",
+          "found_keywords": [
+            "231-D-54321",
+            "Volvo",
+            "FH460"
+          ],
+          "missing_keywords": []
+        },
+        {
+          "name": "Results retrieved",
+          "passed": true,
+          "message": "3 results"
+        }
+      ]
+    },
+    {
+      "test_id": "agg_001",
+      "query": "how many cars we have?",
+      "query_type": "aggregation_count",
+      "latency": 9.917850494384766,
+      "passed": false,
+      "checks": [
+        {
+          "name": "Expected keywords",
+          "passed": false,
+          "message": "Missing: ['three']",
+          "found_keywords": [
+            "3"
+          ],
+          "missing_keywords": [
+            "three"
+          ]
+        },
+        {
+          "name": "Results retrieved",
+          "passed": true,
+          "message": "10 results"
+        }
+      ]
+    },
+    {
+      "test_id": "entity_001",
+      "query": "Show me all VCR documents",
+      "query_type": "entity_search",
+      "latency": 9.750201940536499,
+      "passed": false,
+      "checks": [
+        {
+          "name": "Expected keywords",
+          "passed": false,
+          "message": "Missing: ['141-D-98765']",
+          "found_keywords": [
+            "VCR"
+          ],
+          "missing_keywords": [
+            "141-D-98765"
+          ]
+        },
+        {
+          "name": "Results retrieved",
+          "passed": true,
+          "message": "10 results"
+        }
+      ]
+    },
+    {
+      "test_id": "semantic_001",
+      "query": "Tell me about vehicle 141-D-98765",
+      "query_type": "semantic_search",
+      "latency": 17.02318263053894,
+      "passed": false,
+      "checks": [
+        {
+          "name": "Expected keywords",
+          "passed": false,
+          "message": "Missing: ['VCR']",
+          "found_keywords": [
+            "141-D-98765"
+          ],
+          "missing_keywords": [
+            "VCR"
+          ]
+        },
+        {
+          "name": "Results retrieved",
+          "passed": true,
+          "message": "10 results"
+        }
+      ]
+    },
+    {
+      "test_id": "neg_001",
+      "query": "What is the biggest river in USA?",
+      "query_type": "negative_out_of_domain",
+      "latency": 10.644586086273193,
+      "passed": false,
+      "checks": [
+        {
+          "name": "Rejection handling",
+          "passed": false,
+          "message": "Missing: [\"don't have\", 'not available']",
+          "found_keywords": [
+            "information"
+          ],
+          "missing_keywords": [
+            "don't have",
+            "not available"
+          ]
+        }
+      ]
+    }
+  ]
+}

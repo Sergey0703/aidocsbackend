@@ -661,27 +661,34 @@ class HybridResultsFusionEngine:
         return fused_results
     
     def _hybrid_deduplication(self, results: List[Any]) -> List[Any]:
-        """?? Hybrid-aware deduplication with intelligent result merging"""
-        
+        """Keep all unique chunks per file (professional approach)
+
+        CHANGED: Previously kept only 1 chunk per filename+content_hash
+        NOW: Keeps ALL unique content chunks, removing only exact duplicates
+        This enables aggregation queries to see all entities in multi-entity documents
+        """
+
         if len(results) <= 1:
             return results
-        
-        # Group by filename + content hash for deduplication
+
+        # Use content hash only for deduplication (not filename)
+        # This allows multiple chunks from same file with different content
         unique_results = {}
-        
+
         for result in results:
-            # Create deduplication key
-            dedup_key = f"{result.filename}_{hash(result.full_content[:200])}"
-            
+            # Create deduplication key based on content only
+            content_hash = hash(result.full_content[:200])
+            dedup_key = f"{content_hash}"
+
             if dedup_key not in unique_results:
                 unique_results[dedup_key] = result
                 result.metadata["dedup_status"] = "original"
             else:
                 existing = unique_results[dedup_key]
-                
-                # ?? Hybrid-aware conflict resolution
+
+                # Hybrid-aware conflict resolution
                 keep_new = self._should_keep_new_result(existing, result)
-                
+
                 if keep_new:
                     # Keep new result, mark why
                     result.metadata["dedup_status"] = "replaced_existing"
@@ -691,11 +698,11 @@ class HybridResultsFusionEngine:
                     # Keep existing, mark why
                     existing.metadata["dedup_status"] = "kept_original"
                     existing.metadata["duplicate_found"] = True
-        
+
         deduplicated = list(unique_results.values())
-        
-        logger.info(f"?? Hybrid deduplication: {len(results)} ? {len(deduplicated)} unique results")
-        
+
+        logger.info(f"Hybrid deduplication: {len(results)} → {len(deduplicated)} unique results")
+
         return deduplicated
     
     def _should_keep_new_result(self, existing: Any, new: Any) -> bool:
