@@ -361,8 +361,15 @@ async def execute_search(system_components: Dict, query: str, rerank_mode: str =
             required_terms=required_terms
         )
         fusion_time = time.time() - fusion_start
-        logger.info(f"✓ Fused to {fusion_result.final_count} documents | Method: {fusion_result.fusion_method} | Time: {fusion_time:.3f}s")
-        
+
+        # Count unique source documents
+        unique_source_docs = len(set(
+            doc.filename for doc in fusion_result.fused_results
+            if hasattr(doc, 'filename') and doc.filename
+        ))
+
+        logger.info(f"✓ Fused to {fusion_result.final_count} chunks from {unique_source_docs} source documents | Method: {fusion_result.fusion_method} | Time: {fusion_time:.3f}s")
+
         if fusion_result.fused_results:
             logger.info(f"  Top scores: {[f'{doc.similarity_score:.3f}' for doc in fusion_result.fused_results[:3]]}")
         
@@ -430,9 +437,15 @@ async def execute_search(system_components: Dict, query: str, rerank_mode: str =
             answer_pct=(answer_time / total_time) * 100
         )
         
+        # Count unique source documents in final results
+        unique_final_docs = len(set(
+            doc.filename for doc in fusion_result.fused_results
+            if hasattr(doc, 'filename') and doc.filename
+        ))
+
         logger.info("=" * 80)
         logger.info(f"SEARCH PIPELINE COMPLETED")
-        logger.info(f"Total Time: {total_time:.3f}s | Results: {fusion_result.final_count}")
+        logger.info(f"Total Time: {total_time:.3f}s | Chunks: {fusion_result.final_count} (from {unique_final_docs} source documents)")
         logger.info(f"Re-Ranking: {rerank_mode} mode | Decision: {rerank_decision} | Tokens: {tokens_used}")
         logger.info(f"Breakdown: Extract={extraction_time:.3f}s | Rewrite={rewrite_time:.3f}s | Retrieve={retrieval_time:.3f}s | Fuse={fusion_time:.3f}s | Rerank={rerank_time:.3f}s | Answer={answer_time:.3f}s")
         logger.info("=" * 80)

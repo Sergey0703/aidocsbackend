@@ -128,7 +128,14 @@ async def search(
         )
 
         fusion_time = time.time() - fusion_start
-        logger.info(f"✓ Fused to {fusion_result.final_count} documents")
+
+        # Count unique source documents
+        unique_source_docs = len(set(
+            doc.filename for doc in fusion_result.fused_results
+            if hasattr(doc, 'filename') and doc.filename
+        ))
+
+        logger.info(f"✓ Fused to {fusion_result.final_count} chunks from {unique_source_docs} source documents")
         logger.info(f"  Fusion method: {fusion_result.fusion_method}")
         logger.info(f"  Time: {fusion_time:.3f}s")
 
@@ -219,9 +226,15 @@ async def search(
 
         total_time = time.time() - start_time
 
+        # Count unique source documents in final results
+        unique_final_docs = len(set(
+            result.filename for result in search_results
+            if hasattr(result, 'filename') and result.filename
+        ))
+
         logger.info("=" * 80)
         logger.info("SEARCH COMPLETED")
-        logger.info(f"Total Time: {total_time:.3f}s | Results: {len(search_results)}")
+        logger.info(f"Total Time: {total_time:.3f}s | Chunks: {len(search_results)} (from {unique_final_docs} source documents)")
         logger.info(f"Breakdown: Retrieval={retrieval_time:.3f}s | Fusion={fusion_time:.3f}s | Answer={answer_time:.3f}s")
         if generated_answer:
             logger.info(f"Answer: {generated_answer[:150]}...")
