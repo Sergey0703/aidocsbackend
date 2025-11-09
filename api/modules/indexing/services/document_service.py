@@ -78,7 +78,8 @@ class DocumentService:
 
     async def find_records_by_document_id(self, document_id: str) -> List[Dict]:
         """
-        Finds all records in the database corresponding to a unique Document ID (original_path).
+        Finds all records in the database corresponding to a unique Document ID.
+        Searches by registry_id first (if looks like UUID), then falls back to original_path.
         Returns a list of metadata for these records.
         """
         records = []
@@ -87,8 +88,28 @@ class DocumentService:
             conn = self._get_db_connection()
             if not conn:
                 return []
-            
+
             with conn.cursor(cursor_factory=psycopg2.extras.DictCursor) as cur:
+                # 🆕 FIXED: Try searching by registry_id first (if UUID format)
+                # Check if document_id looks like a UUID (contains dashes and is 36 chars)
+                is_uuid = len(document_id) == 36 and document_id.count('-') == 4
+
+                if is_uuid:
+                    # Search by registry_id
+                    query = f"""
+                        SELECT metadata FROM vecs.{config.TABLE_NAME}
+                        WHERE metadata->>'registry_id' = %s
+                    """
+                    cur.execute(query, (document_id,))
+                    results = cur.fetchall()
+
+                    if results:
+                        for row in results:
+                            records.append(row['metadata'])
+                        conn.close()
+                        return records
+
+                # Fallback: search by original_path (backward compatibility)
                 query = f"""
                     SELECT metadata FROM vecs.{config.TABLE_NAME}
                     WHERE metadata->>'original_path' = %s
@@ -106,6 +127,7 @@ class DocumentService:
     async def delete_records_by_document_id(self, document_id: str) -> int:
         """
         Deletes ALL records from the database corresponding to a Document ID.
+        Searches by registry_id first (if looks like UUID), then falls back to original_path.
         Returns the number of deleted records.
         """
         deleted_count = 0
@@ -114,8 +136,27 @@ class DocumentService:
             conn = self._get_db_connection()
             if not conn:
                 return 0
-            
+
             with conn.cursor() as cur:
+                # 🆕 FIXED: Try deleting by registry_id first (if UUID format)
+                is_uuid = len(document_id) == 36 and document_id.count('-') == 4
+
+                if is_uuid:
+                    # Delete by registry_id
+                    query = f"""
+                        DELETE FROM vecs.{config.TABLE_NAME}
+                        WHERE metadata->>'registry_id' = %s
+                    """
+                    cur.execute(query, (document_id,))
+                    deleted_count = cur.rowcount
+
+                    if deleted_count > 0:
+                        conn.commit()
+                        conn.close()
+                        logger.info(f"🗑️ Deleted {deleted_count} old chunks for registry_id: {document_id}")
+                        return deleted_count
+
+                # Fallback: delete by original_path (backward compatibility)
                 query = f"""
                     DELETE FROM vecs.{config.TABLE_NAME}
                     WHERE metadata->>'original_path' = %s
@@ -123,7 +164,7 @@ class DocumentService:
                 cur.execute(query, (document_id,))
                 deleted_count = cur.rowcount
                 conn.commit()
-            
+
             conn.close()
             if deleted_count > 0:
                 logger.info(f"🗑️ Deleted {deleted_count} old chunks for document ID: {document_id}")

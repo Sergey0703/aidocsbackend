@@ -104,11 +104,11 @@ async def start_indexing(
 async def stop_indexing(task_id: str):
     """
     Stop running indexing task.
-    
+
     - Gracefully stops current processing
     - Completes current batch before stopping
     - Returns partial results
-    
+
     Args:
         task_id: ID of the task to stop
     """
@@ -118,25 +118,25 @@ async def stop_indexing(task_id: str):
                 status_code=400,
                 detail="task_id is required and cannot be empty"
             )
-        
+
         service = get_indexing_service()
-        
+
         success = await service.cancel_task(task_id)
-        
+
         if not success:
             logger.warning(f"Task not found or not running: {task_id}")
             raise HTTPException(
                 status_code=404,
                 detail=f"Task not found or not running: {task_id}"
             )
-        
+
         logger.info(f"Stopped indexing task: {task_id}")
-        
+
         return SuccessResponse(
             success=True,
             message=f"Indexing task {task_id} stopped successfully"
         )
-        
+
     except HTTPException:
         raise
     except Exception as e:

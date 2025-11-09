@@ -288,7 +288,7 @@ class MarkdownLoader:
                     file_hash
                 FROM vecs.document_registry
                 WHERE markdown_storage_path IS NOT NULL
-                  AND status = 'processed'
+                  AND status = 'pending_indexing'
                 ORDER BY uploaded_at DESC
             """)
 

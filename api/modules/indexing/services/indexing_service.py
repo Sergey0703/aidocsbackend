@@ -179,34 +179,46 @@ class IndexingService:
             if task.cancelled: raise asyncio.CancelledError
             task.current_file = doc.metadata.get('file_name', 'Unknown')
             task.processed_files = i + 1
-            
+
             metadata = doc.metadata
+            # 🆕 FIXED: Use registry_id as unique identifier instead of original_path
+            registry_id = metadata.get('registry_id')
             document_id = metadata.get('original_path')
             current_hash = metadata.get('original_file_hash')
 
-            if not document_id:
-                logger.warning(f"File {metadata.get('file_name')} is missing 'original_path' in metadata. Treating as new.")
+            # If no registry_id, fall back to original_path (backward compatibility)
+            unique_id = registry_id if registry_id else document_id
+
+            if not unique_id:
+                logger.warning(f"File {metadata.get('file_name')} is missing both 'registry_id' and 'original_path'. Treating as new.")
                 files_to_index.append(doc)
                 continue
-            
+
             if not current_hash:
                 logger.warning(f"File {metadata.get('file_name')} is missing 'original_file_hash'. Re-indexing for safety.")
-                await doc_service.delete_records_by_document_id(document_id)
+                await doc_service.delete_records_by_document_id(unique_id)
                 files_to_index.append(doc)
                 files_to_update += 1
                 continue
 
-            existing_records_meta = await doc_service.find_records_by_document_id(document_id)
+            # 🆕 FIXED: Query by registry_id if available, otherwise by document_id
+            existing_records_meta = await doc_service.find_records_by_document_id(unique_id)
 
             if not existing_records_meta:
+                # No existing records found - this is a new document
                 files_to_index.append(doc)
+                logger.debug(f"   ➕ New document: {metadata.get('file_name')} (registry_id: {registry_id or 'N/A'})")
             else:
+                # Found existing records - check if hash changed
                 stored_hash = existing_records_meta[0].get('original_file_hash')
                 if stored_hash == current_hash:
+                    # Same hash - skip indexing
                     files_to_skip += 1
+                    logger.debug(f"   ⏩ Skipped (unchanged): {metadata.get('file_name')}")
                 else:
+                    # Hash changed - update
                     logger.info(f"🔄 Found updated file, removing old version: {metadata.get('file_name')}")
-                    await doc_service.delete_records_by_document_id(document_id)
+                    await doc_service.delete_records_by_document_id(unique_id)
                     files_to_index.append(doc)
                     files_to_update += 1
         
@@ -258,83 +270,68 @@ class IndexingService:
 
             task.current_stage = ProcessingStage.LOADING
             task.current_stage_name = "Loading Documents"
-            
-            logger.info("Initializing storage manager, registry manager, and markdown loader...")
-            storage_manager = SupabaseStorageManager()  # 🆕 Initialize Storage manager
+
+            # 🚀 OPTIMIZATION: Use markdown_loader with Storage mode
+            # It now queries for status='pending_indexing' internally, so only pending docs are loaded
+            logger.info("📂 Loading pending documents from Storage using markdown_loader...")
+
+            from chunking_vectors.markdown_loader import create_markdown_loader
+            from storage.storage_manager import SupabaseStorageManager
+            from chunking_vectors.registry_manager import create_registry_manager
+            import tempfile
+
+            # Initialize managers
+            storage_manager = SupabaseStorageManager()
             registry_manager = create_registry_manager(config.CONNECTION_STRING)
+
+            # Create markdown loader with Storage mode
+            # Note: documents_dir is required for initialization but not used in Storage mode
+            temp_dir = tempfile.gettempdir()
             loader = create_markdown_loader(
-                documents_dir=config.DOCUMENTS_DIR,
+                documents_dir=temp_dir,  # Required for initialization, not used in Storage mode
                 recursive=True,
                 config=config,
-                storage_manager=storage_manager  # 🆕 Pass to loader for Storage mode support
+                storage_manager=storage_manager
             )
 
-            logger.info("🔗 Loading documents with registry_id enrichment...")
-            documents, _ = loader.load_data(registry_manager=registry_manager)
-            
+            # Load documents - this will query for pending_indexing status automatically
+            documents, loading_stats = loader.load_data(registry_manager=registry_manager)
+
             if not documents:
-                logger.warning("⚠️ No documents found to index.")
+                logger.info("✅ No pending documents to index. All up to date!")
                 task.status = IndexingStatus.COMPLETED
                 task.end_time = datetime.now()
                 self._add_to_history(task)
                 return
 
+            logger.info(f"📊 Loaded {len(documents)} pending documents from Storage")
+            logger.info(f"   ✓ Registry enrichments: {loading_stats.get('registry_enrichments', 0)}")
+            logger.info(f"   ✓ Total characters: {loading_stats.get('total_characters', 0):,}")
             task.total_files = len(documents)
-            
-            # 🆕 ENRICH DOCUMENTS WITH REGISTRY_ID FROM DOCUMENT_REGISTRY
-            logger.info("🔗 Enriching documents with registry_id from document_registry...")
-            
-            from api.modules.vehicles.services.document_registry_service import get_document_registry_service
-            registry_service = get_document_registry_service()
-            
-            enriched_count = 0
-            for doc in documents:
-                # Skip enrichment if registry_id already present (from Storage mode)
-                if doc.metadata.get('registry_id'):
-                    enriched_count += 1
-                    logger.debug(f"   ✓ Document already has registry_id: {doc.metadata.get('file_name')}")
-                    continue
+            task.registry_entries_created = loading_stats.get('registry_enrichments', 0)
 
-                markdown_path = doc.metadata.get('file_path') or doc.metadata.get('file_name')
-                
-                if markdown_path:
-                    # Build full path if needed
-                    if not str(markdown_path).startswith('/'):
-                        markdown_path = str(Path(config.DOCUMENTS_DIR) / markdown_path)
-                    
-                    registry_entry = await registry_service.find_by_markdown_path(str(markdown_path))
-                    
-                    if registry_entry:
-                        doc.metadata['registry_id'] = str(registry_entry['id'])
-                        enriched_count += 1
-                        logger.debug(f"   ✓ Found registry_id for {doc.metadata.get('file_name')}")
-                    else:
-                        logger.warning(f"   ⚠️ No registry entry for {doc.metadata.get('file_name')}")
-                else:
-                    logger.warning(f"   ⚠️ No file path in metadata for document")
-            
-            logger.info(f"   ✓ Enriched {enriched_count}/{len(documents)} documents with registry_id")
-            task.registry_entries_created = enriched_count
-            
-            task.current_stage = ProcessingStage.LOADING
-            task.current_stage_name = "Checking for updates"
-            
-            documents_to_process = []
+            # 🚀 OPTIMIZATION: Skip incremental checking - markdown_loader already filtered by status!
+            # All loaded documents are guaranteed to be pending_indexing, so process them all
+
             doc_service = get_document_service()
+            documents_to_process = []
 
             if task.mode == IndexingMode.FULL or force_reindex or delete_existing:
+                # Full re-index: delete existing records first
                 logger.warning(f"Full re-index for {len(documents)} docs requested. Deleting existing records...")
                 task.total_files = len(documents)
                 for i, doc in enumerate(documents):
                     if task.cancelled: raise asyncio.CancelledError
                     task.processed_files = i + 1
-                    document_id = doc.metadata.get('original_path')
-                    if document_id:
-                        await doc_service.delete_records_by_document_id(document_id)
+                    registry_id = doc.metadata.get('registry_id')
+                    if registry_id:
+                        await doc_service.delete_records_by_document_id(registry_id)
                 documents_to_process = documents
             else:
-                documents_to_process, skipped_count = await self._prepare_documents_for_indexing(documents, task)
-                task.skipped_files = skipped_count
+                # Incremental mode: process all pending docs (already filtered by database query)
+                logger.info(f"📊 Incremental mode: processing {len(documents)} pending documents")
+                documents_to_process = documents
+                task.skipped_files = 0  # No skips - all docs are pending
 
             if not documents_to_process:
                 logger.info("✅ All documents are up-to-date. Nothing to index.")
@@ -346,6 +343,12 @@ class IndexingService:
             task.current_stage = ProcessingStage.CHUNKING
             task.current_stage_name = "Chunking Documents"
             logger.info(f"✂️ Chunking {len(documents_to_process)} documents...")
+
+            # 🆕 Set current_file to first document being processed
+            if documents_to_process:
+                first_file = documents_to_process[0].metadata.get('file_name', 'unknown')
+                task.current_file = first_file
+                logger.debug(f"   📄 Processing: {first_file}")
 
             # 🔄 USE UNIFIED CHUNKING from rag_indexer (supports Hybrid + SentenceSplitter)
             from chunking_vectors.chunk_helpers import create_and_filter_chunks_enhanced
@@ -403,18 +406,19 @@ class IndexingService:
             
             # 🆕 UPDATE REGISTRY STATUS TO PROCESSED
             logger.info("✅ Updating document_registry status to 'processed'...")
-            
+
             processed_registry_ids = set()
             for doc in documents_to_process:
                 if 'registry_id' in doc.metadata:
                     registry_id = doc.metadata['registry_id']
                     if registry_id not in processed_registry_ids:
                         try:
-                            await registry_service.update_status(registry_id, 'processed')
+                            # Use registry_manager instead of registry_service
+                            registry_manager.update_registry_status(registry_id, 'processed')
                             processed_registry_ids.add(registry_id)
                         except Exception as e:
                             logger.warning(f"Failed to update registry status for {registry_id}: {e}")
-            
+
             logger.info(f"   ✓ Updated {len(processed_registry_ids)} registry entries to 'processed'")
             
             task.statistics = {
@@ -426,7 +430,11 @@ class IndexingService:
                 "success_rate": (task.processed_chunks / task.total_chunks * 100) if task.total_chunks > 0 else 100.0,
                 "registry_entries_updated": len(processed_registry_ids),  # 🆕
             }
-            
+
+            # 🆕 Clear current_file when complete
+            task.current_file = None
+            task.processed_files = len(documents_to_process)  # Set final count
+
             task.status = IndexingStatus.COMPLETED
             task.current_stage = ProcessingStage.COMPLETED
             task.current_stage_name = "Completed"
@@ -483,11 +491,19 @@ class IndexingService:
         if not task:
             for item in self._history:
                 if item.task_id == task_id:
+                    # 🆕 FIXED: Return full statistics from history item
                     return {
                         "task_id": item.task_id,
                         "progress": IndexingProgress(status=item.status, progress_percentage=100),
-                        "statistics": {}, "errors": [item.error_message] if item.error_message else [],
-                        "warnings": [], "timestamp": item.end_time or datetime.now()
+                        "statistics": {
+                            "documents_processed": item.files_processed,
+                            "chunks_created": item.chunks_created,
+                            "chunks_saved": item.chunks_created,  # Assume all created chunks were saved
+                            "success_rate": item.success_rate,
+                        },
+                        "errors": [item.error_message] if item.error_message else [],
+                        "warnings": [],
+                        "timestamp": item.end_time or datetime.now()
                     }
             return None
         

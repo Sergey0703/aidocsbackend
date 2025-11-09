@@ -560,8 +560,8 @@ class ConversionService:
                             new_storage_path=new_path
                         )
 
-                        # Update main status to 'processed' (for Document Manager)
-                        registry_manager.update_registry_status(registry_id, 'processed')
+                        # 🆕 FIXED: Update main status to 'pending_indexing' so file will be indexed
+                        registry_manager.update_registry_status(registry_id, 'pending_indexing')
 
                         task.converted_files += 1
                     else:
