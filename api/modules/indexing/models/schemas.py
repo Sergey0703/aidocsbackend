@@ -228,6 +228,7 @@ class IndexingStatistics(BaseModel):
     documents_loaded: int = 0
     documents_converted: int = 0
     documents_indexed: int = 0
+    documents_processed: int = 0  # Alias for documents_indexed (for frontend compatibility)
     skipped_files: int = 0 # <--- Поле добавлено здесь
     
     # Chunk stats

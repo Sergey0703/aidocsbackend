@@ -78,11 +78,15 @@ const IndexingProgress = ({ status, isActive, onStop }) => {
   };
 
   // Safe access to progress values with defaults
-  const totalFiles = progress?.total_files || 0;
-  const processedFiles = progress?.processed_files || 0;
+  // When completed, prefer statistics over progress for accurate counts
+  const statusValue = progress?.status || 'unknown';
+  const isCompleted = statusValue === 'completed';
+
+  const totalFiles = isCompleted ? (statistics?.documents_processed || 0) : (progress?.total_files || 0);
+  const processedFiles = isCompleted ? (statistics?.documents_processed || 0) : (progress?.processed_files || 0);
   const failedFiles = progress?.failed_files || 0;
-  const totalChunks = progress?.total_chunks || 0;
-  const processedChunks = progress?.processed_chunks || 0;
+  const totalChunks = isCompleted ? (statistics?.chunks_created || 0) : (progress?.total_chunks || 0);
+  const processedChunks = isCompleted ? (statistics?.chunks_saved || 0) : (progress?.processed_chunks || 0);
   const processingSpeed = progress?.processing_speed || 0;
   const currentBatch = progress?.current_batch;
   const totalBatches = progress?.total_batches;
@@ -91,7 +95,6 @@ const IndexingProgress = ({ status, isActive, onStop }) => {
   const elapsedTime = progress?.elapsed_time;
   const estimatedRemaining = progress?.estimated_remaining;
   const avgTimePerFile = progress?.avg_time_per_file;
-  const statusValue = progress?.status || 'unknown';
 
   // Get errors and warnings safely
   const errors = status?.errors || [];

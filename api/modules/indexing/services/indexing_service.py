@@ -431,6 +431,11 @@ class IndexingService:
                 "registry_entries_updated": len(processed_registry_ids),  # 🆕
             }
 
+            # 🔍 DEBUG: Log statistics before adding to history
+            logger.info(f"📊 Final statistics: documents_processed={task.statistics.get('documents_processed')}, "
+                       f"chunks_created={task.statistics.get('chunks_created')}, "
+                       f"chunks_saved={task.statistics.get('chunks_saved')}")
+
             # 🆕 Clear current_file when complete
             task.current_file = None
             task.processed_files = len(documents_to_process)  # Set final count
@@ -440,6 +445,13 @@ class IndexingService:
             task.current_stage_name = "Completed"
             task.end_time = datetime.now()
             self._add_to_history(task)
+
+            # Remove completed task from active tasks so status queries use history
+            async with self._lock:
+                if task.task_id in self._tasks:
+                    del self._tasks[task.task_id]
+                    logger.info(f"🗑️ Removed completed task from active tasks: {task.task_id}")
+
             logger.info(f"✅ REAL indexing pipeline completed for task: {task.task_id}")
 
         except asyncio.CancelledError:
@@ -448,20 +460,37 @@ class IndexingService:
             task.end_time = datetime.now()
             task.errors.append("Task was cancelled by user.")
             self._add_to_history(task)
+
+            # Remove cancelled task from active tasks
+            async with self._lock:
+                if task.task_id in self._tasks:
+                    del self._tasks[task.task_id]
+                    logger.info(f"🗑️ Removed cancelled task from active tasks: {task.task_id}")
         except Exception as e:
             logger.error(f"❌ Indexing failed for task {task.task_id}: {e}", exc_info=True)
             task.status = IndexingStatus.FAILED
             task.end_time = datetime.now()
             task.errors.append(f"Fatal error during indexing: {str(e)}")
             self._add_to_history(task)
+
+            # Remove failed task from active tasks
+            async with self._lock:
+                if task.task_id in self._tasks:
+                    del self._tasks[task.task_id]
+                    logger.info(f"🗑️ Removed failed task from active tasks: {task.task_id}")
     
     def _add_to_history(self, task: IndexingTaskState):
         if not task.start_time: task.start_time = datetime.now()
-        
+
         files_processed_count = task.statistics.get("documents_processed", 0)
         if not isinstance(files_processed_count, int):
              files_processed_count = len(files_processed_count) if hasattr(files_processed_count, '__len__') else 0
-             
+
+        # 🔍 DEBUG: Log what we're storing in history
+        logger.info(f"🔍 Adding to history: files_processed={files_processed_count}, "
+                   f"chunks_created={task.statistics.get('chunks_created', 0)}, "
+                   f"source dict: {task.statistics.get('documents_processed')}")
+
         history_item = IndexingHistoryItem(
             task_id=task.task_id, mode=task.mode, status=task.status,
             start_time=task.start_time, end_time=task.end_time,
@@ -492,21 +521,26 @@ class IndexingService:
             for item in self._history:
                 if item.task_id == task_id:
                     # 🆕 FIXED: Return full statistics from history item
+                    stats = {
+                        "documents_processed": item.files_processed,
+                        "chunks_created": item.chunks_created,
+                        "chunks_saved": item.chunks_created,  # Assume all created chunks were saved
+                        "success_rate": item.success_rate,
+                    }
+                    # 🔍 DEBUG: Log what we're returning from history
+                    logger.info(f"🔍 Returning from history: documents_processed={stats['documents_processed']}, "
+                               f"chunks_created={stats['chunks_created']}, "
+                               f"history item files_processed={item.files_processed}")
                     return {
                         "task_id": item.task_id,
                         "progress": IndexingProgress(status=item.status, progress_percentage=100),
-                        "statistics": {
-                            "documents_processed": item.files_processed,
-                            "chunks_created": item.chunks_created,
-                            "chunks_saved": item.chunks_created,  # Assume all created chunks were saved
-                            "success_rate": item.success_rate,
-                        },
+                        "statistics": stats,
                         "errors": [item.error_message] if item.error_message else [],
                         "warnings": [],
                         "timestamp": item.end_time or datetime.now()
                     }
             return None
-        
+
         return {
             "task_id": task_id,
             "progress": task.get_progress(),

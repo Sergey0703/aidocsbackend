@@ -111,15 +111,21 @@ const IndexingPage = () => {
       if (isIndexing && indexingTaskId) {
         try {
           const status = await ragApi.getIndexingStatus(indexingTaskId);
+          console.log('📊 Indexing Status received:', JSON.stringify(status, null, 2));
           setIndexingStatus(status);
           const currentStatus = status?.progress?.status;
           if (['completed', 'failed', 'cancelled'].includes(currentStatus)) {
             setIsIndexing(false);
             setIndexingTaskId(null);
             fetchDocuments(); // Обновляем список документов после завершения
-            
+
             if (currentStatus === 'completed') {
                 const processed = status.statistics?.documents_processed ?? 0;
+                console.log('✅ INDEXING COMPLETED:', {
+                  documents_processed: processed,
+                  full_statistics: status.statistics,
+                  raw_value: status.statistics?.documents_processed
+                });
                 setIndexingResult({ type: 'success', message: `Successfully indexed ${processed} new file(s).` });
             } else {
                 setIndexingResult({ type: 'error', message: `Indexing failed. Check logs for details.` });
