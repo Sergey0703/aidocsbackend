@@ -236,6 +236,7 @@ const IndexingPage = () => {
             <FileUploader
               onFilesSelected={handleFilesSelected}
               disabled={isOperationRunning}
+              isUploading={isUploading}
               settings={uploadSettings}
               onSettingsChange={setUploadSettings}
             />
@@ -277,13 +278,22 @@ const IndexingPage = () => {
           </div>
           <div className="card-body">
             <p>Process converted files into searchable vectors.</p>
-            <button
-              className="start-indexing-button"
-              onClick={handleStartIndexing}
-              disabled={isOperationRunning}
-            >
-              {isIndexing ? 'Indexing...' : 'Start Manual Indexing'}
-            </button>
+            <div className="indexing-control-wrapper">
+              <button
+                className="start-indexing-button"
+                onClick={handleStartIndexing}
+                disabled={isOperationRunning}
+              >
+                {isIndexing && (
+                  <span className="button-spinner">
+                    <span className="spinner-dot"></span>
+                    <span className="spinner-dot"></span>
+                    <span className="spinner-dot"></span>
+                  </span>
+                )}
+                {isIndexing ? 'Indexing...' : 'Start Manual Indexing'}
+              </button>
+            </div>
             {indexingResult && (
                 <div className={`indexing-result ${indexingResult.type}`}>
                     {indexingResult.message}

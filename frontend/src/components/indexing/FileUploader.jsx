@@ -2,7 +2,7 @@
 import React, { useState, useRef } from 'react';
 import './FileUploader.css';
 
-const FileUploader = ({ onFilesSelected, disabled, settings, onSettingsChange }) => {
+const FileUploader = ({ onFilesSelected, disabled, isUploading, settings, onSettingsChange }) => {
   const [selectedFiles, setSelectedFiles] = useState([]);
   const [dragActive, setDragActive] = useState(false);
   const fileInputRef = useRef(null);
@@ -210,7 +210,14 @@ const FileUploader = ({ onFilesSelected, disabled, settings, onSettingsChange })
           onClick={handleUpload}
           disabled={disabled}
         >
-          Start Conversion ({selectedFiles.length} file{selectedFiles.length !== 1 ? 's' : ''})
+          {isUploading && (
+            <span className="button-spinner">
+              <span className="spinner-dot"></span>
+              <span className="spinner-dot"></span>
+              <span className="spinner-dot"></span>
+            </span>
+          )}
+          {isUploading ? 'Uploading...' : `Start Conversion (${selectedFiles.length} file${selectedFiles.length !== 1 ? 's' : ''})`}
         </button>
       )}
     </div>

@@ -49,6 +49,10 @@
 }
 
 /* Specific Buttons */
+.indexing-control-wrapper {
+  margin-bottom: 1.5rem;
+}
+
 .start-indexing-button {
   width: 100%;
   padding: 0.8rem 1.5rem;
@@ -60,7 +64,10 @@
   border-radius: 8px;
   cursor: pointer;
   transition: background-color 0.2s;
-  margin-bottom: 1.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
 }
 .start-indexing-button:hover:not(:disabled) {
   background-color: var(--primary-color-hover);
@@ -68,6 +75,40 @@
 .start-indexing-button:disabled {
   background-color: #9ca3af;
   cursor: not-allowed;
+}
+
+/* Small inline spinner for button */
+.button-spinner {
+  display: inline-flex;
+  gap: 3px;
+  align-items: center;
+}
+
+.button-spinner .spinner-dot {
+  width: 6px;
+  height: 6px;
+  background-color: white;
+  border-radius: 50%;
+  animation: button-bounce 1.4s infinite ease-in-out both;
+}
+
+.button-spinner .spinner-dot:nth-child(1) {
+  animation-delay: -0.32s;
+}
+
+.button-spinner .spinner-dot:nth-child(2) {
+  animation-delay: -0.16s;
+}
+
+@keyframes button-bounce {
+  0%, 80%, 100% {
+    transform: scale(0.8);
+    opacity: 0.5;
+  }
+  40% {
+    transform: scale(1.2);
+    opacity: 1;
+  }
 }
 
 .refresh-button {

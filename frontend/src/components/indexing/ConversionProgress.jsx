@@ -9,20 +9,30 @@ const ConversionProgress = ({ status, isActive }) => {
       <div className="conversion-progress">
         <div className="preparing-state">
           <div className="preparing-header">
-            <div className="spinner-icon rotating">🔄</div>
+            <div className="modern-spinner">
+              <div className="spinner-ring"></div>
+              <div className="spinner-ring"></div>
+              <div className="spinner-ring"></div>
+            </div>
             <h3>Preparing conversion...</h3>
           </div>
           <div className="preparing-stages">
             <div className="stage active">
-              <div className="stage-dot pulsing"></div>
+              <div className="stage-indicator">
+                <div className="stage-dot pulsing"></div>
+              </div>
               <span>Uploading file to storage</span>
             </div>
             <div className="stage">
-              <div className="stage-dot"></div>
+              <div className="stage-indicator">
+                <div className="stage-dot"></div>
+              </div>
               <span>Creating conversion task</span>
             </div>
             <div className="stage">
-              <div className="stage-dot"></div>
+              <div className="stage-indicator">
+                <div className="stage-dot"></div>
+              </div>
               <span>Initializing Docling converter</span>
             </div>
           </div>
@@ -37,24 +47,36 @@ const ConversionProgress = ({ status, isActive }) => {
       <div className="conversion-progress">
         <div className="preparing-state">
           <div className="preparing-header">
-            <div className="spinner-icon rotating">🔄</div>
+            <div className="modern-spinner">
+              <div className="spinner-ring"></div>
+              <div className="spinner-ring"></div>
+              <div className="spinner-ring"></div>
+            </div>
             <h3>Starting conversion...</h3>
           </div>
           <div className="preparing-stages">
             <div className="stage completed">
-              <div className="stage-dot"></div>
-              <span>✅ File uploaded to storage</span>
+              <div className="stage-indicator">
+                <div className="stage-check">✓</div>
+              </div>
+              <span>File uploaded to storage</span>
             </div>
             <div className="stage active">
-              <div className="stage-dot pulsing"></div>
+              <div className="stage-indicator">
+                <div className="stage-dot pulsing"></div>
+              </div>
               <span>Converting to Markdown format</span>
             </div>
             <div className="stage">
-              <div className="stage-dot"></div>
+              <div className="stage-indicator">
+                <div className="stage-dot"></div>
+              </div>
               <span>Extracting metadata and structure</span>
             </div>
             <div className="stage">
-              <div className="stage-dot"></div>
+              <div className="stage-indicator">
+                <div className="stage-dot"></div>
+              </div>
               <span>Uploading converted files</span>
             </div>
           </div>
