@@ -5,7 +5,6 @@ import { ragApi } from '../api/ragApi';
 import FileUploader from '../components/indexing/FileUploader';
 import ConversionProgress from '../components/indexing/ConversionProgress';
 import IndexingProgress from '../components/indexing/IndexingProgress';
-import DocumentsList from '../components/indexing/DocumentsList';
 
 const IndexingPage = () => {
   // --- STATE MANAGEMENT ---
@@ -23,9 +22,9 @@ const IndexingPage = () => {
   const [conversionStatus, setConversionStatus] = useState(null);
   const [indexingStatus, setIndexingStatus] = useState(null);
 
-  // Состояния для списка документов
-  const [documents, setDocuments] = useState([]);
-  const [loadingDocs, setLoadingDocs] = useState(true);
+  // Состояния для статистики документов
+  const [docStats, setDocStats] = useState(null);
+  const [loadingStats, setLoadingStats] = useState(true);
 
   // Настройки для загрузки и индексации
   const [uploadSettings, setUploadSettings] = useState({
@@ -42,23 +41,23 @@ const IndexingPage = () => {
 
   // --- DATA FETCHING ---
 
-  const fetchDocuments = useCallback(async () => {
-    setLoadingDocs(true);
+  const fetchDocumentStats = useCallback(async () => {
+    setLoadingStats(true);
     try {
-      const data = await ragApi.listDocuments({ limit: 1000, sort_by: 'indexed_at', order: 'desc' });
-      setDocuments(data.documents || []);
+      const data = await ragApi.getDocumentStats();
+      setDocStats(data);
     } catch (err) {
-      console.error("Failed to fetch documents:", err);
-      setError("Could not load the list of indexed documents.");
+      console.error("Failed to fetch document statistics:", err);
+      setError("Could not load document statistics.");
     } finally {
-      setLoadingDocs(false);
+      setLoadingStats(false);
     }
   }, []);
 
-  // Первоначальная загрузка списка документов
+  // Первоначальная загрузка статистики
   useEffect(() => {
-    fetchDocuments();
-  }, [fetchDocuments]);
+    fetchDocumentStats();
+  }, [fetchDocumentStats]);
 
 
   // --- LOGIC FOR POLLING STATUSES ---
@@ -117,7 +116,7 @@ const IndexingPage = () => {
           if (['completed', 'failed', 'cancelled'].includes(currentStatus)) {
             setIsIndexing(false);
             setIndexingTaskId(null);
-            fetchDocuments(); // Обновляем список документов после завершения
+            fetchDocumentStats(); // Обновляем статистику после завершения
 
             if (currentStatus === 'completed') {
                 const processed = status.statistics?.documents_processed ?? 0;
@@ -144,7 +143,7 @@ const IndexingPage = () => {
     }
 
     return () => clearInterval(intervalId);
-  }, [isConverting, conversionTaskId, isIndexing, indexingTaskId, fetchDocuments, handleStartIndexing]);
+  }, [isConverting, conversionTaskId, isIndexing, indexingTaskId, fetchDocumentStats, handleStartIndexing]);
 
 
   // --- EVENT HANDLERS ---
@@ -214,17 +213,6 @@ const IndexingPage = () => {
       setError(err.message || err.response?.data?.detail || 'Failed to process files.');
       setIsUploading(false);
       setIsConverting(false);
-    }
-  };
-  
-  const handleDeleteDocument = async (filename) => {
-    try {
-      await ragApi.deleteDocument(filename);
-      // Оптимистичное обновление UI для лучшего UX
-      setDocuments(prev => prev.filter(doc => doc.filename !== filename));
-    } catch (error) {
-      console.error("Failed to delete document:", error);
-      setError("Failed to delete the document.");
     }
   };
 
@@ -311,21 +299,64 @@ const IndexingPage = () => {
           </div>
         </div>
 
-        {/* Card: Indexed Documents */}
+        {/* Card: Indexing Statistics */}
         <div className="card">
           <div className="card-header">
-            <h3>Indexed Documents</h3>
-            <button className="refresh-button" onClick={fetchDocuments} disabled={loadingDocs}>
-              {loadingDocs ? 'Refreshing...' : 'Refresh'}
+            <h3>📈 Indexing Statistics</h3>
+            <button className="refresh-button" onClick={fetchDocumentStats} disabled={loadingStats}>
+              {loadingStats ? 'Refreshing...' : 'Refresh'}
             </button>
           </div>
           <div className="card-body">
-            <DocumentsList
-              documents={documents}
-              loading={loadingDocs}
-              onDelete={handleDeleteDocument}
-              onRefresh={fetchDocuments}
-            />
+            {loadingStats ? (
+              <div style={{ textAlign: 'center', padding: '2rem', color: '#6c757d' }}>
+                Loading statistics...
+              </div>
+            ) : docStats ? (
+              <div className="indexing-statistics">
+                <div className="stats-summary">
+                  <div className="stat-item-inline">
+                    <span className="stat-label">Documents:</span>
+                    <span className="stat-value">{(docStats.total_documents || 0).toLocaleString()}</span>
+                  </div>
+                  <div className="stat-separator">|</div>
+                  <div className="stat-item-inline">
+                    <span className="stat-label">Chunks:</span>
+                    <span className="stat-value">{(docStats.total_chunks || 0).toLocaleString()}</span>
+                  </div>
+                  <div className="stat-separator">|</div>
+                  <div className="stat-item-inline">
+                    <span className="stat-label">Total size:</span>
+                    <span className="stat-value">
+                      {((docStats.total_characters || 0) / 1024 / 1024).toFixed(2)} MB
+                    </span>
+                  </div>
+                </div>
+                <button
+                  className="manage-docs-button"
+                  disabled
+                  style={{
+                    marginTop: '1.5rem',
+                    padding: '0.75rem 1.5rem',
+                    backgroundColor: '#e9ecef',
+                    color: '#6c757d',
+                    border: '1px solid #dee2e6',
+                    borderRadius: '4px',
+                    cursor: 'not-allowed',
+                    fontSize: '1rem',
+                    width: '100%',
+                    textAlign: 'center'
+                  }}
+                  title="Document Manager page coming soon"
+                >
+                  Manage Documents → (Coming Soon)
+                </button>
+              </div>
+            ) : (
+              <div style={{ textAlign: 'center', padding: '2rem', color: '#dc3545' }}>
+                Failed to load statistics
+              </div>
+            )}
           </div>
         </div>
       </div>

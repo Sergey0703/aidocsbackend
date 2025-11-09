@@ -130,9 +130,59 @@
 }
 
 
+/* Indexing Statistics */
+.indexing-statistics {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.stats-summary {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  padding: 1.5rem;
+  background-color: #f8f9fa;
+  border-radius: 8px;
+  font-size: 1.1rem;
+}
+
+.stat-item-inline {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.stat-item-inline .stat-label {
+  color: #6c757d;
+  font-weight: 500;
+}
+
+.stat-item-inline .stat-value {
+  color: #212529;
+  font-weight: 700;
+  font-size: 1.3rem;
+}
+
+.stat-separator {
+  color: #dee2e6;
+  font-size: 1.5rem;
+  font-weight: 300;
+}
+
 /* Responsive Design */
 @media (max-width: 1024px) {
   .indexing-page {
     grid-template-columns: 1fr;
+  }
+
+  .stats-summary {
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  .stat-separator {
+    display: none;
   }
 }
