@@ -327,18 +327,21 @@ class DatabaseRetriever(BaseRetriever):
     async def retrieve(self, query: str, top_k: int = 10, **kwargs) -> List[RetrievalResult]:
         """🔥 Hybrid database search with multiple strategies"""
         logger.info(f"🗄️ Database hybrid search for: '{query}'")
-        
+
         try:
             conn = psycopg2.connect(self.config.database.connection_string)
             cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
-            
+
             results = []
-            
+
+            # Check if this is VRN/document query BEFORE searching
+            is_document_query = self._is_vrn_or_document_query(query)
+
             # Strategy 1: Exact phrase match (highest priority)
             exact_results = await self._exact_phrase_search(cur, query, top_k)
             results.extend(exact_results)
             logger.info(f"   Database: {len(exact_results)} exact phrase matches")
-            
+
             # Strategy 2: Flexible term search (if still need more)
             if len(results) < top_k:
                 needed = top_k - len(results)
@@ -348,17 +351,116 @@ class DatabaseRetriever(BaseRetriever):
                 )
                 results.extend(terms_results)
                 logger.info(f"   Database: {len(terms_results)} flexible term matches")
-            
+
+            # 📄 DOCUMENT-AWARE RETRIEVAL: Fetch ALL chunks if VRN/document query
+            if is_document_query and results and self.config.search.enable_full_document_retrieval:
+                logger.info(f"   🎯 VRN/Document query detected: '{query}'")
+                logger.info(f"   📄 Fetching ALL chunks for matched documents...")
+
+                # Get unique filenames from initial results
+                matched_filenames = set(r.filename for r in results if r.filename)
+
+                all_document_chunks = []
+                for filename in matched_filenames:
+                    document_chunks = await self._fetch_all_document_chunks(cur, filename)
+                    all_document_chunks.extend(document_chunks)
+
+                logger.info(f"   ✅ Fetched {len(all_document_chunks)} total chunks from {len(matched_filenames)} documents")
+
+                # Replace results with full document chunks
+                results = all_document_chunks[:self.config.search.full_document_max_chunks]
+
             cur.close()
             conn.close()
-            
+
+            # Add document query flag to all results for downstream processing
+            if is_document_query:
+                for result in results:
+                    result.metadata['is_document_query'] = True
+
             logger.info(f"✅ Database search completed: {len(results)} total results")
             return results
-            
+
         except Exception as e:
             logger.error(f"❌ Database search failed: {e}")
             return []
     
+    async def _fetch_all_document_chunks(self, cur, filename: str) -> List[RetrievalResult]:
+        """
+        Fetch ALL chunks for a specific document by filename.
+
+        When we find a document by VRN or exact match, we want to show
+        the ENTIRE document, not just a few chunks.
+        """
+        fetch_sql = f"""
+        SELECT
+            id,
+            metadata,
+            (metadata->>'text') as text_content,
+            (metadata->>'file_name') as file_name,
+            (metadata->>'chunk_index') as chunk_index,
+            (metadata->>'registry_id') as registry_id
+        FROM {self.config.database.schema}.{self.config.database.table_name}
+        WHERE metadata->>'file_name' = %s
+        ORDER BY
+            COALESCE((metadata->>'chunk_index')::int, 0) ASC,
+            id ASC
+        """
+
+        cur.execute(fetch_sql, (filename,))
+        rows = cur.fetchall()
+
+        results = []
+        for row in rows:
+            try:
+                content = row.get('text_content', '')
+                if not content:
+                    continue
+
+                metadata = row.get('metadata', {})
+
+                # High score for document chunks (all equally important)
+                relevance_score = self.config.search.database_exact_match_score
+
+                # Ensure document_id is string
+                doc_id = row.get('id', '')
+                if isinstance(doc_id, uuid.UUID):
+                    doc_id = str(doc_id)
+                elif not isinstance(doc_id, str):
+                    doc_id = str(doc_id) if doc_id else ''
+
+                # Ensure chunk_index is int
+                chunk_idx = row.get('chunk_index', 0)
+                try:
+                    chunk_idx = int(chunk_idx) if chunk_idx is not None else 0
+                except (ValueError, TypeError):
+                    chunk_idx = 0
+
+                result = RetrievalResult(
+                    content=content[:500] + "..." if len(content) > 500 else content,
+                    full_content=content,
+                    filename=filename,
+                    similarity_score=relevance_score,
+                    metadata=metadata,
+                    source_method=self.get_name(),
+                    document_id=doc_id,
+                    chunk_index=chunk_idx
+                )
+
+                result.metadata.update({
+                    "match_type": "full_document",
+                    "database_strategy": "fetch_all_chunks"
+                })
+
+                results.append(result)
+
+            except Exception as e:
+                logger.warning(f"Error processing document chunk: {e}")
+                continue
+
+        logger.info(f"   📄 Fetched ALL {len(results)} chunks for document: {filename}")
+        return results
+
     async def _exact_phrase_search(self, cur, query: str, limit: int) -> List[RetrievalResult]:
         """Exact phrase matching with high relevance scoring"""
         search_sql = f"""
@@ -387,7 +489,7 @@ class DatabaseRetriever(BaseRetriever):
         phrase_pattern = f"%{query}%"
         cur.execute(search_sql, (word_boundary_pattern, phrase_pattern, limit))
         rows = cur.fetchall()
-        
+
         results = []
         for row in rows:
             try:
@@ -445,6 +547,42 @@ class DatabaseRetriever(BaseRetriever):
         
         return results
     
+    def _is_vrn_or_document_query(self, query: str) -> bool:
+        """
+        Detect if query is VRN-specific or document-specific.
+
+        Returns True if query matches patterns like:
+        - "191-D-12345" (VRN format)
+        - "tell me about car 191-D-00001"
+        - "show me document X"
+        - "all information about X"
+        """
+        query_lower = query.lower()
+
+        # VRN pattern: XXX-X-XXXXX (Irish VRN format)
+        vrn_pattern = r'\d{2,3}-[A-Z]-\d{4,5}'
+        if re.search(vrn_pattern, query, re.IGNORECASE):
+            return True
+
+        # Document-specific keywords
+        document_keywords = [
+            'tell me about',
+            'show me',
+            'all information',
+            'complete information',
+            'full document',
+            'all details',
+            'everything about',
+            'all chunks',
+            'entire document'
+        ]
+
+        for keyword in document_keywords:
+            if keyword in query_lower:
+                return True
+
+        return False
+
     async def _flexible_terms_search(self, cur, query: str, limit: int, exclude_ids: List[str] = None) -> List[RetrievalResult]:
         """Flexible terms matching for broader recall"""
         if exclude_ids is None:

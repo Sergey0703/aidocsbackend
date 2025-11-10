@@ -203,12 +203,17 @@ class HybridResultsFusionEngine:
                                  all_results: List[Any],
                                  original_query: str,
                                  extracted_entity: Optional[str] = None,
-                                 required_terms: List[str] = None) -> FusionResult:
+                                 required_terms: List[str] = None,
+                                 skip_reranking: bool = False) -> FusionResult:
         """
         ASYNC version of fuse_results() with full LLM re-ranking support.
 
         Use this version when calling from async context (tests, async API endpoints).
         Enables proper LLM re-ranking without event loop conflicts.
+
+        Args:
+            skip_reranking: If True, skip LLM reranking (useful for document-specific queries
+                           where all chunks are equally relevant)
         """
         start_time = time.time()
 
@@ -228,7 +233,7 @@ class HybridResultsFusionEngine:
         is_person_query = self._is_person_query(original_query, extracted_entity)
         query_complexity = self._analyze_query_complexity(original_query)
 
-        logger.info(f"[*] Hybrid fusion (async): {original_count} results | Person query: {is_person_query} | Complexity: {query_complexity}")
+        logger.info(f"[*] Hybrid fusion (async): {original_count} results | Person query: {is_person_query} | Complexity: {query_complexity} | Skip reranking: {skip_reranking}")
 
         # Remove exact duplicates first
         deduplicated = self._hybrid_deduplication(all_results)
@@ -270,7 +275,8 @@ class HybridResultsFusionEngine:
         )
 
         # [NEW] ASYNC LLM RE-RANKING: Full semantic validation
-        if self.reranking_enabled and final_results:
+        # Skip reranking for document-specific queries (e.g., VRN lookup)
+        if self.reranking_enabled and final_results and not skip_reranking:
             logger.info(f"[*] Applying ASYNC LLM re-ranking to validate {len(final_results)} results...")
             try:
                 # Use async re-ranking (no event loop conflicts!)
@@ -285,6 +291,8 @@ class HybridResultsFusionEngine:
                 import traceback
                 logger.error(traceback.format_exc())
                 # Continue with original results on error
+        elif skip_reranking and final_results:
+            logger.info(f"[⏭️] Skipping LLM re-ranking (document-specific query): keeping all {len(final_results)} chunks")
 
         fusion_time = time.time() - start_time
 

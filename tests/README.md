@@ -6,9 +6,13 @@ Comprehensive test suite for error handling, input validation, and security feat
 
 ```
 tests/
-├── test_validators.py      # Unit tests for input validators
-├── test_search_api.py       # Integration tests for API endpoints
-└── README.md                # This file
+├── test_validators.py                      # Unit tests for input validators
+├── test_search_api.py                      # Integration tests for API endpoints
+├── generate_complex_test_document.py       # Generate complex DOCX test document
+├── test_complex_document_processing.py     # Full pipeline validation (conversion → indexing → search)
+├── test_data/                              # Test documents directory
+│   └── Vehicle_Service_Report_Toyota_Camry_2023.docx  # Complex test document (38.4 KB)
+└── README.md                                # This file
 ```
 
 ## Prerequisites
@@ -350,14 +354,153 @@ pytest tests/ --cov=api/core --cov-report=html
 open htmlcov/index.html
 ```
 
+## Complex Document Processing Tests (NEW - API-BASED)
+
+### Purpose
+
+End-to-end validation of the PRODUCTION RAG pipeline using a realistic vehicle service report document.
+
+**Tests the complete workflow:**
+1. Upload PDF via API → Supabase Storage
+2. Trigger conversion (Docling) → Markdown + JSON
+3. Trigger indexing → Chunks + embeddings in database
+4. Test search quality → Verify RAG retrieval
+
+### Test Document: Vehicle Service Report
+
+**Generated file:** `tests/test_data/Vehicle_Service_Report_Toyota_Camry_2023.docx` (38.4 KB, 4 pages)
+
+**Structure:**
+- **Page 1:** Headers, formatting (bold/italic), vehicle info (191-D-12345), bulleted lists
+- **Page 2:** Large table (16 rows × 6 columns) - **CRITICAL for chunking test**
+- **Page 3:** Image with text (VIN plate for OCR testing)
+- **Page 4:** Nested headings, cost breakdown table, totals
+
+### Prerequisites
+
+1. **Start API server:**
+   ```bash
+   python run_api.py
+   ```
+
+2. **Configure HybridChunker:**
+   - Set `USE_HYBRID_CHUNKING=true` in `rag_indexer/.env`
+   - Set `SAVE_JSON_OUTPUT=true` in `rag_indexer/.env`
+
+3. **Generate and convert test document:**
+   ```bash
+   # Generate DOCX
+   python tests/generate_complex_test_document.py
+
+   # Open DOCX and Save As PDF (manual step in Word)
+   # File -> Save As -> PDF
+   # Save to: tests/test_data/Vehicle_Service_Report_Toyota_Camry_2023.pdf
+   ```
+
+### Running the Test
+
+```bash
+# Run complete API-based test
+python tests/test_complex_document_processing.py
+```
+
+**Test workflow:**
+1. **Upload:** POST to `/api/documents/upload` → file to Supabase Storage
+2. **Conversion:** POST to `/api/conversion/start` → Docling processing
+3. **Indexing:** POST to `/api/indexing/start` → chunking + embeddings
+4. **Search:** POST to `/api/search` → test 6 queries
+
+**Expected duration:** ~5-10 minutes (depending on Gemini API speed)
+
+### Test Coverage
+
+**Automated Tests:**
+
+1. **Upload to Supabase Storage**
+   - File uploaded via `/api/documents/upload`
+   - Registry entry created in `document_registry`
+   - Storage path: `raw/pending/{filename}`
+   - Duplicate detection working (file hash comparison)
+
+2. **Document Conversion** (Docling via API)
+   - Triggered via `/api/conversion/start`
+   - Status polling until completion
+   - Markdown + JSON created in Storage
+   - Bold/italic formatting preserved (`**text**`, `*text*`)
+   - Tables preserved in Markdown format
+   - OCR for images (Gemini Vision API)
+
+3. **Indexing** (Chunking + Embeddings via API)
+   - Triggered via `/api/indexing/start`
+   - Status polling until completion
+   - HybridChunker used (structure-aware)
+   - Chunks linked to registry via `registry_id`
+   - Embeddings generated (768D Gemini)
+   - Metadata includes file_name, chunk_index, headings
+
+4. **Search Quality** (6 automated queries)
+   - `"brake pads"` → finds table data (services)
+   - `"oil change"` → finds multiple service entries
+   - `"191-D-12345"` → finds VRN
+   - `"service history"` → finds complete table
+   - `"total cost"` → finds €654.98 and €2,785.00
+   - `"VIN WF0"` → finds OCR-extracted text
+
+**Quality Checks:**
+
+5. **HybridChunker Quality** (Database validation)
+   - Large table NOT split mid-row ✅
+   - Heading hierarchy added to chunk content
+   - Reasonable chunk count (~10-20, not 50+)
+   - Lists kept intact
+
+6. **Frontend Rendering** (Manual validation)
+   - Open http://localhost:3000
+   - Search for test document
+   - Verify `react-markdown` renders formatting
+   - No visible `**` or `*` symbols
+   - Tables display as HTML tables
+   - Bold/italic rendered correctly
+
+### Why This Test Matters
+
+**Problem:** Complex documents (service reports, insurance forms) have tables and structure.
+**Risk:** Simple chunking (SentenceSplitter) can split tables mid-row → broken data.
+**Solution:** HybridChunker uses JSON (DoclingDocument) to respect document structure.
+
+**Example:**
+```markdown
+## Service History Table
+| Date       | Service     | Cost     |
+|------------|-------------|----------|
+| 15/01/2025 | Oil Change  | €120.00  |  ← THIS ROW
+| 10/12/2024 | Tire Rotate | €45.00   |  ← MUST STAY TOGETHER
+
+SentenceSplitter: Chunk 1 ends here ----^  ❌ BROKEN
+HybridChunker:    Keeps entire table ✅ INTACT
+```
+
+### Configuration Required
+
+```bash
+# In rag_indexer/.env
+USE_HYBRID_CHUNKING=true      # Enable structure-aware chunking
+SAVE_JSON_OUTPUT=true          # Save DoclingDocument JSON
+JSON_OUTPUT_DIR=./data/json    # JSON directory path
+```
+
+See [CLAUDE.md](../CLAUDE.md#L277-L407) for detailed explanation of HybridChunker.
+
 ## Related Documentation
 
 - [ERROR_HANDLING_IMPROVEMENTS.md](../ERROR_HANDLING_IMPROVEMENTS.md) - Error handling implementation details
 - [api/core/validators.py](../api/core/validators.py) - Validator implementation
 - [api/modules/search/routes/search.py](../api/modules/search/routes/search.py) - Search endpoint
+- [CLAUDE.md](../CLAUDE.md#L277-L407) - HybridChunker vs SentenceSplitter comparison
+- [RAG_TESTING_GUIDE.md](../dev_tools/RAG_TESTING_GUIDE.md) - Ragas-based RAG testing
 
 ---
 
-**Last Updated:** 2025-11-08
-**Test Coverage:** 63 test cases
+**Last Updated:** 2025-11-10
+**Test Coverage:** 63+ test cases (including complex document tests)
 **Status:** ✅ All tests passing

@@ -1,0 +1,204 @@
+
+======================================================================
+  COMPLEX DOCUMENT PROCESSING - FULL PIPELINE TEST
+======================================================================
+Test Document: Vehicle_Service_Report_Toyota_Camry_2023
+Test Data Dir: c:\projects\aidocsbackend\tests\test_data
+
+======================================================================
+  TEST 1: DOCUMENT CONVERSION (DOCLING)
+======================================================================
+[OK] File exists (docx)
+    38.4 KB
+[FAIL] docx: Markdown file created
+    Requires manual conversion
+[FAIL] docx: JSON file created
+    Requires manual conversion
+[FAIL] docx: Bold formatting preserved (**text**)
+    Check markdown for **VEHICLE SERVICE REPORT**
+[FAIL] docx: Italic formatting preserved (*text*)
+    Check markdown for *15 January 2025*
+[FAIL] docx: Headings preserved (##)
+    Check for ## Vehicle Information
+[FAIL] docx: Large table preserved
+    Check Service History table (16 rows)
+[FAIL] docx: Small table preserved
+    Check Cost Summary table
+[FAIL] docx: Lists preserved
+    Check bulleted/numbered lists
+[FAIL] File exists (pdf)
+    Not found: c:\projects\aidocsbackend\tests\test_data\Vehicle_Service_Report_Toyota_Camry_2023.pdf
+
+[NOTE] Manual Steps Required:
+1. Convert DOCX to PDF: Save As > PDF
+2. Run conversion:
+   cd rag_indexer
+   python process_documents.py
+3. Check output in data/markdown/ and data/json/
+4. Re-run this test to validate output
+
+======================================================================
+  TEST 2: OCR QUALITY (IMAGE TEXT EXTRACTION)
+======================================================================
+[FAIL] Markdown file found
+    Run conversion first
+
+======================================================================
+  TEST 3: HYBRID CHUNKING (STRUCTURE-AWARE)
+======================================================================
+[FAIL] JSON file found
+    Required for HybridChunker
+
+======================================================================
+  TEST 4: CHUNKING COMPARISON (HYBRID vs SENTENCE)
+======================================================================
+Expected Differences:
+
+HybridChunker:
+  [OK] Tables kept intact
+  [OK] Heading hierarchy: 'Vehicle Information > Registration Number: 191-D-12345'
+  [OK] ~12-18 chunks (semantic boundaries)
+  [OK] Better search: 'brake pads' -> finds full context
+
+SentenceSplitter:
+  [WARN] May split large table mid-row
+  [WARN] No heading context
+  [WARN] ~25-35 chunks (fixed token boundaries)
+  [WARN] Search: 'brake pads' -> partial context
+
+[NOTE] To compare:
+1. Run indexing with USE_HYBRID_CHUNKING=true
+2. Save results
+3. Delete chunks from database
+4. Run indexing with USE_HYBRID_CHUNKING=false
+5. Compare chunk counts and quality
+
+======================================================================
+  TEST 5: DATABASE INDEXING
+======================================================================
+Expected Database State:
+[FAIL] document_registry entry created
+    Check: SELECT * FROM vecs.document_registry WHERE original_filename LIKE '%Toyota_Camry%'
+[FAIL] All chunks have registry_id
+    Check: SELECT COUNT(*) FROM vecs.documents WHERE registry_id IS NULL (should be 0)
+[FAIL] Embeddings created (768D)
+    Check: SELECT vec, array_length(vec, 1) FROM vecs.documents LIMIT 1
+[FAIL] Metadata contains file_name
+    Check: SELECT metadata->>'file_name' FROM vecs.documents LIMIT 5
+[FAIL] Metadata contains headings
+    Check: SELECT metadata->>'headings' FROM vecs.documents WHERE metadata ? 'headings'
+
+[NOTE] Validation SQL Queries:
+
+-- Check document registry
+SELECT id, original_filename, status, document_type
+FROM vecs.document_registry
+WHERE original_filename LIKE '%Toyota_Camry%';
+
+-- Check chunks
+SELECT
+    id,
+    registry_id,
+    metadata->>'file_name' as file_name,
+    metadata->>'chunk_index' as chunk_index,
+    LEFT(content, 100) as content_preview
+FROM vecs.documents
+WHERE metadata->>'file_name' LIKE '%Toyota_Camry%'
+ORDER BY (metadata->>'chunk_index')::int;
+
+-- Check for orphaned chunks (should be 0)
+SELECT COUNT(*) as orphaned_chunks
+FROM vecs.documents
+WHERE registry_id IS NULL;
+    
+
+======================================================================
+  TEST 6: SEARCH QUALITY
+======================================================================
+[FAIL] Query: 'brake pads'
+    Should find: 'Brake pads (front), Brake pads (rear)'
+[FAIL] Query: 'oil change'
+    Should find: Multiple oil change entries from table
+[FAIL] Query: '191-D-12345'
+    Should find: Registration Number section
+[FAIL] Query: 'service history'
+    Should find: Large table with all service records
+[FAIL] Query: 'total cost'
+    Should find: €654.98 or €2,785.00
+[FAIL] Query: 'VIN WF0'
+    Should find: VIN information (OCR test)
+
+[NOTE] Test searches:
+1. Start API: python run_api.py
+2. Open frontend: http://localhost:3000
+3. Try each query above
+4. Verify:
+   - Results contain expected data
+   - Tables display correctly (with Markdown rendering)
+   - Bold/italic formatting works
+   - Heading context visible
+
+======================================================================
+  TEST 7: FRONTEND RENDERING (REACT-MARKDOWN)
+======================================================================
+Expected rendering:
+  **VEHICLE SERVICE REPORT** -> VEHICLE SERVICE REPORT (bold, large)
+  *15 January 2025* -> 15 January 2025 (italic)
+  | Table | Data | -> Properly formatted table
+  ## Vehicle Information -> Large heading
+[FAIL] react-markdown imported
+    Check: frontend/src/components/SearchResults.jsx
+[FAIL] Chunk content uses <ReactMarkdown>
+    Check line 97-98 in SearchResults.jsx
+[FAIL] Answer uses <ReactMarkdown>
+    Check line 164 in SearchResults.jsx
+[FAIL] No visible ** or * symbols
+    Test in browser
+[FAIL] Tables render as HTML tables
+    Test in browser
+
+[NOTE] Visual Test:
+1. Search: '191-D-12345'
+2. Check chunk display:
+   [FAIL] **Registration Number: 191-D-12345** (visible asterisks)
+   [OK] Registration Number: 191-D-12345 (bold, no asterisks)
+
+======================================================================
+  TEST SUMMARY
+======================================================================
+
+Test Coverage:
+  1. Document Conversion:     pending
+  2. OCR Quality:             skipped
+  3. Hybrid Chunking:         skipped
+  4. Sentence Splitter:       manual
+  5. Database Indexing:       manual
+  6. Search Quality:          manual
+  7. Frontend Rendering:      manual
+
+[RESULTS] Test Results Summary:
+{
+  "conversion": {
+    "docx": "manual_check_required"
+  },
+  "ocr": {
+    "status": "skipped"
+  },
+  "chunking": {
+    "status": "skipped"
+  },
+  "indexing": {},
+  "search": {},
+  "comparison": {}
+}
+
+[NEXT STEPS]:
+1. Convert DOCX to PDF
+2. Run conversion: python rag_indexer/process_documents.py
+3. Run indexing: python rag_indexer/indexer.py
+4. Re-run this test: python tests/test_complex_document_processing.py
+5. Manual validation in browser
+
+======================================================================
+Test script completed. Most checks require manual validation.
+======================================================================

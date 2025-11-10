@@ -19,7 +19,10 @@
       "Bash(ping:*)",
       "Bash(nul)",
       "Bash(timeout /t 5 /nobreak)",
-      "Bash(timeout /t 2 /nobreak)"
+      "Bash(timeout /t 2 /nobreak)",
+      "Bash(tests/test_output.txt)",
+      "Bash(cat:*)",
+      "Bash(iconv:*)"
     ],
     "deny": [],
     "ask": []

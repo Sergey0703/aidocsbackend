@@ -85,16 +85,20 @@ class SearchConfig:
     database_exact_match_score: float = 0.95  # High score for exact matches
     database_base_score: float = 0.60         # Base score for database results
     database_score_per_occurrence: float = 0.05  # Bonus per query occurrence
-    
+
+    # 📄 DOCUMENT-AWARE RETRIEVAL
+    enable_full_document_retrieval: bool = True  # Fetch ALL chunks when document matched
+    full_document_max_chunks: int = 50  # Max chunks per document (safety limit)
+
     # Multi-query settings
     max_query_variants: int = 3
     enable_query_rewriting: bool = True
     enable_entity_extraction: bool = True
     enable_multi_retrieval: bool = True
-    
+
     # Results fusion with hybrid support
     min_results_for_fusion: int = 2
-    max_final_results: int = 20  # Increased from 15
+    max_final_results: int = 50  # Increased from 20 to allow full documents
     fusion_method: str = "hybrid_weighted"  # Changed from "weighted_score"
     
     # 🔥 HYBRID FUSION WEIGHTS

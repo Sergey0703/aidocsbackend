@@ -204,6 +204,28 @@ async def search(
         logger.info("STAGE 2: Hybrid Results Fusion + LLM Re-ranking")
         fusion_start = time.time()
 
+        # Check if this is a document-specific query (VRN lookup)
+        # Skip reranking for document queries - all chunks are relevant
+
+        # DEBUG: Log metadata to see if flag is present
+        logger.info(f"🔍 Checking for document query flag in {len(multi_retrieval_result.results)} results...")
+        flag_count = 0
+        for i, result in enumerate(multi_retrieval_result.results[:3]):  # Check first 3
+            has_flag = result.metadata.get('is_document_query', False)
+            if has_flag:
+                flag_count += 1
+            logger.info(f"   Result {i+1}: is_document_query={has_flag} | metadata keys: {list(result.metadata.keys())[:10]}")
+
+        is_document_query = any(
+            result.metadata.get('is_document_query', False)
+            for result in multi_retrieval_result.results
+        )
+
+        if is_document_query:
+            logger.info(f"📄 Document-specific query detected ({flag_count} results flagged) - will skip LLM reranking")
+        else:
+            logger.info(f"❌ No document query flag found - LLM reranking will run")
+
         try:
             # Use ASYNC version for full LLM re-ranking support
             fusion_result = await asyncio.wait_for(
@@ -211,7 +233,8 @@ async def search(
                     all_results=multi_retrieval_result.results,
                     original_query=search_query,  # Use preprocessed query!
                     extracted_entity=None,  # Backend will handle entity extraction if needed
-                    required_terms=None
+                    required_terms=None,
+                    skip_reranking=is_document_query  # Skip reranking for document queries
                 ),
                 timeout=FUSION_TIMEOUT
             )
