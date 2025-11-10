@@ -167,22 +167,47 @@ const IndexingPage = () => {
       let uploadedCount = 0;
       let duplicateCount = 0;
       let duplicateFiles = [];
+      let failedFiles = [];
 
       for (const file of files) {
-        const uploadResponse = await ragApi.uploadDocument(file, false); // false = не запускать индексацию автоматически
+        try {
+          const uploadResponse = await ragApi.uploadDocument(file, false); // false = не запускать индексацию автоматически
 
-        // Check if file is duplicate
-        if (uploadResponse.duplicate) {
-          duplicateCount++;
-          duplicateFiles.push(file.name);
-          console.log(`📋 Duplicate file: ${file.name} (already indexed)`);
-        } else {
-          uploadedCount++;
+          // Check if file is duplicate
+          if (uploadResponse.duplicate) {
+            duplicateCount++;
+            duplicateFiles.push(file.name);
+            console.log(`📋 Duplicate file: ${file.name} (already indexed)`);
+          } else {
+            uploadedCount++;
+          }
+        } catch (uploadError) {
+          // Handle individual file upload errors (e.g., file too large)
+          const errorDetail = uploadError.response?.data?.detail || uploadError.message;
+          failedFiles.push({ name: file.name, error: errorDetail });
+          console.error(`❌ Failed to upload ${file.name}:`, errorDetail);
         }
       }
 
-      console.log(`✅ Upload complete: ${uploadedCount} new, ${duplicateCount} duplicates`);
+      console.log(`✅ Upload complete: ${uploadedCount} new, ${duplicateCount} duplicates, ${failedFiles.length} failed`);
       setIsUploading(false);
+
+      // Show error message if some files failed to upload
+      if (failedFiles.length > 0) {
+        const failedMessage = failedFiles.length === 1
+          ? `❌ Failed to upload "${failedFiles[0].name}": ${failedFiles[0].error}`
+          : `❌ Failed to upload ${failedFiles.length} file(s): ${failedFiles.map(f => `${f.name} (${f.error})`).join(', ')}`;
+
+        setUploadMessage({
+          type: 'error',
+          message: failedMessage
+        });
+
+        // If ALL files failed, stop here
+        if (uploadedCount === 0 && duplicateCount === 0) {
+          return;
+        }
+      }
 
       // Show message if all files were duplicates
       if (uploadedCount === 0 && duplicateCount > 0) {
@@ -194,7 +219,7 @@ const IndexingPage = () => {
       }
 
       // Show info if some files were duplicates
-      if (duplicateCount > 0) {
+      if (duplicateCount > 0 && failedFiles.length === 0) {
         setUploadMessage({
           type: 'warning',
           message: `⚠️ ${duplicateCount} duplicate file(s) skipped: ${duplicateFiles.join(', ')}`

@@ -470,6 +470,16 @@ async def upload_document(
 
         file_size = len(content)
 
+        # Check file size limit (50 MB = 50 * 1024 * 1024 bytes)
+        MAX_FILE_SIZE_MB = 50
+        MAX_FILE_SIZE_BYTES = MAX_FILE_SIZE_MB * 1024 * 1024
+
+        if file_size > MAX_FILE_SIZE_BYTES:
+            raise HTTPException(
+                status_code=413,  # 413 Payload Too Large
+                detail=f"File size ({file_size / 1024 / 1024:.2f} MB) exceeds maximum allowed size of {MAX_FILE_SIZE_MB} MB"
+            )
+
         # Import Storage components
         import sys
         import os
