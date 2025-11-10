@@ -262,7 +262,7 @@ if relevance.is_relevant:  # ❌ Filters out low-scoring results
 **Stage 2: Indexing (LlamaIndex)**
 1. Load markdown files from `MARKDOWN_OUTPUT_DIR`
 2. **Enrich with registry_id** from `document_registry` (critical step!)
-3. Chunk using SentenceSplitter (configurable size/overlap)
+3. **Chunk using HybridChunker or SentenceSplitter** (see Chunking Strategy below)
 4. Filter invalid chunks (too short, low quality)
 5. Generate embeddings via Gemini API (with rate limiting)
 6. Save to `vecs.documents` with registry_id foreign key
@@ -273,6 +273,138 @@ if relevance.is_relevant:  # ❌ Filters out low-scoring results
 - Skips already-processed files
 - Removes deleted files from database
 - Significantly faster for large document sets
+
+### Chunking Strategy: HybridChunker vs SentenceSplitter
+
+The system supports two chunking approaches:
+
+#### 1. **HybridChunker** (Recommended - Default)
+**Purpose**: Structure-aware chunking that respects document semantics
+
+**How It Works:**
+- Requires **both Markdown AND JSON** files from Docling
+- JSON file (`DoclingDocument`) contains structured document representation:
+  - Text blocks with semantic labels (headings, paragraphs, lists)
+  - Table structures (rows, columns, cells)
+  - Image metadata and OCR text
+  - Hierarchical heading relationships
+  - Bounding box coordinates for each element
+
+**Why JSON is Critical:**
+- **Semantic Boundaries**: Chunks are created at logical boundaries (section breaks, table boundaries)
+- **No Mid-Table Splitting**: Tables are kept intact or intelligently split by rows
+- **Contextual Enrichment**: Each chunk includes its heading hierarchy (e.g., "Chapter 1 > Section 2.1 > Subsection")
+- **Adaptive Length**: Chunk size adjusts to document structure (respects paragraphs, doesn't break mid-sentence)
+
+**Configuration (.env):**
+```bash
+USE_HYBRID_CHUNKING=true
+SAVE_JSON_OUTPUT=true           # CRITICAL: Saves DoclingDocument JSON alongside markdown
+JSON_OUTPUT_DIR=./data/json     # JSON files must exist for HybridChunker
+
+HYBRID_MAX_TOKENS=512           # Max tokens per chunk
+HYBRID_MERGE_PEERS=true         # Merge sibling paragraphs in same section
+HYBRID_USE_CONTEXTUALIZE=true   # Add heading hierarchy to chunk content (better RAG quality)
+HYBRID_TOKENIZER_MODEL=sentence-transformers/all-MiniLM-L6-v2
+```
+
+**File Requirements:**
+```
+data/
+├── markdown/
+│   └── document.md          # Human-readable markdown (with ** for bold, * for italic)
+└── json/
+    └── document.json        # DoclingDocument JSON (structure + metadata)
+```
+
+**Example: Why HybridChunker is Better**
+
+**Document Structure:**
+```markdown
+## Vehicle Registration
+- VRN: 191-D-12345
+- Make: Toyota
+
+| Field | Value |
+|-------|-------|
+| NCT   | 2025-12-31 |
+| Tax   | 2025-06-30 |
+```
+
+**SentenceSplitter (Simple):**
+```
+Chunk 1: "## Vehicle Registration\n- VRN: 191-D-12345\n- Make:"
+Chunk 2: "Toyota\n\n| Field | Value |\n|-------"
+Chunk 3: "|-------|-------|"  # ❌ BROKEN TABLE
+```
+
+**HybridChunker (Smart):**
+```
+Chunk 1: "Vehicle Registration > VRN: 191-D-12345, Make: Toyota"
+Chunk 2: "Vehicle Registration > Table: NCT: 2025-12-31, Tax: 2025-06-30"  # ✅ INTACT TABLE
+```
+
+**Benefits:**
+- ✅ Tables never split mid-row
+- ✅ Lists kept together
+- ✅ Headings provide context
+- ✅ Better semantic search quality
+- ✅ Improved answer accuracy (LLM sees full context)
+
+#### 2. **SentenceSplitter** (Fallback)
+**Purpose**: Simple token-based chunking when JSON unavailable
+
+**How It Works:**
+- Uses only Markdown files
+- Splits text every N tokens (default: 512)
+- Tries to respect sentence boundaries
+- No awareness of document structure
+
+**When to Use:**
+- JSON files missing or corrupted
+- Legacy documents without DoclingDocument JSON
+- Quick testing without full pipeline
+
+**Configuration (.env):**
+```bash
+USE_HYBRID_CHUNKING=false
+CHUNK_SIZE=512
+CHUNK_OVERLAP=128
+```
+
+**Limitations:**
+- ❌ May split tables, lists, or code blocks
+- ❌ No contextual enrichment (no heading hierarchy)
+- ❌ Fixed chunk size regardless of content
+- ❌ Lower RAG quality for structured documents
+
+**Automatic Fallback:**
+- If `USE_HYBRID_CHUNKING=true` but JSON file missing, system falls back to SentenceSplitter
+- Warning logged: "JSON file not found, using markdown fallback"
+
+#### Why Markdown Shows Asterisks on Frontend
+
+**Problem**: Markdown formatting (`**bold**`, `*italic*`) appears as raw text in browser
+
+**Root Cause:**
+- DOCX files have formatting (bold, italic, headings)
+- Docling converts formatting to Markdown syntax
+- Frontend displays raw Markdown instead of rendering it
+
+**Solution**: Use a Markdown renderer on frontend (e.g., `react-markdown`)
+```jsx
+import ReactMarkdown from 'react-markdown';
+
+<ReactMarkdown>{chunkContent}</ReactMarkdown>
+```
+
+**Result:**
+- `**bold**` → **bold**
+- `*italic*` → *italic*
+- `## Heading` → Large heading
+- Tables render correctly
+
+**Note**: PDF files often don't have formatting, so they appear without asterisks
 
 ### Registry Manager Integration
 

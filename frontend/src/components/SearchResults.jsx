@@ -1,5 +1,6 @@
 // src/components/SearchResults.jsx
 import React, { useState } from 'react';
+import ReactMarkdown from 'react-markdown';
 import DocumentCard from './DocumentCard';
 import EntityInfo from './EntityInfo';
 import PerformanceMetrics from './PerformanceMetrics';
@@ -93,7 +94,9 @@ const DocumentGroupsSection = ({ results, totalResults }) => {
                         </div>
                         <div className="chunk-content">
                           <h4>Content:</h4>
-                          <p>{chunk.content}</p>
+                          <div className="markdown-content">
+                            <ReactMarkdown>{chunk.content}</ReactMarkdown>
+                          </div>
                         </div>
                         <div className="chunk-metadata">
                           <h4>Details:</h4>
@@ -161,9 +164,7 @@ const SearchResults = ({ results, answer, totalResults, entityResult, rewriteRes
         <div className="answer-section">
           <h2 className="section-title">Answer</h2>
           <div className="answer-box">
-            {answer.split('\n').map((line, idx) => (
-              <p key={idx} style={{ margin: '0.5rem 0' }}>{line}</p>
-            ))}
+            <ReactMarkdown>{answer}</ReactMarkdown>
           </div>
         </div>
       )}
