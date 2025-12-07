@@ -179,14 +179,21 @@ async def get_status(task_id: Optional[str] = None):
             logger.info(f"No task_id provided, using most recent: {task_id}")
         
         status = await service.get_task_status(task_id)
-        
+
         if not status:
             logger.warning(f"Task not found: {task_id}")
             raise HTTPException(
                 status_code=404,
                 detail=f"Task not found: {task_id}"
             )
-        
+
+        # 🔍 DEBUG: Log progress stage
+        progress = status.get('progress')
+        if progress:
+            stage_value = progress.stage if hasattr(progress, 'stage') else getattr(progress, 'stage', 'UNKNOWN')
+            stage_name = progress.current_stage_name if hasattr(progress, 'current_stage_name') else getattr(progress, 'current_stage_name', 'UNKNOWN')
+            logger.info(f"📊 Status response: stage={stage_value}, current_stage_name={stage_name}, progress_percentage={progress.progress_percentage if hasattr(progress, 'progress_percentage') else 'UNKNOWN'}")
+
         return IndexingStatusResponse(**status)
         
     except HTTPException:

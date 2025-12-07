@@ -533,7 +533,12 @@ class IndexingService:
                                f"history item files_processed={item.files_processed}")
                     return {
                         "task_id": item.task_id,
-                        "progress": IndexingProgress(status=item.status, progress_percentage=100),
+                        "progress": IndexingProgress(
+                            status=item.status,
+                            stage=ProcessingStage.COMPLETED,
+                            current_stage_name="Completed",
+                            progress_percentage=100
+                        ),
                         "statistics": stats,
                         "errors": [item.error_message] if item.error_message else [],
                         "warnings": [],
