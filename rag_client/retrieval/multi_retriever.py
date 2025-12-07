@@ -352,9 +352,13 @@ class DatabaseRetriever(BaseRetriever):
                 results.extend(terms_results)
                 logger.info(f"   Database: {len(terms_results)} flexible term matches")
 
-            # 📄 DOCUMENT-AWARE RETRIEVAL: Fetch ALL chunks if VRN/document query
+            # 📄 DOCUMENT-AWARE RETRIEVAL: Fetch ALL chunks if VRN/document/aggregation query
             if is_document_query and results and self.config.search.enable_full_document_retrieval:
-                logger.info(f"   🎯 VRN/Document query detected: '{query}'")
+                # Determine query type for better logging
+                query_type = "VRN" if re.search(r'\d{2,3}-[A-Z]-\d{4,5}', query, re.IGNORECASE) else \
+                            "Aggregation" if any(kw in query.lower() for kw in ['how many', 'count', 'all cars', 'all vehicles']) else \
+                            "Document"
+                logger.info(f"   🎯 {query_type} query detected: '{query}'")
                 logger.info(f"   📄 Fetching ALL chunks for matched documents...")
 
                 # Get unique filenames from initial results
@@ -549,13 +553,15 @@ class DatabaseRetriever(BaseRetriever):
     
     def _is_vrn_or_document_query(self, query: str) -> bool:
         """
-        Detect if query is VRN-specific or document-specific.
+        Detect if query is VRN-specific, document-specific, or aggregation query.
 
         Returns True if query matches patterns like:
         - "191-D-12345" (VRN format)
         - "tell me about car 191-D-00001"
         - "show me document X"
         - "all information about X"
+        - "how many cars" (aggregation query)
+        - "tell me about all vehicles" (aggregation query)
         """
         query_lower = query.lower()
 
@@ -578,6 +584,26 @@ class DatabaseRetriever(BaseRetriever):
         ]
 
         for keyword in document_keywords:
+            if keyword in query_lower:
+                return True
+
+        # Aggregation query keywords (how many, count, total, all cars, etc.)
+        # These queries need ALL documents to count/aggregate correctly
+        aggregation_keywords = [
+            'how many',
+            'count',
+            'total number',
+            'number of',
+            'all cars',
+            'all vehicles',
+            'all our',
+            'list all',
+            'show all',
+            'tell me about our',
+            'tell me about all'
+        ]
+
+        for keyword in aggregation_keywords:
             if keyword in query_lower:
                 return True
 
@@ -722,7 +748,65 @@ class MultiStrategyRetriever:
             self.retrievers["database"] = DatabaseRetriever(self.config)
         
         logger.info(f"🔧 Initialized retrievers: {list(self.retrievers.keys())}")
-    
+
+    def _is_vrn_or_document_query(self, query: str) -> bool:
+        """
+        Detect if query is VRN-specific, document-specific, or aggregation query.
+
+        Returns True if query matches patterns like:
+        - "191-D-12345" (VRN format)
+        - "tell me about car 191-D-00001"
+        - "show me document X"
+        - "all information about X"
+        - "how many cars" (aggregation query)
+        - "tell me about all vehicles" (aggregation query)
+        """
+        query_lower = query.lower()
+
+        # VRN pattern: XXX-X-XXXXX (Irish VRN format)
+        vrn_pattern = r'\d{2,3}-[A-Z]-\d{4,5}'
+        if re.search(vrn_pattern, query, re.IGNORECASE):
+            return True
+
+        # Document-specific keywords
+        document_keywords = [
+            'tell me about',
+            'show me',
+            'all information',
+            'complete information',
+            'full document',
+            'all details',
+            'everything about',
+            'all chunks',
+            'entire document'
+        ]
+
+        for keyword in document_keywords:
+            if keyword in query_lower:
+                return True
+
+        # Aggregation query keywords (how many, count, total, all cars, etc.)
+        # These queries need ALL documents to count/aggregate correctly
+        aggregation_keywords = [
+            'how many',
+            'count',
+            'total number',
+            'number of',
+            'all cars',
+            'all vehicles',
+            'all our',
+            'list all',
+            'show all',
+            'tell me about our',
+            'tell me about all'
+        ]
+
+        for keyword in aggregation_keywords:
+            if keyword in query_lower:
+                return True
+
+        return False
+
     async def multi_retrieve(self, 
                            queries: List[str], 
                            extracted_entity: Optional[str] = None,
@@ -781,7 +865,19 @@ class MultiStrategyRetriever:
                 if search_params.get("database_priority", False) and len(database_results) >= 10:
                     logger.info("🔥 Database priority: sufficient exact matches found, skipping vector search")
                     final_results = database_results[:search_params["top_k"]]
-                    
+
+                    # 📄 DOCUMENT QUERY FLAG: Set flag for early return too
+                    is_document_query = self._is_vrn_or_document_query(original_query)
+                    if is_document_query:
+                        query_type = "VRN" if re.search(r'\d{2,3}-[A-Z]-\d{4,5}', original_query, re.IGNORECASE) else \
+                                    "Aggregation" if any(kw in original_query.lower() for kw in ['how many', 'count', 'all cars', 'all vehicles']) else \
+                                    "Document"
+                        logger.info(f"   📄 {query_type} query detected (early return) - setting is_document_query flag on all {len(final_results)} results")
+
+                        # Set flag on ALL results
+                        for result in final_results:
+                            result.metadata['is_document_query'] = True
+
                     return MultiRetrievalResult(
                         query=primary_query,
                         results=final_results,
@@ -851,16 +947,36 @@ class MultiStrategyRetriever:
         
         # Hybrid deduplication and ranking
         final_results = self._hybrid_dedupe_and_rank(all_results, search_params["top_k"], primary_query, extracted_entity)
-        
+
+        # 📄 DOCUMENT QUERY FLAG: Set flag for VRN/Document/Aggregation queries
+        # This flag is used downstream to skip LLM reranking and show all chunks
+        logger.info(f"   🔍 DEBUG: Checking if '{original_query}' is document query...")
+        is_document_query = self._is_vrn_or_document_query(original_query)
+        logger.info(f"   🔍 DEBUG: is_document_query = {is_document_query}")
+
+        if is_document_query:
+            query_type = "VRN" if re.search(r'\d{2,3}-[A-Z]-\d{4,5}', original_query, re.IGNORECASE) else \
+                        "Aggregation" if any(kw in original_query.lower() for kw in ['how many', 'count', 'all cars', 'all vehicles']) else \
+                        "Document"
+            logger.info(f"   📄 {query_type} query detected - setting is_document_query flag on all {len(final_results)} results")
+
+            # Set flag on ALL results
+            for result in final_results:
+                result.metadata['is_document_query'] = True
+
+            logger.info(f"   ✅ Flag set successfully on {len(final_results)} results")
+        else:
+            logger.info(f"   ❌ NOT a document query - flag will NOT be set")
+
         retrieval_time = time.time() - start_time
-        
+
         logger.info(f"🔥 HYBRID RETRIEVAL COMPLETED:")
         logger.info(f"   Strategy: {search_strategy}")
         logger.info(f"   Total candidates: {len(all_results)}")
         logger.info(f"   Final results: {len(final_results)}")
         logger.info(f"   Methods used: {', '.join(methods_used)}")
         logger.info(f"   Time: {retrieval_time:.3f}s")
-        
+
         return MultiRetrievalResult(
             query=primary_query,
             results=final_results,

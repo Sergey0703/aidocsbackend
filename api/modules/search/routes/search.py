@@ -222,7 +222,12 @@ async def search(
         )
 
         if is_document_query:
-            logger.info(f"📄 Document-specific query detected ({flag_count} results flagged) - will skip LLM reranking")
+            # Determine query type for better logging
+            import re
+            query_type = "VRN" if re.search(r'\d{2,3}-[A-Z]-\d{4,5}', search_query, re.IGNORECASE) else \
+                        "Aggregation" if any(kw in search_query.lower() for kw in ['how many', 'count', 'all cars', 'all vehicles', 'all our']) else \
+                        "Document"
+            logger.info(f"📄 {query_type} query detected ({flag_count} results flagged) - will skip LLM reranking")
         else:
             logger.info(f"❌ No document query flag found - LLM reranking will run")
 
@@ -307,7 +312,18 @@ async def search(
 
         # Convert backend results to API response format
         # Apply top_k limit (default 10 if not specified)
-        top_k = request.top_k or 10
+        # BUT: For document queries (VRN/Aggregation lookup), show ALL chunks!
+        if is_document_query:
+            top_k = len(fusion_result.fused_results)  # Show ALL chunks for document queries
+            # Determine query type (re-use same logic from above)
+            query_type = "VRN" if re.search(r'\d{2,3}-[A-Z]-\d{4,5}', search_query, re.IGNORECASE) else \
+                        "Aggregation" if any(kw in search_query.lower() for kw in ['how many', 'count', 'all cars', 'all vehicles', 'all our']) else \
+                        "Document"
+            logger.info(f"📄 {query_type} query: returning ALL {top_k} chunks (ignoring top_k limit)")
+        else:
+            top_k = request.top_k or 10
+            logger.info(f"🔍 Regular query: applying top_k limit = {top_k}")
+
         search_results = []
         for result in fusion_result.fused_results[:top_k]:
             # Extract metadata for frontend compatibility
