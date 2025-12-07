@@ -25,10 +25,10 @@ router = APIRouter()
 _query_preprocessor = None
 
 # Timeout settings (seconds)
-SEARCH_TIMEOUT = 60  # Maximum time for entire search operation
+SEARCH_TIMEOUT = 120  # Maximum time for entire search operation (increased for aggregation queries)
 RETRIEVAL_TIMEOUT = 30  # Maximum time for retrieval stage
 FUSION_TIMEOUT = 20  # Maximum time for fusion stage
-ANSWER_TIMEOUT = 15  # Maximum time for answer generation
+ANSWER_TIMEOUT = 60  # Maximum time for answer generation (increased for complex queries with many chunks)
 
 
 @router.post("/", response_model=SearchResponse)
